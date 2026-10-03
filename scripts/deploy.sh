@@ -31,15 +31,10 @@ fi
 echo "🔨 Building Next.js production application..."
 npm run build
 
-# Reload PM2 zero-downtime cluster
-echo "🔄 Reloading PM2 process..."
-if pm2 list | grep -q "india-mock-tests"; then
-  pm2 reload ecosystem.config.js --update-env
-else
-  pm2 start ecosystem.config.js
-fi
-
-# Save PM2 process list
+# Reload/Restart PM2 process
+echo "🔄 Starting/Reloading PM2 process..."
+pm2 delete india-mock-tests 2>/dev/null || true
+pm2 start ecosystem.config.js
 pm2 save
 
 echo "✅ Deployment completed successfully!"
