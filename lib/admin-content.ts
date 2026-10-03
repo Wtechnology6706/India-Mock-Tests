@@ -775,8 +775,10 @@ export async function listMockTests(filter?: {
     const params: unknown[] = [];
 
     if (filter?.examSlug && filter.examSlug !== "All") {
-      conditions.push("(e.slug = ? OR e.name = ?)");
-      params.push(filter.examSlug, filter.examSlug);
+      const slugPattern = `%${filter.examSlug}%`;
+      const namePattern = `%${filter.examSlug.replace(/-/g, " ")}%`;
+      conditions.push("(e.slug = ? OR e.name = ? OR e.slug LIKE ? OR LOWER(e.name) LIKE LOWER(?))");
+      params.push(filter.examSlug, filter.examSlug, slugPattern, namePattern);
     }
     if (filter?.trackSlug && filter.trackSlug !== "All") {
       conditions.push("t.track_slug = ?");
@@ -787,8 +789,8 @@ export async function listMockTests(filter?: {
       params.push(filter.subjectName);
     }
     if (filter?.status && filter.status !== "All") {
-      conditions.push("t.status = ?");
-      params.push(filter.status.toLowerCase());
+      conditions.push("LOWER(t.status) = LOWER(?)");
+      params.push(filter.status);
     }
 
     if (conditions.length > 0) {

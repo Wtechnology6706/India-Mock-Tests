@@ -5,9 +5,8 @@ import { syllabusTracks } from "../../../lib/syllabus";
 import { listMockTests, listSubjectRequests } from "../../../lib/admin-content";
 import ExamTrackExplorer from "./ExamTrackExplorer";
 
-export function generateStaticParams() {
-  return Object.keys(fallbackExamDetails).map((slug) => ({ slug }));
-}
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function ExamPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

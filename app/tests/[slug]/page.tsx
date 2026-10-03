@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { getTestStartInfo } from "../../../lib/attempt-store";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function TestStartPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const test = await getTestStartInfo(slug);
