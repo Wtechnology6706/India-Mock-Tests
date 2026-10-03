@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MegaMenu from "../../components/MegaMenu";
+import Footer from "../../components/Footer";
 import { fallbackExamDetails } from "../../../lib/catalog";
 import { syllabusTracks } from "../../../lib/syllabus";
 import { listMockTests, listSubjectRequests } from "../../../lib/admin-content";
@@ -200,19 +201,7 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
       </section>
 
       {/* Footer */}
-      <footer className="detail-footer modern-footer">
-        <div className="footer-brand">
-          <Link href="/">
-            India Mock Tests<span>.</span>
-          </Link>
-          <p>Practice with purpose. Perform with confidence.</p>
-        </div>
-        <div className="footer-links">
-          <Link href="/exams">All Exams</Link>
-          <Link href="/pricing">VIP Subscription</Link>
-          <Link href="/dashboard">Student Dashboard</Link>
-        </div>
-      </footer>
+      <Footer />
     </main>
   );
 }

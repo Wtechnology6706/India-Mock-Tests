@@ -2486,3 +2486,227 @@
     font-size: 14.5px !important;
   }
 }
+
+/* ==========================================================================
+   Global Site Footer (W Technology Branded & Gateway Compliant)
+   ========================================================================== */
+
+.global-site-footer {
+  background: #0f1c19;
+  color: #e2ede8;
+  padding: 64px 0 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: auto;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.global-footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 48px 32px;
+  margin-bottom: 48px;
+}
+
+.footer-col-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.footer-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.footer-logo-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-logo-badge {
+  background: var(--coral, #b94a2b);
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-logo-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.footer-dot {
+  color: var(--coral, #b94a2b);
+}
+
+.footer-brand-tagline {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #9ab4aa;
+  margin: 0;
+  max-width: 380px;
+}
+
+.footer-trust-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.trust-badge-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #c4dcd3;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.footer-heading {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 16px;
+}
+
+.footer-link-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-link-list a {
+  color: #9ab4aa;
+  text-decoration: none;
+  font-size: 13.5px;
+  transition: color 0.15s ease, transform 0.15s ease;
+  display: inline-block;
+}
+
+.footer-link-list a:hover {
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.footer-disclaimer-bar {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px 0;
+  margin-bottom: 24px;
+}
+
+.footer-disclaimer-bar p {
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: #7d968d;
+  margin: 0;
+}
+
+.footer-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12.5px;
+  color: #8da49b;
+}
+
+.footer-powered-by {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.powered-by-link {
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.powered-by-link:hover {
+  background: var(--coral, #b94a2b);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.footer-payment-icons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.payment-label {
+  font-size: 11px;
+  color: #6e847c;
+  margin-right: 4px;
+}
+
+.pay-badge {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2ede8;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+@media (max-width: 900px) {
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 36px 24px;
+  }
+  .footer-col-brand {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .global-site-footer {
+    padding: 48px 0 24px;
+  }
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .footer-col-brand {
+    grid-column: span 1;
+  }
+  .footer-bottom-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+

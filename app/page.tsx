@@ -2,6 +2,7 @@ import Link from "next/link";
 import { featuredExams } from "../lib/catalog";
 import MegaMenu from "./components/MegaMenu";
 import HeroSearch from "./components/HeroSearch";
+import Footer from "./components/Footer";
 
 const exams = featuredExams;
 
@@ -282,21 +283,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="footer">
-        <Link className="logo" href="/">
-          <span className="logo-mark">I</span>
-          <span>India Mock Tests<span className="logo-dot">.</span></span>
-        </Link>
-        <p>Find your exam. Find your focus. Find your way forward.</p>
-        <div className="footer-links">
-          <Link href="/exams">Exams</Link>
-          <Link href="/plans">Plans</Link>
-          <Link href="/notifications">Notifications</Link>
-          <Link href="/about">About</Link>
-          <Link href="/contact">Support</Link>
-        </div>
-        <small>© 2026 India Mock Tests · Privacy · Terms</small>
-      </footer>
+      <Footer />
     </main>
   );
 }
