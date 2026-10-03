@@ -4,7 +4,7 @@ set -e
 echo "🚀 Starting deployment of India Mock Tests Platform..."
 
 # Navigate to project directory
-APP_DIR="/var/www/mocktest"
+APP_DIR="/var/www/mocktest/India-Mock-Tests"
 cd "$APP_DIR" || exit 1
 
 # Pull latest commits from GitHub main branch

@@ -817,30 +817,29 @@ export async function listMockTests(filter?: {
       linked_count: number;
     })[]>(sql, params);
 
-    if (rows.length > 0) {
-      return rows.map((r) => ({
-        id: String(r.id),
-        slug: r.slug || `test-${r.id}`,
-        name: r.name,
-        examId: r.exam_id ? String(r.exam_id) : undefined,
-        examName: r.exam_name || "Unassigned Exam",
-        examSlug: r.exam_slug || "bpsc-tre-4",
-        trackSlug: r.track_slug || "primary-1-5",
-        subjectId: r.subject_id ? String(r.subject_id) : undefined,
-        subjectName: r.subject_name || "General Studies",
-        testType: r.test_type || "Full mock",
-        questionCount: r.question_count || 150,
-        durationMinutes: r.duration_minutes || 150,
-        totalMarks: Number(r.total_marks) || 150,
-        access: r.access_type === "premium" ? "Premium" : "Free",
-        status: r.status === "published" ? "Published" : r.status === "archived" ? "Archived" : "Draft",
-        linkedQuestionsCount: Number(r.linked_count) || 0,
-        description: r.description || undefined,
-        bannerImageUrl: r.banner_image_url || undefined,
-      }));
-    }
-  } catch {
-    // Fall back to local mock tests
+    return rows.map((r) => ({
+      id: String(r.id),
+      slug: r.slug || `test-${r.id}`,
+      name: r.name,
+      examId: r.exam_id ? String(r.exam_id) : undefined,
+      examName: r.exam_name || "Unassigned Exam",
+      examSlug: r.exam_slug || "bpsc-tre-4",
+      trackSlug: r.track_slug || "primary-1-5",
+      subjectId: r.subject_id ? String(r.subject_id) : undefined,
+      subjectName: r.subject_name || "General Studies",
+      testType: r.test_type || "Full mock",
+      questionCount: r.question_count || 150,
+      durationMinutes: r.duration_minutes || 150,
+      totalMarks: Number(r.total_marks) || 150,
+      access: r.access_type === "premium" ? "Premium" : "Free",
+      status: r.status === "published" ? "Published" : r.status === "archived" ? "Archived" : "Draft",
+      linkedQuestionsCount: Number(r.linked_count) || 0,
+      description: r.description || undefined,
+      bannerImageUrl: r.banner_image_url || undefined,
+    }));
+  } catch (err) {
+    // Only fall back to local fixture mock tests if database connection failed
+    console.error("Database query error in listMockTests:", err);
   }
 
   let results = [...localMockTests];
