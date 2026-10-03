@@ -1199,13 +1199,45 @@
   min-width: 220px;
 }
 
+.test-catalog-search-wrap .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  color: #8c9e97;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.test-catalog-search-wrap .search-clear-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #8c9e97;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.test-catalog-search-wrap .search-clear-btn:hover {
+  color: var(--ink);
+}
+
 .test-catalog-search-input {
   width: 100%;
   background: #ffffff;
   border: 1px solid #d4dfda;
   border-radius: 20px;
-  padding: 8px 32px 8px 32px;
-  font: 500 12px 'DM Sans', sans-serif;
+  padding: 8px 32px 8px 34px;
+  font: 500 13px 'DM Sans', sans-serif;
   color: var(--ink);
   outline: none;
   transition: all 0.15s ease;
