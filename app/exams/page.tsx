@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import MegaMenu from "../components/MegaMenu";
+import Footer from "../components/Footer";
 import { featuredExams } from "../../lib/catalog";
 import { syllabusTracks } from "../../lib/syllabus";
 
@@ -264,22 +265,7 @@ export default function ExamsDirectoryPage() {
       </section>
 
       {/* Footer */}
-      <footer className="footer">
-        <Link className="logo" href="/">
-          <span className="logo-mark">I</span>
-          <span>India Mock Tests<span className="logo-dot">.</span></span>
-        </Link>
-        <p>Find your exam. Find your focus. Find your way forward.</p>
-        <div className="footer-links">
-          <Link href="/exams">Exams</Link>
-          <Link href="/pricing">Plans & VIP</Link>
-          <Link href="/about">About</Link>
-          <Link href="/contact">Support</Link>
-          <Link href="/terms">Terms</Link>
-          <Link href="/privacy">Privacy</Link>
-        </div>
-        <small>© 2026 India Mock Tests · India</small>
-      </footer>
+      <Footer />
     </main>
   );
 }

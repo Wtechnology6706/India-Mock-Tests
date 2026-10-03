@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import MegaMenu from "../components/MegaMenu";
+import Footer from "../components/Footer";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
@@ -36,14 +37,22 @@ export default function ContactPage() {
         <span className="kicker">SUPPORT & INQUIRIES</span>
         <h1>Get in touch with our team.</h1>
         <p className="static-lede">
-          Have a question regarding mock test series, scoring patterns, or subscription access? We are here to help you succeed.
+          Have a question regarding mock test series, VIP passes, question accuracy reports, or billing? We are here to help you succeed.
         </p>
 
         <div className="contact-layout-grid">
           {/* Contact Details Card */}
           <div className="contact-info-card">
-            <h3>Student Helpdesk</h3>
+            <h3>Student Helpdesk & Operating Office</h3>
             <p>Our academic support counselors and technical team respond to every learner ticket promptly.</p>
+
+            <div className="contact-channel-item">
+              <span className="channel-icon">🏢</span>
+              <div>
+                <strong>Operating Entity</strong>
+                <span>W Technology (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral)", fontWeight: 600 }}>wtechnology.in</a>)</span>
+              </div>
+            </div>
 
             <div className="contact-channel-item">
               <span className="channel-icon">✉️</span>
@@ -56,7 +65,7 @@ export default function ContactPage() {
             <div className="contact-channel-item">
               <span className="channel-icon">📞</span>
               <div>
-                <strong>Helpline (Mon - Sat)</strong>
+                <strong>Helpline (Mon - Sat, 10 AM - 6 PM IST)</strong>
                 <span>{supportPhone}</span>
               </div>
             </div>
@@ -66,6 +75,14 @@ export default function ContactPage() {
               <div>
                 <strong>Response Time</strong>
                 <span>Within 24 business hours</span>
+              </div>
+            </div>
+
+            <div className="contact-channel-item">
+              <span className="channel-icon">🛡️</span>
+              <div>
+                <strong>Grievance Redressal</strong>
+                <span>Grievance Officer, W Technology</span>
               </div>
             </div>
           </div>
@@ -113,9 +130,10 @@ export default function ContactPage() {
                   <label>Subject / Topic *</label>
                   <select className="contact-input">
                     <option>Exam / Test Series Inquiry</option>
+                    <option>Billing, Invoices & VIP Pass Access</option>
                     <option>Question / Answer Correction Report</option>
-                    <option>Billing & Subscription Access</option>
-                    <option>General Feedback / Suggestion</option>
+                    <option>Technical Support / Login Issue</option>
+                    <option>Refund & Cancellation Request</option>
                   </select>
                 </div>
 
@@ -138,22 +156,7 @@ export default function ContactPage() {
         </div>
       </div>
 
-      <footer className="footer">
-        <Link className="logo" href="/">
-          <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>
-          <span>{portalName.toLowerCase()}<span className="logo-dot">.</span></span>
-        </Link>
-        <p>Practice with purpose. Perform with confidence.</p>
-        <div className="footer-links">
-          <Link href="/exams">Exams</Link>
-          <Link href="/pricing">Premium Plans</Link>
-          <Link href="/privacy">Privacy Policy</Link>
-          <Link href="/terms">Terms of Service</Link>
-          <Link href="/about">About</Link>
-          <Link href="/contact">Support</Link>
-        </div>
-        <small>© 2026 {portalName} Learning Technologies · All Rights Reserved.</small>
-      </footer>
+      <Footer />
     </main>
   );
 }

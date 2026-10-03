@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import MegaMenu from "../components/MegaMenu";
+import Footer from "../components/Footer";
 
 export default function PricingPage() {
   const [portalName, setPortalName] = useState("India Mock Tests");
@@ -230,22 +231,7 @@ export default function PricingPage() {
         </div>
       </div>
 
-      <footer className="footer">
-        <Link className="logo" href="/">
-          <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>
-          <span>{portalName.toLowerCase()}<span className="logo-dot">.</span></span>
-        </Link>
-        <p>Practice with purpose. Perform with confidence.</p>
-        <div className="footer-links">
-          <Link href="/exams">Exams</Link>
-          <Link href="/pricing">Premium Plans</Link>
-          <Link href="/privacy">Privacy Policy</Link>
-          <Link href="/terms">Terms of Service</Link>
-          <Link href="/about">About</Link>
-          <Link href="/contact">Support</Link>
-        </div>
-        <small>© 2026 {portalName} Learning Technologies · All Rights Reserved.</small>
-      </footer>
+      <Footer />
     </main>
   );
 }

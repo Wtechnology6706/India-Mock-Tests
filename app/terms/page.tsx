@@ -3,17 +3,18 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import MegaMenu from "../components/MegaMenu";
+import Footer from "../components/Footer";
 
 export default function TermsPage() {
   const [portalName, setPortalName] = useState("India Mock Tests");
+  const [contactEmail, setContactEmail] = useState("support@indiamocktests.com");
 
   useEffect(() => {
     fetch("/api/config")
       .then((res) => res.json())
       .then((data) => {
-        if (data?.config?.portalName) {
-          setPortalName(data.config.portalName);
-        }
+        if (data?.config?.portalName) setPortalName(data.config.portalName);
+        if (data?.config?.contactEmail) setContactEmail(data.config.contactEmail);
       })
       .catch(() => {});
   }, []);
@@ -23,97 +24,99 @@ export default function TermsPage() {
       <MegaMenu />
 
       <div className="static-page-container" style={{ maxWidth: "860px" }}>
-        <span className="kicker">LEGAL & COMPLIANCE</span>
+        <span className="kicker">TERMS & LEGAL AGREEMENT</span>
         <h1>Terms and Conditions of Use</h1>
         <p className="static-lede">
-          Last updated: October 2026. Please read these terms carefully before accessing or using the {portalName} Mock Test Platform.
+          Last updated: October 2026. Please read these Terms and Conditions carefully before accessing or using {portalName} (developed and operated by <strong>W Technology</strong>, available at <a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer">wtechnology.in</a>).
         </p>
 
         <div className="legal-content-card">
           <section className="legal-section">
             <h2>1. Acceptance of Terms</h2>
             <p>
-              By accessing, browsing, registering for, or using {portalName} ("the Platform", "we", "us", or "our"), you agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree to these terms, please do not use our services.
+              By accessing, browsing, registering an account, or purchasing a subscription on {portalName} ("the Platform", "Service", "we", "us", or "our"), you ("User", "Student", or "Learner") agree to be bound by these Terms and Conditions, our <Link href="/privacy" style={{ color: "var(--coral)", fontWeight: 600 }}>Privacy Policy</Link>, and our <Link href="/refund" style={{ color: "var(--coral)", fontWeight: 600 }}>Refund Policy</Link>. If you do not agree with any part of these terms, you must not use this website.
             </p>
           </section>
 
           <section className="legal-section">
-            <h2>2. Educational Practice Disclaimer</h2>
+            <h2>2. Educational & Practice Simulation Disclaimer</h2>
             <p>
-              {portalName} is an independent online learning and mock examination practice platform. All mock tests, question banks, previous year question analyses, syllabus guides, and scoring simulations (including BPSC, STET, BTET, CTET, UGC NET, etc.) are provided for educational and preparation purposes only.
+              {portalName} is an independent educational technology service designed to assist candidates with computer-based test (CBT) preparation, question bank practice, and performance analytics for various public competitive and recruitment examinations (such as BPSC TRE, Bihar STET, CTET, and State PSCs).
             </p>
             <p>
-              {portalName} is NOT affiliated with, sponsored by, or endorsed by the Bihar Public Service Commission (BPSC), Central Board of Secondary Education (CBSE), or any government examination authority. Official exam dates, admit cards, and regulations should always be verified on the respective official government portals.
-            </p>
-          </section>
-
-          <section className="legal-section">
-            <h2>3. User Accounts and Security</h2>
-            <p>
-              When you create an account on {portalName}, you must provide accurate, complete, and updated information. You are solely responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.
+              <strong>Non-Government Affiliation:</strong> {portalName} and W Technology are private educational entities and are <strong>NOT affiliated with, authorized by, sponsored by, or endorsed by the Bihar Public Service Commission (BPSC), Bihar School Examination Board (BSEB), Central Board of Secondary Education (CBSE), or any government department</strong>. All official notification dates, eligibility requirements, and admit cards must be checked on respective official government portals.
             </p>
           </section>
 
           <section className="legal-section">
-            <h2>4. Intellectual Property & Fair Use</h2>
+            <h2>3. User Account Registration & Security</h2>
             <p>
-              The design, code, proprietary question explanations, analytical algorithms, and website content are the intellectual property of {portalName}. Users are granted a non-exclusive, non-transferable license to access and practice mock tests for personal, non-commercial educational use. Scraping, unauthorized copying, redistributing, or reselling platform content is strictly prohibited.
+              To access personalized mock tests and test analytics, you must register an account. You agree to:
+            </p>
+            <ul>
+              <li>Provide true, accurate, and current personal information during registration.</li>
+              <li>Maintain the confidentiality of your login credentials.</li>
+              <li>Not share, rent, resell, or distribute your account access to any third party. Single user account sharing is strictly monitored and subject to immediate suspension without refund.</li>
+              <li>Notify us immediately of any unauthorized access to your account.</li>
+            </ul>
+          </section>
+
+          <section className="legal-section">
+            <h2>4. Pricing, Payments & Taxes</h2>
+            <p>
+              Access to free mock tests is provided without charge. Paid VIP passes (Sprint and Ultimate VIP) grant premium access as detailed on our <Link href="/pricing" style={{ color: "var(--coral)", fontWeight: 600 }}>Pricing Page</Link>.
+            </p>
+            <ul>
+              <li>All prices are quoted in <strong>Indian Rupees (INR ₹)</strong>.</li>
+              <li>Prices are inclusive of applicable Goods and Services Tax (GST) unless stated otherwise.</li>
+              <li>Payments are processed securely via authorized payment gateways (Razorpay).</li>
+              <li>Access to purchased digital passes is provisioned immediately upon transaction confirmation.</li>
+            </ul>
+          </section>
+
+          <section className="legal-section">
+            <h2>5. Cancellation and Refund Policy</h2>
+            <p>
+              Our refund policy is governed by our dedicated <Link href="/refund" style={{ color: "var(--coral)", fontWeight: 600 }}>Cancellation and Refund Policy</Link>. In brief, refunds may be requested within <strong>48 hours</strong> of purchase provided fewer than two (2) premium tests have been attempted and no terms violation has occurred.
             </p>
           </section>
 
           <section className="legal-section">
-            <h2>5. Advertisements & Third-Party Content (Google AdSense)</h2>
+            <h2>6. Intellectual Property & Fair Use</h2>
             <p>
-              The Platform may display advertisements served by Google AdSense and other third-party ad networks. We do not endorse the products or services advertised by third parties. Your interactions with advertisers found on or through the Platform are solely between you and the advertiser.
-            </p>
-          </section>
-
-          <section className="legal-section">
-            <h2>6. Premium Subscriptions & Refund Policy</h2>
-            <p>
-              Certain mock test series and advanced analytics features require a paid subscription. Premium fees are charged in advance on a recurring or one-time basis. Refund requests are subject to our standard 7-day satisfaction policy provided fewer than 3 premium mock tests have been attempted.
+              The platform design, source code, questions curation, customized solutions, scoring engines, and brand assets are the exclusive intellectual property of <strong>W Technology</strong>. You are granted a personal, revocable, non-exclusive, non-transferable license to take mock tests for personal preparation. You may not copy, scrape, reverse-engineer, broadcast, or republish our question banks.
             </p>
           </section>
 
           <section className="legal-section">
             <h2>7. Limitation of Liability</h2>
             <p>
-              To the maximum extent permitted by law, {portalName} and its operators shall not be liable for any indirect, incidental, or consequential damages resulting from the use of or inability to use our examination platform or educational materials.
+              While we make every effort to maintain accurate question banks and reliable exam engines, {portalName} and W Technology shall not be liable for any indirect, incidental, or consequential damages, including loss of study time, exam performance outcomes, or third-party internet disruptions. Mock test scores are for self-assessment only and do not guarantee final recruitment or exam selection.
             </p>
           </section>
 
           <section className="legal-section">
-            <h2>8. Modifications to Services and Terms</h2>
+            <h2>8. Governing Law & Jurisdiction</h2>
             <p>
-              We reserve the right to modify, suspend, or discontinue any aspect of the Platform or these Terms at any time. Continued use of the platform after updates constitutes acceptance of the revised Terms.
+              These Terms shall be governed by and construed in accordance with the laws of the Republic of India. Any disputes arising in connection with these Terms shall be subject to the exclusive jurisdiction of the competent courts in India.
             </p>
           </section>
 
           <section className="legal-section">
-            <h2>9. Contact Us</h2>
-            <p>
-              For legal inquiries or questions regarding these Terms, please reach out through our <Link href="/contact" style={{ color: "var(--coral)", fontWeight: 600 }}>Support Page</Link> or email support@{portalName.toLowerCase()}.edu.
-            </p>
+            <h2>9. Contact & Company Details</h2>
+            <p>For any questions or legal inquiries regarding these Terms:</p>
+            <div style={{ background: "#f8faf9", padding: "16px 20px", borderRadius: "8px", marginTop: "12px", border: "1px solid #dbe6e1" }}>
+              <p style={{ margin: "0 0 6px" }}><strong>Operating Entity:</strong> W Technology</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Platform:</strong> {portalName}</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Support Email:</strong> <a href={`mailto:${contactEmail}`}>{contactEmail}</a></p>
+              <p style={{ margin: "0 0 6px" }}><strong>Official Website:</strong> <a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer">https://wtechnology.in</a></p>
+              <p style={{ margin: 0 }}><strong>Support Portal:</strong> <Link href="/contact">Contact Support</Link></p>
+            </div>
           </section>
         </div>
       </div>
 
-      <footer className="footer">
-        <Link className="logo" href="/">
-          <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>
-          <span>{portalName.toLowerCase()}<span className="logo-dot">.</span></span>
-        </Link>
-        <p>Practice with purpose. Perform with confidence.</p>
-        <div className="footer-links">
-          <Link href="/exams">Exams</Link>
-          <Link href="/pricing">Premium Plans</Link>
-          <Link href="/privacy">Privacy Policy</Link>
-          <Link href="/terms">Terms of Service</Link>
-          <Link href="/about">About</Link>
-          <Link href="/contact">Support</Link>
-        </div>
-        <small>© 2026 {portalName} Learning Technologies · All Rights Reserved.</small>
-      </footer>
+      <Footer />
     </main>
   );
 }

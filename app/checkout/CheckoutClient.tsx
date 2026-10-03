@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { AuthUser } from "../../lib/auth-store";
+import Footer from "../components/Footer";
 
 type CheckoutClientProps = {
   user: AuthUser | null;
@@ -19,6 +20,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponError, setCouponError] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(true);
 
   // Payment process states
   const [isProcessing, setIsProcessing] = useState(false);
@@ -109,6 +111,11 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
   // Official Razorpay Checkout Launcher
   async function handleRazorpayPayment() {
     setErrorMessage(null);
+
+    if (!agreedToTerms) {
+      setErrorMessage("Please check and accept the Terms & Conditions, Privacy Policy, and Refund Policy before proceeding.");
+      return;
+    }
 
     if (!user) {
       router.push(`/login?redirect=/checkout?plan=${selectedPlan}`);
@@ -486,7 +493,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
                       gridTemplateColumns: "repeat(2, 1fr)",
                       gap: "12px",
                       textAlign: "left",
-                      marginBottom: "24px",
+                      marginBottom: "20px",
                     }}
                   >
                     <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 14px" }}>
@@ -510,6 +517,52 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
                     </div>
                   </div>
 
+                  {/* Mandatory Gateway Terms & Policies Acceptance */}
+                  <div
+                    style={{
+                      background: "#f8faf9",
+                      border: "1px solid #d4dfda",
+                      borderRadius: "8px",
+                      padding: "14px 16px",
+                      textAlign: "left",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "10px",
+                        cursor: "pointer",
+                        fontSize: "0.82rem",
+                        color: "#334155",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={agreedToTerms}
+                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                        style={{ marginTop: "3px", accentColor: "#1e3a34", width: "16px", height: "16px", cursor: "pointer" }}
+                      />
+                      <span>
+                        I agree to the{" "}
+                        <Link href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral, #b94a2b)", fontWeight: 600, textDecoration: "underline" }}>
+                          Terms & Conditions
+                        </Link>
+                        ,{" "}
+                        <Link href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral, #b94a2b)", fontWeight: 600, textDecoration: "underline" }}>
+                          Privacy Policy
+                        </Link>
+                        , and{" "}
+                        <Link href="/refund" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral, #b94a2b)", fontWeight: 600, textDecoration: "underline" }}>
+                          Cancellation & Refund Policy
+                        </Link>
+                        . I acknowledge that subscription pass access is delivered digitally and instantly upon payment confirmation.
+                      </span>
+                    </label>
+                  </div>
+
                   {isProcessing ? (
                     <div style={{ padding: "16px 0" }}>
                       <div className="processing-spinner" />
@@ -529,17 +582,28 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
                         boxShadow: "0 6px 20px rgba(2, 132, 199, 0.35)",
                         fontSize: "1rem",
                         padding: "16px 24px",
+                        width: "100%",
                       }}
                     >
                       ⚡ Proceed to Pay ₹{finalPrice} via Razorpay →
                     </button>
                   )}
+
+                  <div style={{ marginTop: "16px", fontSize: "0.78rem", color: "#64748b", lineHeight: "1.5" }}>
+                    <span>Billing & Technology Partner: <strong>W Technology</strong> · </span>
+                    <a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer" style={{ color: "#0284c7", textDecoration: "none", fontWeight: 600 }}>
+                      wtechnology.in
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
           </section>
         </main>
       )}
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
