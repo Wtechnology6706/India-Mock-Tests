@@ -26,24 +26,6 @@ echo "🚀 Starting deployment of India Mock Tests Platform..."
 APP_DIR="/var/www/mocktest/India-Mock-Tests"
 cd "$APP_DIR" || exit 1
 
-# Mark directory as safe for git
-git config --global --add safe.directory "$APP_DIR" || true
-
-# Check if .git folder exists; if not, initialize and connect to origin
-if [ ! -d ".git" ]; then
-  echo "⚠️ .git folder not found. Initializing git repository..."
-  git init
-  git remote add origin https://github.com/Wtechnology6706/India-Mock-Tests.git || git remote set-url origin https://github.com/Wtechnology6706/India-Mock-Tests.git
-fi
-
-# Ensure origin URL is up-to-date
-git remote set-url origin https://github.com/Wtechnology6706/India-Mock-Tests.git || true
-
-# Pull latest commits from GitHub main branch
-echo "📥 Fetching and syncing latest changes from GitHub main..."
-git fetch origin main
-git reset --hard origin/main
-
 # Install production and build dependencies
 echo "📦 Installing npm dependencies..."
 npm ci --legacy-peer-deps
