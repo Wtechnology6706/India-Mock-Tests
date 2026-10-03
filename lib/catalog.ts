@@ -6,6 +6,7 @@ export type FeaturedExam = {
   badge: string;
   tone: string;
   symbol: string;
+  imageUrl?: string;
 };
 
 export const featuredExams: FeaturedExam[] = [

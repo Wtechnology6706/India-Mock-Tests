@@ -691,6 +691,7 @@ export type MockTest = {
   status: "Draft" | "Published" | "Archived";
   linkedQuestionsCount: number;
   description?: string;
+  bannerImageUrl?: string;
 };
 
 export type MockTestInput = {
@@ -704,8 +705,9 @@ export type MockTestInput = {
   durationMinutes?: number;
   totalMarks?: number;
   access?: "Free" | "Premium";
-  status?: "Draft" | "Published";
+  status?: "Draft" | "Published" | "Archived";
   description?: string;
+  bannerImageUrl?: string;
   questionIds?: string[];
 };
 
@@ -749,7 +751,7 @@ export async function listMockTests(filter?: {
   try {
     let sql = `
       SELECT t.id, t.slug, t.name, t.test_type, t.question_count, t.duration_minutes, t.total_marks,
-             t.access_type, t.status, t.description, t.track_slug,
+             t.access_type, t.status, t.description, t.track_slug, t.banner_image_url,
              e.id AS exam_id, e.name AS exam_name, e.slug AS exam_slug,
              s.id AS subject_id, s.name AS subject_name,
              (SELECT COUNT(*) FROM test_questions tq WHERE tq.test_id = t.id) AS linked_count
@@ -794,6 +796,7 @@ export async function listMockTests(filter?: {
       status: string;
       description: string | null;
       track_slug: string | null;
+      banner_image_url: string | null;
       exam_id: number | null;
       exam_name: string | null;
       exam_slug: string | null;
@@ -821,6 +824,7 @@ export async function listMockTests(filter?: {
         status: r.status === "published" ? "Published" : r.status === "archived" ? "Archived" : "Draft",
         linkedQuestionsCount: Number(r.linked_count) || 0,
         description: r.description || undefined,
+        bannerImageUrl: r.banner_image_url || undefined,
       }));
     }
   } catch {
@@ -879,6 +883,7 @@ export async function createMockTest(input: MockTestInput): Promise<MockTest> {
     status: cleanStatus === "published" ? "Published" : "Draft",
     linkedQuestionsCount: (input.questionIds ?? []).length,
     description: input.description,
+    bannerImageUrl: input.bannerImageUrl?.trim() || undefined,
   };
 
   try {
@@ -942,8 +947,8 @@ export async function createMockTest(input: MockTestInput): Promise<MockTest> {
       }
 
       const [insert] = await connection.execute<ResultSetHeader>(
-        `INSERT INTO tests (test_series_id, exam_id, subject_id, track_slug, name, slug, test_type, question_count, duration_minutes, total_marks, access_type, description, status, rule_profile_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO tests (test_series_id, exam_id, subject_id, track_slug, name, slug, test_type, question_count, duration_minutes, total_marks, access_type, description, banner_image_url, status, rule_profile_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           seriesId,
           exams[0].id,
@@ -957,6 +962,7 @@ export async function createMockTest(input: MockTestInput): Promise<MockTest> {
           cleanMarks,
           cleanAccess,
           input.description?.trim() || null,
+          input.bannerImageUrl?.trim() || null,
           cleanStatus,
           ruleId,
         ]
@@ -988,6 +994,157 @@ export async function createMockTest(input: MockTestInput): Promise<MockTest> {
 
   localMockTests.unshift(fallback);
   return fallback;
+}
+
+export async function updateMockTest(testId: string, input: Partial<MockTestInput>): Promise<MockTest> {
+  try {
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      let examId: number | undefined;
+      let subjectId: number | undefined;
+
+      if (input.examName) {
+        let [exams] = await connection.query<(RowDataPacket & { id: number })[]>(
+          "SELECT id FROM exams WHERE name = ? OR slug = ? LIMIT 1",
+          [input.examName.trim(), input.examName.trim()]
+        );
+        if (!exams[0]) {
+          const examSlug = input.examName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+          const [eIns] = await connection.execute<ResultSetHeader>(
+            "INSERT INTO exams (name, slug, status) VALUES (?, ?, 'published')",
+            [input.examName.trim(), examSlug]
+          );
+          examId = eIns.insertId;
+        } else {
+          examId = exams[0].id;
+        }
+      }
+
+      if (input.subjectName) {
+        const targetExamId = examId || (
+          await connection.query<(RowDataPacket & { exam_id: number })[]>(
+            "SELECT exam_id FROM tests WHERE id = ? LIMIT 1",
+            [testId]
+          )
+        )[0][0]?.exam_id;
+
+        if (targetExamId) {
+          let [subjects] = await connection.query<(RowDataPacket & { id: number })[]>(
+            "SELECT id FROM subjects WHERE exam_id = ? AND name = ? LIMIT 1",
+            [targetExamId, input.subjectName.trim()]
+          );
+          if (!subjects[0]) {
+            const subSlug = input.subjectName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+            const [sIns] = await connection.execute<ResultSetHeader>(
+              "INSERT INTO subjects (exam_id, name, slug) VALUES (?, ?, ?)",
+              [targetExamId, input.subjectName.trim(), subSlug]
+            );
+            subjectId = sIns.insertId;
+          } else {
+            subjectId = subjects[0].id;
+          }
+        }
+      }
+
+      // Build update queries
+      const setClauses: string[] = [];
+      const setParams: (string | number | null)[] = [];
+
+      if (input.name !== undefined) {
+        setClauses.push("name = ?");
+        setParams.push(input.name.trim());
+      }
+      if (examId !== undefined) {
+        setClauses.push("exam_id = ?");
+        setParams.push(examId);
+      }
+      if (subjectId !== undefined) {
+        setClauses.push("subject_id = ?");
+        setParams.push(subjectId);
+      }
+      if (input.trackSlug !== undefined) {
+        setClauses.push("track_slug = ?");
+        setParams.push(input.trackSlug);
+      }
+      if (input.testType !== undefined) {
+        setClauses.push("test_type = ?");
+        setParams.push(input.testType);
+      }
+      if (input.questionCount !== undefined) {
+        setClauses.push("question_count = ?");
+        setParams.push(Number(input.questionCount) || 150);
+      }
+      if (input.durationMinutes !== undefined) {
+        setClauses.push("duration_minutes = ?");
+        setParams.push(Number(input.durationMinutes) || 150);
+      }
+      if (input.totalMarks !== undefined) {
+        setClauses.push("total_marks = ?");
+        setParams.push(Number(input.totalMarks) || 150);
+      }
+      if (input.access !== undefined) {
+        setClauses.push("access_type = ?");
+        setParams.push(input.access === "Premium" ? "premium" : "free");
+      }
+      if (input.status !== undefined) {
+        setClauses.push("status = ?");
+        setParams.push(input.status.toLowerCase());
+      }
+      if (input.description !== undefined) {
+        setClauses.push("description = ?");
+        setParams.push(input.description ? input.description.trim() : null);
+      }
+      if (input.bannerImageUrl !== undefined) {
+        setClauses.push("banner_image_url = ?");
+        setParams.push(input.bannerImageUrl ? input.bannerImageUrl.trim() : null);
+      }
+
+      if (setClauses.length > 0) {
+        setParams.push(testId);
+        await connection.execute(`UPDATE tests SET ${setClauses.join(", ")} WHERE id = ?`, setParams);
+      }
+
+      await connection.commit();
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    if (process.env.NODE_ENV === "production") throw error;
+  }
+
+  // Update local in-memory test
+  const existingIndex = localMockTests.findIndex((t) => t.id === testId);
+  if (existingIndex !== -1) {
+    const current = localMockTests[existingIndex];
+    localMockTests[existingIndex] = {
+      ...current,
+      name: input.name !== undefined ? input.name.trim() : current.name,
+      examName: input.examName !== undefined ? input.examName.trim() : current.examName,
+      examSlug: input.examName !== undefined ? input.examName.toLowerCase().replace(/[^a-z0-9]+/g, "-") : current.examSlug,
+      trackSlug: input.trackSlug !== undefined ? input.trackSlug : current.trackSlug,
+      subjectName: input.subjectName !== undefined ? input.subjectName.trim() : current.subjectName,
+      testType: input.testType !== undefined ? input.testType : current.testType,
+      questionCount: input.questionCount !== undefined ? Number(input.questionCount) : current.questionCount,
+      durationMinutes: input.durationMinutes !== undefined ? Number(input.durationMinutes) : current.durationMinutes,
+      totalMarks: input.totalMarks !== undefined ? Number(input.totalMarks) : current.totalMarks,
+      access: input.access !== undefined ? input.access : current.access,
+      status: input.status !== undefined ? (input.status as any) : current.status,
+      description: input.description !== undefined ? input.description : current.description,
+      bannerImageUrl: input.bannerImageUrl !== undefined ? input.bannerImageUrl : current.bannerImageUrl,
+    };
+    return localMockTests[existingIndex];
+  }
+
+  // Reload and return updated test
+  const updatedList = await listMockTests();
+  const found = updatedList.find((t) => t.id === testId);
+  if (!found) throw new Error("Mock test not found after update.");
+  return found;
 }
 
 export async function deleteMockTest(testId: string): Promise<boolean> {
