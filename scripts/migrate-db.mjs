@@ -46,7 +46,11 @@ async function migrate() {
   const schemaPath = path.resolve(process.cwd(), 'database', 'schema.sql');
   if (fs.existsSync(schemaPath)) {
     console.log('🗄️ Executing database/schema.sql initialization...');
-    const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+    let schemaSql = fs.readFileSync(schemaPath, 'utf8');
+    // Strip any hardcoded CREATE DATABASE or USE statements to execute on the active connected database
+    schemaSql = schemaSql
+      .replace(/CREATE DATABASE[^\n;]+;/gi, '')
+      .replace(/USE [^\n;]+;/gi, '');
     await connection.query(schemaSql);
     console.log('✅ Schema tables verified/created successfully.');
   }
