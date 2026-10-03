@@ -590,10 +590,15 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
                   )}
 
                   <div style={{ marginTop: "16px", fontSize: "0.78rem", color: "#64748b", lineHeight: "1.5" }}>
-                    <span>Billing & Technology Partner: <strong>W Technology</strong> · </span>
+                    <span>Official Billing Partner: <strong>W Technology</strong> & <strong>Make My School</strong> (</span>
                     <a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer" style={{ color: "#0284c7", textDecoration: "none", fontWeight: 600 }}>
                       wtechnology.in
                     </a>
+                    <span> / </span>
+                    <a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer" style={{ color: "#0284c7", textDecoration: "none", fontWeight: 600 }}>
+                      makemyschool.com
+                    </a>
+                    <span>)</span>
                   </div>
                 </div>
               </div>

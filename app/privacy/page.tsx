@@ -100,10 +100,10 @@ export default function PrivacyPage() {
               In accordance with the Information Technology Act 2000 and rules made thereunder, the contact details of the Grievance Officer are provided below:
             </p>
             <div style={{ background: "#f8faf9", padding: "16px 20px", borderRadius: "8px", marginTop: "12px", border: "1px solid #dbe6e1" }}>
-              <p style={{ margin: "0 0 6px" }}><strong>Company / Operator:</strong> W Technology</p>
-              <p style={{ margin: "0 0 6px" }}><strong>Platform Name:</strong> {portalName}</p>
-              <p style={{ margin: "0 0 6px" }}><strong>Grievance Email:</strong> <a href={`mailto:${contactEmail}`}>{contactEmail}</a></p>
-              <p style={{ margin: "0 0 6px" }}><strong>Company Website:</strong> <a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer">https://wtechnology.in</a></p>
+              <p style={{ margin: "0 0 6px" }}><strong>Company / Operator:</strong> W Technology (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer">wtechnology.in</a>)</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Associated Flagship Product:</strong> Make My School (<a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer">makemyschool.com</a>)</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Platform Name:</strong> {portalName} (mock.wtechnology.in)</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Grievance & Privacy Email:</strong> <a href={`mailto:${contactEmail}`}>{contactEmail}</a></p>
               <p style={{ margin: 0 }}><strong>Response Timeline:</strong> Within 48 business hours</p>
             </div>
           </section>

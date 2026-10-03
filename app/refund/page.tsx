@@ -102,10 +102,10 @@ export default function RefundPage() {
               For all payment-related questions, invoice requests, or billing queries, contact our dedicated nodal desk:
             </p>
             <div style={{ background: "#f8faf9", padding: "16px 20px", borderRadius: "8px", marginTop: "12px", border: "1px solid #dbe6e1" }}>
-              <p style={{ margin: "0 0 6px" }}><strong>Operating Entity:</strong> W Technology</p>
-              <p style={{ margin: "0 0 6px" }}><strong>Platform:</strong> {portalName}</p>
-              <p style={{ margin: "0 0 6px" }}><strong>Email:</strong> <a href={`mailto:${contactEmail}`}>{contactEmail}</a></p>
-              <p style={{ margin: "0 0 6px" }}><strong>Official Website:</strong> <a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer">https://wtechnology.in</a></p>
+              <p style={{ margin: "0 0 6px" }}><strong>Operating Entity:</strong> W Technology (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer">wtechnology.in</a>)</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Associated Product:</strong> Make My School (<a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer">makemyschool.com</a>)</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Mock Test Platform:</strong> {portalName} (mock.wtechnology.in)</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Billing & Refund Desk:</strong> <a href={`mailto:${contactEmail}`}>{contactEmail}</a></p>
               <p style={{ margin: 0 }}><strong>Support Ticket:</strong> <Link href="/contact">Visit Support Center</Link></p>
             </div>
           </section>

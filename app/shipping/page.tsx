@@ -89,8 +89,9 @@ export default function ShippingPolicyPage() {
               For any questions regarding service delivery or fulfillment:
             </p>
             <div style={{ background: "#f8faf9", padding: "16px 20px", borderRadius: "8px", marginTop: "12px", border: "1px solid #dbe6e1" }}>
-              <p style={{ margin: "0 0 6px" }}><strong>Operating Business:</strong> W Technology</p>
-              <p style={{ margin: "0 0 6px" }}><strong>Website:</strong> <a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer">https://wtechnology.in</a></p>
+              <p style={{ margin: "0 0 6px" }}><strong>Operating Business:</strong> W Technology (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer">wtechnology.in</a>)</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Flagship EdTech Brand:</strong> Make My School (<a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer">makemyschool.com</a>)</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Examination Platform:</strong> {portalName} (mock.wtechnology.in)</p>
               <p style={{ margin: "0 0 6px" }}><strong>Email Support:</strong> <a href={`mailto:${contactEmail}`}>{contactEmail}</a></p>
               <p style={{ margin: 0 }}><strong>Help Desk:</strong> <Link href="/contact">Support Center</Link></p>
             </div>

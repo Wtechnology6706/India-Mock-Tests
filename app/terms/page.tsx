@@ -106,11 +106,11 @@ export default function TermsPage() {
             <h2>9. Contact & Company Details</h2>
             <p>For any questions or legal inquiries regarding these Terms:</p>
             <div style={{ background: "#f8faf9", padding: "16px 20px", borderRadius: "8px", marginTop: "12px", border: "1px solid #dbe6e1" }}>
-              <p style={{ margin: "0 0 6px" }}><strong>Operating Entity:</strong> W Technology</p>
-              <p style={{ margin: "0 0 6px" }}><strong>Platform:</strong> {portalName}</p>
-              <p style={{ margin: "0 0 6px" }}><strong>Support Email:</strong> <a href={`mailto:${contactEmail}`}>{contactEmail}</a></p>
-              <p style={{ margin: "0 0 6px" }}><strong>Official Website:</strong> <a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer">https://wtechnology.in</a></p>
-              <p style={{ margin: 0 }}><strong>Support Portal:</strong> <Link href="/contact">Contact Support</Link></p>
+              <p style={{ margin: "0 0 6px" }}><strong>Operating Business:</strong> W Technology (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer">wtechnology.in</a>)</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Associated Flagship Brand:</strong> Make My School (<a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer">makemyschool.com</a>)</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Mock Test Platform:</strong> {portalName} (mock.wtechnology.in)</p>
+              <p style={{ margin: "0 0 6px" }}><strong>Billing & Support Email:</strong> <a href={`mailto:${contactEmail}`}>{contactEmail}</a></p>
+              <p style={{ margin: 0 }}><strong>Helpdesk:</strong> <Link href="/contact">Support Center</Link></p>
             </div>
           </section>
         </div>
