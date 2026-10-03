@@ -122,7 +122,7 @@ export default function Footer() {
         {/* Disclaimer Bar */}
         <div className="footer-disclaimer-bar">
           <p>
-            <strong>Disclaimer:</strong> {portalName} is an independent educational mock testing platform developed and operated by <strong>W Technology</strong>. All examination names, logos, syllabi references, and trademarks (such as BPSC, BSEB, CBSE, CTET, STET) belong to their respective government authorities and examination bodies. Their use does not imply any affiliation, sponsorship, or endorsement.
+            <strong>Disclaimer:</strong> {portalName} is an edtech practice and mock testing portal developed and operated by <strong>W Technology</strong> (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer" style={{ color: "#c4dcd3", textDecoration: "underline" }}>wtechnology.in</a>) in association with <strong>Make My School</strong> (<a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer" style={{ color: "#c4dcd3", textDecoration: "underline" }}>makemyschool.com</a>). All examination names, syllabi references, and trademarks (such as BPSC, BSEB, CBSE, CTET, STET) belong to their respective government authorities.
           </p>
         </div>
 
@@ -132,7 +132,7 @@ export default function Footer() {
             <span>© {new Date().getFullYear()} {portalName} · All Rights Reserved.</span>
           </div>
 
-          {/* Powered by W Technology */}
+          {/* Powered by W Technology & Make My School */}
           <div className="footer-powered-by">
             <span>Powered by </span>
             <a
@@ -142,6 +142,15 @@ export default function Footer() {
               className="powered-by-link"
             >
               W Technology
+            </a>
+            <span style={{ margin: "0 4px" }}>&</span>
+            <a
+              href="https://makemyschool.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="powered-by-link"
+            >
+              Make My School
             </a>
           </div>
 

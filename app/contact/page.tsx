@@ -49,8 +49,10 @@ export default function ContactPage() {
             <div className="contact-channel-item">
               <span className="channel-icon">🏢</span>
               <div>
-                <strong>Operating Entity</strong>
-                <span>W Technology (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral)", fontWeight: 600 }}>wtechnology.in</a>)</span>
+                <strong>Operating Enterprise & Network</strong>
+                <span>
+                  W Technology (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral)", fontWeight: 600 }}>wtechnology.in</a>) & Make My School (<a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral)", fontWeight: 600 }}>makemyschool.com</a>)
+                </span>
               </div>
             </div>
 
