@@ -3,17 +3,24 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// Parse .env if present
+// Parse .env / .env.production / .env.local files
 function loadEnv() {
-  const envPath = path.resolve(process.cwd(), '.env');
-  if (fs.existsSync(envPath)) {
-    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const [key, ...vals] = trimmed.split('=');
-      if (key && process.env[key.trim()] === undefined) {
-        process.env[key.trim()] = vals.join('=').trim();
+  const envFiles = ['.env', '.env.local', '.env.production'];
+  for (const file of envFiles) {
+    const envPath = path.resolve(process.cwd(), file);
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      const lines = content.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const [key, ...vals] = trimmed.split('=');
+        if (key && vals.length > 0) {
+          const val = vals.join('=').trim().replace(/^["']|["']$/g, '');
+          if (process.env[key.trim()] === undefined) {
+            process.env[key.trim()] = val;
+          }
+        }
       }
     }
   }
@@ -41,7 +48,7 @@ async function main() {
     port: Number(process.env.DB_PORT || 3306),
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'mock_test_platform',
+    database: process.env.DB_NAME || 'mocktest_db',
   });
 
   try {

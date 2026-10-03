@@ -21,6 +21,28 @@
   margin: 0 auto;
 }
 
+.public-logo-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.public-nav-logo-img {
+  height: 50px;
+  max-height: 56px;
+  max-width: 260px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.public-logo-link:hover .public-nav-logo-img {
+  transform: scale(1.02);
+}
+
 .nav-links-mega {
   display: flex;
   align-items: center;
@@ -212,6 +234,15 @@
   color: #7d8e88;
   cursor: pointer;
   transition: all 0.16s ease;
+  position: relative;
+}
+
+.nav-search-btn .search-icon {
+  font-size: 13px;
+  line-height: 1;
+  display: inline-block;
+  position: static;
+  transform: none;
 }
 
 .nav-search-btn:hover {

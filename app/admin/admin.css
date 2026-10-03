@@ -1683,7 +1683,7 @@
   width: 100%;
 }
 
-.search-icon {
+.search-input-wrap .search-icon {
   position: absolute;
   left: 10px;
   font-size: 13px;
@@ -3283,7 +3283,7 @@
   align-items: center;
 }
 
-.search-icon {
+.admin-search-wrapper .search-icon {
   position: absolute;
   left: 12px;
   font-size: 13px;

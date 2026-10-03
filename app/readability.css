@@ -589,7 +589,7 @@
   box-shadow: 0 0 0 2px rgba(23, 40, 36, 0.1);
 }
 
-.search-icon {
+.workspace-search-wrap .search-icon {
   position: absolute;
   left: 11px;
   top: 50%;
@@ -599,7 +599,7 @@
   pointer-events: none;
 }
 
-.search-clear-btn {
+.workspace-search-wrap .search-clear-btn {
   position: absolute;
   right: 11px;
   top: 50%;
