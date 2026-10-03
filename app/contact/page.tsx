@@ -6,8 +6,8 @@ import MegaMenu from "../components/MegaMenu";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
-  const [portalName, setPortalName] = useState("Northstar");
-  const [contactEmail, setContactEmail] = useState("support@northstar.edu");
+  const [portalName, setPortalName] = useState("India Mock Tests");
+  const [contactEmail, setContactEmail] = useState("support@indiamocktests.com");
   const [supportPhone, setSupportPhone] = useState("+91 98765 43210");
 
   useEffect(() => {

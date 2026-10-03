@@ -21,7 +21,7 @@ function loadEnv() {
 
 loadEnv();
 
-const email = (process.argv[2] || 'admin@northstar.edu').trim().toLowerCase();
+const email = (process.argv[2] || 'admin@indiamocktests.com').trim().toLowerCase();
 const password = process.argv[3] || 'Admin@123456';
 const displayName = process.argv[4] || 'System Administrator';
 

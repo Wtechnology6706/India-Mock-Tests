@@ -56,7 +56,7 @@ export default function TestsDirectoryPage() {
         </div>
       </section>
       <footer className="directory-footer">
-        <Link href="/">northstar<span>.</span></Link>
+        <Link href="/">India Mock Tests<span>.</span></Link>
         <span>Practice with purpose. Perform with confidence.</span>
       </footer>
     </main>

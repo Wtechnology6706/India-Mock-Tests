@@ -17,8 +17,8 @@ export default async function TestStartPage({ params }: { params: Promise<{ slug
     <main className="start-page">
       <nav className="detail-nav">
         <Link className="logo" href="/">
-          <span className="logo-mark">N</span>
-          <span>northstar<span className="logo-dot">.</span></span>
+          <span className="logo-mark">I</span>
+          <span>India Mock Tests<span className="logo-dot">.</span></span>
         </Link>
         <Link className="back-link" href={`/exams/${test.examSlug}`}>
           ← Back to {test.examTitle}

@@ -3,8 +3,8 @@ import { getUserForToken } from "../../lib/auth-store";
 import CheckoutClient from "./CheckoutClient";
 
 export const metadata = {
-  title: "Checkout & Payment Gateway | Northstar VIP",
-  description: "Secure simulated payment gateway for Northstar mock test passes.",
+  title: "Checkout & Payment Gateway | India Mock Tests VIP Pass",
+  description: "Secure payment gateway for India Mock Tests preparation passes.",
 };
 
 export default async function CheckoutPage() {

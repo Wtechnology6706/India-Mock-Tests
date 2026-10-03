@@ -64,8 +64,8 @@ export default function AdminSidebar({
         {/* Brand Header */}
         <div className="sidebar-brand-header">
           <Link className="logo" href="/" onClick={onCloseMobile}>
-            <span className="logo-mark">N</span>
-            <span>northstar<span className="logo-dot">.</span></span>
+            <span className="logo-mark">I</span>
+            <span>India Mock Tests<span className="logo-dot">.</span></span>
           </Link>
           <span className="admin-badge-tag">ADMIN</span>
           <button type="button" className="sidebar-close-btn" onClick={onCloseMobile}>

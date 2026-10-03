@@ -235,8 +235,8 @@ export default function AttemptClient({
       <main className="attempt-page premium-locked-layout">
         <nav className="cbt-topbar">
           <Link className="cbt-brand" href="/">
-            <span className="logo-mark">N</span>
-            <span className="cbt-brand-text">northstar<span>.</span></span>
+            <span className="logo-mark">I</span>
+            <span className="cbt-brand-text">India Mock Tests<span>.</span></span>
           </Link>
           <div className="cbt-exam-heading">
             <strong>{title}</strong>
@@ -254,7 +254,7 @@ export default function AttemptClient({
             <h2>Unlock Full Mock Test & In-Depth Analytics</h2>
             <p>
               {premiumLock.message ||
-                "This mock test is part of our Northstar Premium Test Pass. Subscribe to get unlimited attempts, detailed step-by-step solutions, national percentile ranking, and speed analysis."}
+                "This mock test is part of our India Mock Tests VIP Test Pass. Subscribe to get unlimited attempts, detailed step-by-step solutions, national percentile ranking, and speed analysis."}
             </p>
 
             <div className="premium-features-list">
@@ -283,8 +283,8 @@ export default function AttemptClient({
       <main className="attempt-page">
         <nav className="cbt-topbar">
           <span className="cbt-brand">
-            <span className="logo-mark">N</span>
-            <span className="cbt-brand-text">northstar<span>.</span></span>
+            <span className="logo-mark">I</span>
+            <span className="cbt-brand-text">India Mock Tests<span>.</span></span>
           </span>
           <span className="attempt-status">Attempt submitted</span>
         </nav>
@@ -326,8 +326,8 @@ export default function AttemptClient({
       <header className="cbt-topbar">
         <div className="cbt-brand-area">
           <Link className="cbt-brand" href="/" title="Back to Home">
-            <span className="logo-mark">N</span>
-            <span className="cbt-brand-text">northstar<span>.</span></span>
+            <span className="logo-mark">I</span>
+            <span className="cbt-brand-text">India Mock Tests<span>.</span></span>
           </Link>
           <div className="cbt-exam-heading">
             <strong>{title}</strong>

@@ -88,14 +88,14 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     setCouponError("");
     const code = couponCode.trim().toUpperCase();
     if (!code) return;
-    if (code === "NORTHSTAR100" || code === "FIRST100" || code === "VIP100") {
+    if (code === "INDIAMOCK100" || code === "FIRST100" || code === "VIP100") {
       setCouponApplied(true);
       setCouponDiscount(100);
     } else if (code === "SAVEMORE" || code === "BPSC50") {
       setCouponApplied(true);
       setCouponDiscount(50);
     } else {
-      setCouponError("Invalid coupon code. Try 'NORTHSTAR100' for ₹100 off.");
+      setCouponError("Invalid coupon code. Try 'INDIAMOCK100' for ₹100 off.");
     }
   }
 
@@ -146,7 +146,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
         key: orderData.keyId,
         amount: orderData.amount,
         currency: orderData.currency || "INR",
-        name: "Northstar VIP",
+        name: "India Mock Tests VIP",
         description: `${activePlan.name} (${activePlan.durationLabel})`,
         image: "https://cdn.razorpay.com/static/assets/logo/payment_gateway.png",
         order_id: orderData.orderId,
@@ -212,9 +212,9 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
       {/* Top Header */}
       <header className="checkout-topbar">
         <Link href="/" className="checkout-logo">
-          <span className="logo-mark">N</span>
+          <span className="logo-mark">I</span>
           <span>
-            northstar<span className="logo-dot">.</span>
+            India Mock Tests<span className="logo-dot">.</span>
           </span>
         </Link>
         <div className="checkout-security-tag">
@@ -343,7 +343,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
                 <input
                   id="coupon"
                   type="text"
-                  placeholder="e.g. NORTHSTAR100"
+                  placeholder="e.g. INDIAMOCK100"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
                   disabled={couponApplied}

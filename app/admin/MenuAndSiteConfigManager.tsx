@@ -204,10 +204,10 @@ export default function MenuAndSiteConfigManager() {
                 type="text"
                 value={config.portalName}
                 onChange={(e) => setConfig({ ...config, portalName: e.target.value })}
-                placeholder="e.g. Northstar / eSpark Exam / MockTest Pro"
+                placeholder="e.g. India Mock Tests"
                 required
               />
-              <small>Displays on top header logo, favicon title, and emails.</small>
+              <small>Displays on top header logo, favicon title, metadata, and emails.</small>
             </div>
 
             <div className="config-field">
@@ -216,8 +216,71 @@ export default function MenuAndSiteConfigManager() {
                 type="text"
                 value={config.portalTagline}
                 onChange={(e) => setConfig({ ...config, portalTagline: e.target.value })}
-                placeholder="e.g. India's Focused Mock-Test Platform"
+                placeholder="e.g. India's Premier Examination & Mock Test Practice Platform"
               />
+            </div>
+
+            {/* Logo Configuration & Live Preview */}
+            <div className="config-field" style={{ gridColumn: "1 / -1" }}>
+              <div className="logo-config-box" style={{ background: "#f8faf9", border: "1.5px solid #d4dfda", borderRadius: "10px", padding: "16px 20px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "20px", alignItems: "center" }}>
+                  <div>
+                    <label style={{ font: "700 13px 'Space Grotesk', sans-serif", color: "#172824", display: "block", marginBottom: "4px" }}>
+                      🖼️ Custom Header Logo Image URL
+                    </label>
+                    <p style={{ fontSize: "12px", color: "#637770", margin: "0 0 10px", lineHeight: "1.4" }}>
+                      Provide a direct image URL for your brand logo (PNG, SVG, or JPG with transparent/light background). If left blank, the portal will automatically display the sleek dynamic text logo.
+                    </p>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <input
+                        type="url"
+                        value={config.logoImageUrl || ""}
+                        onChange={(e) => setConfig({ ...config, logoImageUrl: e.target.value })}
+                        placeholder="https://.../logo.png or /images/logo.svg"
+                        style={{ flex: 1, padding: "8px 12px", borderRadius: "6px", border: "1px solid #c7d8d0", fontSize: "12.5px" }}
+                      />
+                      {config.logoImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setConfig({ ...config, logoImageUrl: "" })}
+                          style={{ background: "#faeae6", border: "1px solid #f2c7bd", color: "#a83f2a", borderRadius: "6px", padding: "8px 12px", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}
+                        >
+                          ✕ Remove Logo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Real-time Live Logo Preview */}
+                  <div style={{ background: "#ffffff", border: "1px solid #d4dfda", borderRadius: "8px", padding: "12px 16px", textAlign: "center" }}>
+                    <span style={{ font: "700 9.5px 'Space Grotesk', sans-serif", color: "#7a8e87", textTransform: "uppercase", letterSpacing: "0.8px", display: "block", marginBottom: "10px" }}>
+                      LIVE HEADER LOGO PREVIEW
+                    </span>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "44px", padding: "4px" }}>
+                      {config.logoImageUrl ? (
+                        <img
+                          src={config.logoImageUrl}
+                          alt={config.portalName}
+                          style={{ maxHeight: "38px", maxWidth: "180px", objectFit: "contain" }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", font: "700 17px 'Space Grotesk', sans-serif", color: "#172824" }}>
+                          <span style={{ display: "grid", placeItems: "center", width: "30px", height: "30px", borderRadius: "6px", background: "#e8623b", color: "#ffffff", fontWeight: "800", fontSize: "15px" }}>
+                            {config.portalName ? config.portalName.slice(0, 1).toUpperCase() : "I"}
+                          </span>
+                          <span>
+                            {config.portalName ? config.portalName : "India Mock Tests"}
+                            <span style={{ color: "#e8623b" }}>.</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="config-field">
@@ -226,7 +289,7 @@ export default function MenuAndSiteConfigManager() {
                 type="email"
                 value={config.contactEmail}
                 onChange={(e) => setConfig({ ...config, contactEmail: e.target.value })}
-                placeholder="support@yourdomain.com"
+                placeholder="support@indiamocktests.com"
               />
             </div>
 
