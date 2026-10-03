@@ -27,6 +27,6 @@ jobs:
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             export PATH=$PATH:/usr/local/bin:~/.nvm/versions/node/$(nvm current)/bin
 
-            cd /var/www/mocktest
+            cd /var/www/mocktest/India-Mock-Tests
             chmod +x scripts/deploy.sh
             ./scripts/deploy.sh
