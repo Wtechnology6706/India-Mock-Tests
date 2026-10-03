@@ -18,6 +18,8 @@ export type SubMenuLayer2 = {
 export type SiteConfiguration = {
   portalName: string;
   portalTagline: string;
+  logoImageUrl?: string;
+  logoText?: string;
   contactEmail: string;
   supportPhone: string;
   adsenseClientId: string;
@@ -126,10 +128,12 @@ export const defaultTutorialMenu: SubMenuLayer2[] = [
 ];
 
 export const defaultSiteConfig: SiteConfiguration = {
-  portalName: "Northstar",
+  portalName: "India Mock Tests",
   portalTagline: "India's Premier Examination & Mock Test Practice Platform",
-  contactEmail: "support@northstar.edu.in",
-  supportPhone: "+91 (0612) 234-5678",
+  logoImageUrl: "",
+  logoText: "India Mock Tests",
+  contactEmail: "support@indiamocktests.com",
+  supportPhone: "+91 98765 43210",
   adsenseClientId: "",
   mockTestMenu: defaultMockTestMenu,
   tutorialMenu: defaultTutorialMenu,

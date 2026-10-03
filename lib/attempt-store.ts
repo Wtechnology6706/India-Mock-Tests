@@ -149,7 +149,7 @@ export async function getTestAttemptDefinition(testSlug: string): Promise<TestDe
 
     if (testRows[0]) {
       const test = testRows[0];
-      const examName = test.exam_name || "Northstar Exam Series";
+      const examName = test.exam_name || "India Mock Tests Series";
       const durationSeconds = (test.duration_minutes || 150) * 60;
       const isBpsc = (test.exam_slug || "").includes("bpsc") || examName.toLowerCase().includes("bpsc");
 

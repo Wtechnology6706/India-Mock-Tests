@@ -7,10 +7,10 @@ export default function AboutPage() {
       <MegaMenu />
 
       <div className="static-page-container">
-        <span className="kicker">ABOUT NORTHSTAR MOCK PLATFORM</span>
+        <span className="kicker">ABOUT INDIA MOCK TESTS PLATFORM</span>
         <h1>Empowering Every Aspirant<br /><em>with Trustworthy Practice.</em></h1>
         <p className="static-lede">
-          Northstar was built to eliminate guesswork from competitive exam preparation. We combine real syllabus alignment, precision scoring analytics, and high-yield question curation.
+          India Mock Tests was built to eliminate guesswork from competitive exam preparation. We combine real syllabus alignment, precision scoring analytics, and high-yield question curation.
         </p>
 
         <div className="about-values-grid">
@@ -46,8 +46,8 @@ export default function AboutPage() {
 
       <footer className="footer">
         <Link className="logo" href="/">
-          <span className="logo-mark">N</span>
-          <span>northstar<span className="logo-dot">.</span></span>
+          <span className="logo-mark">I</span>
+          <span>India Mock Tests<span className="logo-dot">.</span></span>
         </Link>
         <p>Find your exam. Find your focus. Find your way forward.</p>
         <div className="footer-links">
@@ -57,7 +57,7 @@ export default function AboutPage() {
           <Link href="/about">About</Link>
           <Link href="/contact">Support</Link>
         </div>
-        <small>© 2026 Northstar Learning Technologies · Privacy · Terms</small>
+        <small>© 2026 India Mock Tests · Privacy · Terms</small>
       </footer>
     </main>
   );

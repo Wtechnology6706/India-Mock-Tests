@@ -117,9 +117,9 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
       {/* Persistent Left Sidebar */}
       <aside className="dashboard-sidebar">
         <Link className="logo" href="/">
-          <span className="logo-mark">N</span>
+          <span className="logo-mark">I</span>
           <span>
-            northstar<span className="logo-dot">.</span>
+            India Mock Tests<span className="logo-dot">.</span>
           </span>
         </Link>
 
@@ -214,7 +214,7 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
         {/* Top bar with Search & User Menu */}
         <header className="dashboard-topbar">
           <div className="dashboard-mobile-logo">
-            <span className="logo-mark">N</span>northstar
+            <span className="logo-mark">I</span>India Mock Tests
           </div>
 
           <div className="dashboard-search-container">
@@ -965,8 +965,8 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e2e8f0", paddingBottom: "14px" }}>
                     <div>
-                      <span className="logo-mark" style={{ display: "inline-block", width: "24px", height: "24px", background: "#b94a2b", color: "#fff", textAlign: "center", borderRadius: "4px", fontWeight: "bold" }}>N</span>
-                      <strong style={{ marginLeft: "8px", fontFamily: "Space Grotesk" }}>NORTHSTAR LEARNING</strong>
+                      <span className="logo-mark" style={{ display: "inline-block", width: "24px", height: "24px", background: "#b94a2b", color: "#fff", textAlign: "center", borderRadius: "4px", fontWeight: "bold" }}>I</span>
+                      <strong style={{ marginLeft: "8px", fontFamily: "Space Grotesk" }}>INDIA MOCK TESTS</strong>
                     </div>
                     <button
                       type="button"

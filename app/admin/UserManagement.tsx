@@ -361,7 +361,7 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
                 <input
                   type="email"
                   required
-                  placeholder="e.g. editor@northstar.edu"
+                  placeholder="e.g. editor@indiamocktests.com"
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
                   className="admin-input"

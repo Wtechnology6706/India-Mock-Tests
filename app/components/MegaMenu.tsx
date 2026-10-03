@@ -88,7 +88,8 @@ export default function MegaMenu() {
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ id: string; email: string; displayName: string; role: string } | null>(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [portalName, setPortalName] = useState("Northstar");
+  const [portalName, setPortalName] = useState("India Mock Tests");
+  const [logoImageUrl, setLogoImageUrl] = useState("");
   const [mockMenu, setMockMenu] = useState(mockTestMegaMenu);
   const [tutMenu, setTutMenu] = useState(tutorialMegaMenu);
   const [mobileExpandedCat, setMobileExpandedCat] = useState<string | null>(null);
@@ -106,12 +107,13 @@ export default function MegaMenu() {
       })
       .catch(() => {});
 
-    // Fetch site config (portal name and dynamic menus)
+    // Fetch site config (portal name, logo, and dynamic menus)
     fetch("/api/config")
       .then((res) => res.json())
       .then((data) => {
         if (data?.config) {
           if (data.config.portalName) setPortalName(data.config.portalName);
+          if (data.config.logoImageUrl) setLogoImageUrl(data.config.logoImageUrl);
           if (data.config.mockTestMenu?.length) setMockMenu(data.config.mockTestMenu);
           if (data.config.tutorialMenu?.length) setTutMenu(data.config.tutorialMenu);
         }
@@ -161,11 +163,22 @@ export default function MegaMenu() {
       <header className="public-nav-wrapper">
         <nav className="public-nav">
           <Link className="logo" href="/">
-            <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>
-            <span>
-              {portalName.toLowerCase()}
-              <span className="logo-dot">.</span>
-            </span>
+            {logoImageUrl ? (
+              <img
+                src={logoImageUrl}
+                alt={portalName}
+                style={{ maxHeight: "36px", maxWidth: "170px", objectFit: "contain", display: "block" }}
+                onError={() => setLogoImageUrl("")}
+              />
+            ) : (
+              <>
+                <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>
+                <span>
+                  {portalName}
+                  <span className="logo-dot">.</span>
+                </span>
+              </>
+            )}
           </Link>
 
           {/* Desktop Mega Menu Navigation */}
@@ -614,7 +627,7 @@ export default function MegaMenu() {
             <div className="mobile-drawer-footer">
               <div className="mobile-footer-nav-grid">
                 <Link href="/about" onClick={() => setMobileOpen(false)}>
-                  About Northstar
+                  About {portalName}
                 </Link>
                 <Link href="/contact" onClick={() => setMobileOpen(false)}>
                   Help & Support

@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "northstar-mocktest",
+      name: "india-mock-tests",
       script: "npm",
       args: "start",
       instances: "max",

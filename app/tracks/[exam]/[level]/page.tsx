@@ -133,8 +133,8 @@ export default async function TrackPage({ params }: TrackPageProps) {
 
       <footer className="footer">
         <Link className="logo" href="/">
-          <span className="logo-mark">N</span>
-          <span>northstar<span className="logo-dot">.</span></span>
+          <span className="logo-mark">I</span>
+          <span>India Mock Tests<span className="logo-dot">.</span></span>
         </Link>
         <p>Find your exam. Find your focus. Find your way forward.</p>
         <div className="footer-links">
@@ -144,7 +144,7 @@ export default async function TrackPage({ params }: TrackPageProps) {
           <Link href="/about">About</Link>
           <Link href="/contact">Support</Link>
         </div>
-        <small>© 2026 Northstar Learning Technologies · Privacy · Terms</small>
+        <small>© 2026 India Mock Tests · Privacy · Terms</small>
       </footer>
     </main>
   );

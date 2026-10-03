@@ -6,8 +6,8 @@ import "./readability.css";
 import "./megamenu.css";
 
 export const metadata: Metadata = {
-  title: "Northstar | Mock Test Platform",
-  description: "A focused workspace for measurable exam preparation.",
+  title: "India Mock Tests | Premier Exam Preparation & Test Series",
+  description: "India's premier focused workspace for syllabus-aligned mock tests and measurable competitive exam preparation.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

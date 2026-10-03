@@ -204,7 +204,7 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
       <footer className="detail-footer modern-footer">
         <div className="footer-brand">
           <Link href="/">
-            northstar<span>.</span>
+            India Mock Tests<span>.</span>
           </Link>
           <p>Practice with purpose. Perform with confidence.</p>
         </div>

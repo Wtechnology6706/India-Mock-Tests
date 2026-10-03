@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Starting deployment of Northstar MockTest Platform..."
+echo "🚀 Starting deployment of India Mock Tests Platform..."
 
 # Navigate to project directory
 APP_DIR="/var/www/mocktest"
@@ -27,7 +27,7 @@ npm run build
 
 # Reload PM2 zero-downtime cluster
 echo "🔄 Reloading PM2 process..."
-if pm2 list | grep -q "northstar-mocktest"; then
+if pm2 list | grep -q "india-mock-tests"; then
   pm2 reload ecosystem.config.js --update-env
 else
   pm2 start ecosystem.config.js

@@ -12,7 +12,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [loading, setLoading] = useState(false);
 
   function fillAdminDemo() {
-    setEmail("admin@northstar.edu");
+    setEmail("admin@indiamocktests.com");
     setPassword("Admin@123456");
     setError("");
   }
@@ -44,9 +44,9 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     <main className="auth-page">
       <div className="auth-art">
         <Link className="logo" href="/">
-          <span className="logo-mark">N</span>
+          <span className="logo-mark">I</span>
           <span>
-            northstar<span className="logo-dot">.</span>
+            India Mock Tests<span className="logo-dot">.</span>
           </span>
         </Link>
         <div className="auth-quote">
@@ -63,10 +63,10 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
       </div>
       <section className="auth-panel">
         <Link className="auth-back" href="/">
-          ← Back to northstar
+          ← Back to India Mock Tests
         </Link>
         <div className="auth-heading">
-          <span className="kicker">{isRegister ? "WELCOME TO NORTHSTAR" : "WELCOME BACK"}</span>
+          <span className="kicker">{isRegister ? "WELCOME TO INDIA MOCK TESTS" : "WELCOME BACK"}</span>
           <h1>{isRegister ? "Start with a clearer plan." : "Pick up where you left off."}</h1>
           <p>
             {isRegister
@@ -138,7 +138,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
           </button>
         </form>
         <p className="auth-switch">
-          {isRegister ? "Already have an account?" : "New to northstar?"}{" "}
+          {isRegister ? "Already have an account?" : "New to India Mock Tests?"}{" "}
           <Link href={isRegister ? "/login" : "/register"}>
             {isRegister ? "Log in" : "Create an account"}
           </Link>

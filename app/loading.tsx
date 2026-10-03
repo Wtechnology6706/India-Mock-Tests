@@ -26,7 +26,7 @@ export default function Loading() {
           Preparing your examination workspace...
         </strong>
         <small style={{ color: "#94a3b8", fontSize: "0.82rem" }}>
-          Northstar Practice Engine
+          India Mock Tests Engine
         </small>
       </div>
       <style>{`

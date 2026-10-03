@@ -1,4 +1,4 @@
-# Northstar Mock Test Platform
+# India Mock Tests Platform
 
 ## Delivery plan
 

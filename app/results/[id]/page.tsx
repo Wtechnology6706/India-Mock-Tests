@@ -20,9 +20,9 @@ export default async function ResultPage({
     <main className="results-page">
       <nav className="detail-nav">
         <Link className="logo" href="/">
-          <span className="logo-mark">N</span>
+          <span className="logo-mark">I</span>
           <span>
-            northstar<span className="logo-dot">.</span>
+            India Mock Tests<span className="logo-dot">.</span>
           </span>
         </Link>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>

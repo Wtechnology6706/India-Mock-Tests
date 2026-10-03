@@ -5,7 +5,7 @@ import Link from "next/link";
 import MegaMenu from "../components/MegaMenu";
 
 export default function TermsPage() {
-  const [portalName, setPortalName] = useState("Northstar");
+  const [portalName, setPortalName] = useState("India Mock Tests");
 
   useEffect(() => {
     fetch("/api/config")
