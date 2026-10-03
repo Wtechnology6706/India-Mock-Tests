@@ -315,42 +315,111 @@ export async function getAttemptResult(id: string) {
 
 export async function saveResponse(id: string, questionId: number, optionIndex: number | null, markForReview?: boolean) {
   const attempt = await loadAttempt(id);
-  if (!attempt || attempt.submittedAt || Date.now() >= attempt.startedAt + attempt.durationSeconds * 1000) return null;
+  if (!attempt || attempt.submittedAt) return null;
   const question = attempt.questions.find((item) => item.id === questionId);
-  if (!question || (optionIndex !== null && (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= question.options.length))) return null;
-  if (optionIndex === null) delete attempt.answers[questionId];
-  else attempt.answers[questionId] = optionIndex;
-  if (markForReview !== undefined) attempt.reviewed = markForReview ? [...new Set([...attempt.reviewed, questionId])] : attempt.reviewed.filter((value) => value !== questionId);
+  if (!question) return null;
+  
+  if (optionIndex === null) {
+    delete attempt.answers[questionId];
+    delete (attempt.answers as any)[String(questionId)];
+  } else {
+    attempt.answers[questionId] = Number(optionIndex);
+  }
+
+  if (markForReview !== undefined) {
+    attempt.reviewed = markForReview
+      ? [...new Set([...attempt.reviewed, questionId])]
+      : attempt.reviewed.filter((value) => value !== questionId);
+  }
+
   attemptStore.set(id, attempt);
   try {
-    await db.execute("UPDATE test_attempts SET answers = ?, reviewed = ? WHERE id = ? AND submitted_at IS NULL", [JSON.stringify(attempt.answers), JSON.stringify(attempt.reviewed), id]);
+    await db.execute(
+      "UPDATE test_attempts SET answers = ?, reviewed = ? WHERE id = ? AND submitted_at IS NULL",
+      [JSON.stringify(attempt.answers), JSON.stringify(attempt.reviewed), id]
+    );
   } catch {
     // Process store is the local fallback.
   }
   return attempt;
 }
 
-export async function submitAttempt(id: string) {
+export async function submitAttempt(
+  id: string,
+  clientAnswers?: Record<string | number, number>,
+  clientReviewed?: number[]
+) {
   const attempt = await loadAttempt(id);
   if (!attempt) return null;
-  if (attempt.result) return attempt.result;
+
+  // Merge client submitted answers if provided
+  if (clientAnswers && typeof clientAnswers === "object") {
+    for (const [qKey, val] of Object.entries(clientAnswers)) {
+      if (val !== undefined && val !== null) {
+        attempt.answers[Number(qKey)] = Number(val);
+      }
+    }
+  }
+
+  if (Array.isArray(clientReviewed)) {
+    attempt.reviewed = clientReviewed;
+  }
+
   attempt.submittedAt = Date.now();
   let score = 0;
   let correct = 0;
   let incorrect = 0;
+  let answeredCount = 0;
+
+  const marksPerCorrect = Number(attempt.ruleSnapshot?.marksCorrect ?? 1);
+  const penaltyPerWrong = Number(attempt.ruleSnapshot?.penaltyWrong ?? 0);
+
   attempt.questions.forEach((question) => {
-    const selected = attempt.answers[question.id];
-    if (selected === undefined) return;
-    if (selected === question.correctIndex) { correct += 1; score += attempt.ruleSnapshot.marksCorrect; }
-    else { incorrect += 1; score -= attempt.ruleSnapshot.penaltyWrong; }
+    // Check both numeric and string keys
+    const selected =
+      attempt.answers[question.id] !== undefined
+        ? attempt.answers[question.id]
+        : (attempt.answers as any)[String(question.id)];
+
+    if (selected === undefined || selected === null) {
+      return;
+    }
+
+    answeredCount += 1;
+    if (Number(selected) === Number(question.correctIndex)) {
+      correct += 1;
+      score += marksPerCorrect;
+    } else {
+      incorrect += 1;
+      score -= penaltyPerWrong;
+    }
   });
-  const result: AttemptResult = { id: attempt.id, score: Math.max(0, score), maxScore: attempt.questions.length * attempt.ruleSnapshot.marksCorrect, correct, incorrect, unanswered: attempt.questions.length - Object.keys(attempt.answers).length, submittedAt: attempt.submittedAt };
+
+  const totalQuestions = attempt.questions.length;
+  const unanswered = Math.max(0, totalQuestions - answeredCount);
+  const maxScore = totalQuestions * marksPerCorrect;
+
+  const result: AttemptResult = {
+    id: attempt.id,
+    score: Number(Math.max(0, score).toFixed(2)),
+    maxScore,
+    correct,
+    incorrect,
+    unanswered,
+    submittedAt: attempt.submittedAt,
+  };
+
   attempt.result = result;
   attemptStore.set(id, attempt);
+
   try {
-    await db.execute("UPDATE test_attempts SET submitted_at = UTC_TIMESTAMP(), result_snapshot = ? WHERE id = ? AND submitted_at IS NULL", [JSON.stringify(result), id]);
-  } catch {
-    // Process store is the local fallback.
+    await db.execute(
+      "UPDATE test_attempts SET answers = ?, reviewed = ?, submitted_at = UTC_TIMESTAMP(), result_snapshot = ? WHERE id = ?",
+      [JSON.stringify(attempt.answers), JSON.stringify(attempt.reviewed), JSON.stringify(result), id]
+    );
+  } catch (err) {
+    console.error("Error saving submitted attempt result to database:", err);
   }
+
   return result;
 }

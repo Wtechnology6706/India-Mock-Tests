@@ -1,0 +1,15 @@
+import { cookies } from "next/headers";
+import { getUserForToken } from "../../lib/auth-store";
+import CheckoutClient from "./CheckoutClient";
+
+export const metadata = {
+  title: "Checkout & Payment Gateway | Northstar VIP",
+  description: "Secure simulated payment gateway for Northstar mock test passes.",
+};
+
+export default async function CheckoutPage() {
+  const cookieStore = await cookies();
+  const user = await getUserForToken(cookieStore.get("northstar_session")?.value);
+
+  return <CheckoutClient user={user} />;
+}
