@@ -23,11 +23,33 @@ jobs:
           port: 22
           script_stop: true
           script: |
-            export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+            # 1. Source user environment for non-interactive SSH
+            [ -f ~/.profile ] && . ~/.profile || true
+            [ -f ~/.bashrc ] && . ~/.bashrc || true
             if [ -d "$HOME/.nvm" ]; then
               export NVM_DIR="$HOME/.nvm"
-              [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+              [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" || true
             fi
-            cd /var/www/mocktest/India-Mock-Tests
+            if [ -d "/root/.nvm" ]; then
+              export NVM_DIR="/root/.nvm"
+              [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" || true
+            fi
+
+            # 2. Add all candidate Node & NPM binary paths
+            for dir in /root/.nvm/versions/node/*/bin $HOME/.nvm/versions/node/*/bin /usr/local/bin /usr/bin /bin /snap/bin; do
+              if [ -d "$dir" ] && [ -f "$dir/npm" ]; then
+                export PATH="$dir:$PATH"
+              fi
+            done
+            export PATH="$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin"
+
+            # 3. Pull latest code before running deploy script
+            APP_DIR="/var/www/mocktest/India-Mock-Tests"
+            cd "$APP_DIR" || exit 1
+            git config --global --add safe.directory "$APP_DIR" || true
+            git fetch origin main
+            git reset --hard origin/main
+
+            # 4. Run the fresh deployment script
             chmod +x scripts/deploy.sh
-            ./scripts/deploy.sh
+            bash scripts/deploy.sh
