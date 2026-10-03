@@ -162,12 +162,13 @@ export default function MegaMenu() {
     <>
       <header className="public-nav-wrapper">
         <nav className="public-nav">
-          <Link className="logo" href="/">
+          <Link className="logo public-logo-link" href="/">
             {logoImageUrl ? (
               <img
                 src={logoImageUrl}
                 alt={portalName}
-                style={{ maxHeight: "36px", maxWidth: "170px", objectFit: "contain", display: "block" }}
+                className="public-nav-logo-img"
+                style={{ height: "50px", maxHeight: "56px", maxWidth: "260px", width: "auto", objectFit: "contain", display: "block" }}
                 onError={() => setLogoImageUrl("")}
               />
             ) : (
