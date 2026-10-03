@@ -97,6 +97,17 @@ async function migrate() {
     }
   }
 
+  // Ensure test_type is VARCHAR(50) to prevent ENUM truncation
+  try {
+    await connection.query(`
+      ALTER TABLE tests 
+      MODIFY COLUMN test_type VARCHAR(50) NOT NULL DEFAULT 'full'
+    `);
+    console.log('  + Modified test_type column to VARCHAR(50) in tests table.');
+  } catch (err) {
+    // Ignore
+  }
+
   // Ensure site_configurations table exists
   try {
     await connection.query(`

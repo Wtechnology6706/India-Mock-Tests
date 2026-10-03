@@ -51,6 +51,18 @@ if (process.env.NODE_ENV !== "production") {
   globalForAdminContent.tests = localTests;
 }
 
+function normalizeTestType(val?: string): string {
+  if (!val) return "full";
+  const lower = val.toLowerCase().trim();
+  if (lower.includes("subject")) return "subject";
+  if (lower.includes("section")) return "section";
+  if (lower.includes("topic") || lower.includes("chapter")) return "topic";
+  if (lower.includes("pyq")) return "pyq";
+  if (lower.includes("live")) return "live";
+  if (lower.includes("mini")) return "mini";
+  return "full";
+}
+
 export async function listQuestions(filters?: { exam?: string; subject?: string; status?: string; query?: string }) {
   try {
     let sql = `SELECT q.id, e.name AS exam, s.name AS subject, t.name AS topic, q.stem, q.explanation, q.difficulty, q.status
@@ -956,7 +968,7 @@ export async function createMockTest(input: MockTestInput): Promise<MockTest> {
           input.trackSlug || "primary-1-5",
           input.name.trim(),
           generatedSlug,
-          input.testType || "full",
+          normalizeTestType(input.testType),
           cleanQuestions,
           cleanDuration,
           cleanMarks,
@@ -1070,7 +1082,7 @@ export async function updateMockTest(testId: string, input: Partial<MockTestInpu
       }
       if (input.testType !== undefined) {
         setClauses.push("test_type = ?");
-        setParams.push(input.testType);
+        setParams.push(normalizeTestType(input.testType));
       }
       if (input.questionCount !== undefined) {
         setClauses.push("question_count = ?");
