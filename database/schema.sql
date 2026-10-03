@@ -1,6 +1,3 @@
-CREATE DATABASE IF NOT EXISTS mock_test_platform CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE mock_test_platform;
-
 CREATE TABLE IF NOT EXISTS countries (
   id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(120) NOT NULL,
