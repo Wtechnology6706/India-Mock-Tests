@@ -131,6 +131,8 @@ export async function recordRazorpayPayment(params: {
   amountInRupees: number;
   durationDays: number;
   couponCode?: string;
+  targetExamSlug?: string | null;
+  targetExamName?: string | null;
 }) {
   await ensureCommercePlans();
   const orderId = randomUUID();
@@ -155,6 +157,8 @@ export async function recordRazorpayPayment(params: {
     totalAmount: params.amountInRupees,
     durationDays: params.durationDays,
     couponCode: params.couponCode || null,
+    targetExamSlug: params.targetExamSlug || null,
+    targetExamName: params.targetExamName || null,
   });
 
   try {
@@ -167,8 +171,14 @@ export async function recordRazorpayPayment(params: {
     console.error("Error saving Razorpay order to DB:", err);
   }
 
-  // Upgrade user's subscription
-  await updateUserSubscription(params.userId, params.tier, params.durationDays);
+  // Upgrade user's subscription with target exam details
+  await updateUserSubscription(
+    params.userId,
+    params.tier,
+    params.durationDays,
+    params.targetExamSlug,
+    params.targetExamName
+  );
 
   return {
     id: orderId,
@@ -177,6 +187,8 @@ export async function recordRazorpayPayment(params: {
     userId: params.userId,
     planName: params.planName,
     amount: params.amountInRupees,
+    targetExamSlug: params.targetExamSlug,
+    targetExamName: params.targetExamName,
     status: "paid",
     paidAt: now,
   };

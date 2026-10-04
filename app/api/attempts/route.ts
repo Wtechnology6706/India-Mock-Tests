@@ -13,18 +13,41 @@ export async function POST(request: NextRequest) {
   // Check subscription access if test is premium
   if (testInfo && testInfo.access === "Premium") {
     const isStaff = user && (user.role === "admin" || user.role === "editor");
-    const hasPaidPlan = user && (user.subscriptionTier === "sprint" || user.subscriptionTier === "ultimate") && user.subscriptionStatus === "active";
+    const isActiveUser = user && user.subscriptionStatus === "active";
 
-    if (!isStaff && !hasPaidPlan) {
-      return NextResponse.json(
-        {
-          error: "This is a Premium VIP mock test. Please upgrade your subscription to unlock full test series.",
-          code: "PREMIUM_REQUIRED",
-          testName: testInfo.name,
-          access: "Premium",
-        },
-        { status: 403 }
-      );
+    if (!isStaff) {
+      if (!isActiveUser || !user) {
+        return NextResponse.json(
+          {
+            error: "This is a Premium VIP mock test. Please upgrade your subscription to unlock full test series.",
+            code: "PREMIUM_REQUIRED",
+            testName: testInfo.name,
+            access: "Premium",
+          },
+          { status: 403 }
+        );
+      }
+
+      // If user has Sprint Pass, verify it matches the test's exam
+      if (user.subscriptionTier === "sprint") {
+        const userExamSlug = user.targetExamSlug?.trim().toLowerCase();
+        const testExamSlug = testInfo.examSlug?.trim().toLowerCase();
+
+        // If sprint pass is bound to a specific exam and doesn't match
+        if (userExamSlug && testExamSlug && userExamSlug !== testExamSlug) {
+          const sprintExamLabel = user.targetExamName || user.targetExamSlug;
+          return NextResponse.json(
+            {
+              error: `Your Single Exam Sprint Pass is active for ${sprintExamLabel}. To attempt ${testInfo.examTitle} tests, please upgrade to the All-Exam Ultimate VIP Pass.`,
+              code: "PREMIUM_REQUIRED",
+              testName: testInfo.name,
+              access: "Premium",
+              requiredTier: "ultimate",
+            },
+            { status: 403 }
+          );
+        }
+      }
     }
   }
 

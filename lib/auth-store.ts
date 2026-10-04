@@ -13,6 +13,8 @@ export type AuthUser = {
   subscriptionTier: SubscriptionTier;
   subscriptionStatus: "active" | "none" | "expired";
   subscriptionExpiresAt?: string;
+  targetExamSlug?: string | null;
+  targetExamName?: string | null;
 };
 
 type StoredUser = AuthUser & { passwordHash: string; salt: string };
@@ -38,6 +40,8 @@ const publicUser = (u: StoredUser): AuthUser => {
     subscriptionTier: tier,
     subscriptionStatus: status,
     subscriptionExpiresAt: u.subscriptionExpiresAt,
+    targetExamSlug: u.targetExamSlug || null,
+    targetExamName: u.targetExamName || null,
   };
 };
 
@@ -97,8 +101,18 @@ export async function loginUser(email: string, password: string) {
   const normalizedEmail = normalizeEmail(email);
   let user: StoredUser | undefined = undefined;
   try {
-    const [rows] = await db.query<(RowDataPacket & { id: string | number; email: string; password_hash: string; display_name: string; role: AuthRole; subscription_tier?: SubscriptionTier; subscription_expires_at?: string })[]>(
-      "SELECT id, email, password_hash, display_name, role, subscription_tier, subscription_expires_at FROM users WHERE LOWER(TRIM(email)) = LOWER(?) LIMIT 1",
+    const [rows] = await db.query<(RowDataPacket & {
+      id: string | number;
+      email: string;
+      password_hash: string;
+      display_name: string;
+      role: AuthRole;
+      subscription_tier?: SubscriptionTier;
+      subscription_expires_at?: string;
+      target_exam_slug?: string | null;
+      target_exam_name?: string | null;
+    })[]>(
+      "SELECT id, email, password_hash, display_name, role, subscription_tier, subscription_expires_at, target_exam_slug, target_exam_name FROM users WHERE LOWER(TRIM(email)) = LOWER(?) LIMIT 1",
       [normalizedEmail]
     );
     if (rows[0]) {
@@ -111,6 +125,8 @@ export async function loginUser(email: string, password: string) {
         subscriptionTier: rows[0].subscription_tier || (rows[0].role === "admin" ? "ultimate" : "free"),
         subscriptionStatus: rows[0].subscription_tier && rows[0].subscription_tier !== "free" ? "active" : "none",
         subscriptionExpiresAt: rows[0].subscription_expires_at,
+        targetExamSlug: rows[0].target_exam_slug || null,
+        targetExamName: rows[0].target_exam_name || null,
         salt,
         passwordHash
       };
@@ -159,8 +175,17 @@ function createSession(userId: string) {
 export async function getUserForToken(token: string | undefined): Promise<AuthUser | null> {
   if (!token) return null;
   try {
-    const [rows] = await db.query<(RowDataPacket & { id: string; email: string; display_name: string; role: AuthRole; subscription_tier?: SubscriptionTier; subscription_expires_at?: string })[]>(
-      "SELECT u.id, u.email, u.display_name, u.role, u.subscription_tier, u.subscription_expires_at FROM user_sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > UTC_TIMESTAMP() AND u.status = 'active' LIMIT 1",
+    const [rows] = await db.query<(RowDataPacket & {
+      id: string;
+      email: string;
+      display_name: string;
+      role: AuthRole;
+      subscription_tier?: SubscriptionTier;
+      subscription_expires_at?: string;
+      target_exam_slug?: string | null;
+      target_exam_name?: string | null;
+    })[]>(
+      "SELECT u.id, u.email, u.display_name, u.role, u.subscription_tier, u.subscription_expires_at, u.target_exam_slug, u.target_exam_name FROM user_sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > UTC_TIMESTAMP() AND u.status = 'active' LIMIT 1",
       [tokenHash(token)]
     );
     if (rows[0]) {
@@ -174,6 +199,8 @@ export async function getUserForToken(token: string | undefined): Promise<AuthUs
         subscriptionTier: tier,
         subscriptionStatus: tier !== "free" ? "active" : (isExpired ? "expired" : "none"),
         subscriptionExpiresAt: rows[0].subscription_expires_at,
+        targetExamSlug: rows[0].target_exam_slug || null,
+        targetExamName: rows[0].target_exam_name || null,
       };
     }
   } catch {
@@ -202,24 +229,32 @@ export async function getUserForToken(token: string | undefined): Promise<AuthUs
   return found ? publicUser(found) : null;
 }
 
-export async function updateUserSubscription(userId: string, tier: SubscriptionTier, durationDays = 90) {
+export async function updateUserSubscription(
+  userId: string,
+  tier: SubscriptionTier,
+  durationDays = 90,
+  targetExamSlug?: string | null,
+  targetExamName?: string | null
+) {
   const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
   for (const user of users.values()) {
     if (user.id === userId) {
       user.subscriptionTier = tier;
       user.subscriptionStatus = tier !== "free" ? "active" : "none";
       user.subscriptionExpiresAt = expiresAt;
+      user.targetExamSlug = targetExamSlug || null;
+      user.targetExamName = targetExamName || null;
     }
   }
   try {
     await db.execute(
-      "UPDATE users SET subscription_tier = ?, subscription_expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY) WHERE id = ?",
-      [tier, durationDays, userId]
+      "UPDATE users SET subscription_tier = ?, subscription_expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), target_exam_slug = ?, target_exam_name = ? WHERE id = ?",
+      [tier, durationDays, targetExamSlug || null, targetExamName || null, userId]
     );
   } catch {
     // Local fallback
   }
-  return { success: true, tier, expiresAt };
+  return { success: true, tier, expiresAt, targetExamSlug, targetExamName };
 }
 
 export async function deleteSession(token: string | undefined) {
@@ -234,12 +269,17 @@ export type AdminUserRecord = {
   displayName: string;
   role: AuthRole;
   status: "active" | "disabled";
+  subscriptionTier?: SubscriptionTier;
+  subscriptionStatus?: "active" | "none" | "expired";
+  subscriptionExpiresAt?: string;
+  targetExamSlug?: string | null;
+  targetExamName?: string | null;
   createdAt?: string;
 };
 
-export async function listUsersForAdmin(filters?: { query?: string; role?: string; status?: string }): Promise<AdminUserRecord[]> {
+export async function listUsersForAdmin(filters?: { query?: string; role?: string; status?: string; tier?: string }): Promise<AdminUserRecord[]> {
   try {
-    let sql = "SELECT id, email, display_name, role, status, created_at FROM users";
+    let sql = "SELECT id, email, display_name, role, status, subscription_tier, subscription_expires_at, target_exam_slug, target_exam_name, created_at FROM users";
     const conditions: string[] = [];
     const params: unknown[] = [];
 
@@ -256,34 +296,68 @@ export async function listUsersForAdmin(filters?: { query?: string; role?: strin
       conditions.push("status = ?");
       params.push(filters.status);
     }
+    if (filters?.tier && filters.tier !== "all") {
+      conditions.push("subscription_tier = ?");
+      params.push(filters.tier);
+    }
 
     if (conditions.length > 0) {
       sql += " WHERE " + conditions.join(" AND ");
     }
     sql += " ORDER BY id DESC";
 
-    const [rows] = await db.query<(RowDataPacket & { id: number; email: string; display_name: string; role: AuthRole; status: "active" | "disabled"; created_at: Date | string })[]>(sql, params);
+    const [rows] = await db.query<(RowDataPacket & {
+      id: number;
+      email: string;
+      display_name: string;
+      role: AuthRole;
+      status: "active" | "disabled";
+      subscription_tier?: SubscriptionTier;
+      subscription_expires_at?: Date | string | null;
+      target_exam_slug?: string | null;
+      target_exam_name?: string | null;
+      created_at: Date | string;
+    })[]>(sql, params);
     if (rows.length > 0) {
-      return rows.map((r) => ({
-        id: String(r.id),
-        email: r.email,
-        displayName: r.display_name,
-        role: r.role,
-        status: r.status ?? "active",
-        createdAt: r.created_at ? new Date(r.created_at).toISOString() : undefined,
-      }));
+      return rows.map((r) => {
+        const isExpired = r.subscription_expires_at ? new Date(r.subscription_expires_at).getTime() < Date.now() : false;
+        const tier = r.role === "admin" ? "ultimate" : (r.subscription_tier || "free");
+        const status = tier !== "free" ? (isExpired ? "expired" : "active") : "none";
+        return {
+          id: String(r.id),
+          email: r.email,
+          displayName: r.display_name,
+          role: r.role,
+          status: r.status ?? "active",
+          subscriptionTier: tier,
+          subscriptionStatus: status,
+          subscriptionExpiresAt: r.subscription_expires_at ? new Date(r.subscription_expires_at).toISOString() : undefined,
+          targetExamSlug: r.target_exam_slug || null,
+          targetExamName: r.target_exam_name || null,
+          createdAt: r.created_at ? new Date(r.created_at).toISOString() : undefined,
+        };
+      });
     }
   } catch {
     // Fallback to local memory
   }
 
-  let list = [...users.values()].map((u) => ({
-    id: u.id,
-    email: u.email,
-    displayName: u.displayName,
-    role: u.role,
-    status: "active" as const,
-  }));
+  let list = [...users.values()].map((u) => {
+    const isExpired = u.subscriptionExpiresAt ? new Date(u.subscriptionExpiresAt).getTime() < Date.now() : false;
+    const tier = u.role === "admin" ? "ultimate" : (u.subscriptionTier || "free");
+    return {
+      id: u.id,
+      email: u.email,
+      displayName: u.displayName,
+      role: u.role,
+      status: "active" as const,
+      subscriptionTier: tier,
+      subscriptionStatus: tier !== "free" ? (isExpired ? ("expired" as const) : ("active" as const)) : ("none" as const),
+      subscriptionExpiresAt: u.subscriptionExpiresAt,
+      targetExamSlug: u.targetExamSlug || null,
+      targetExamName: u.targetExamName || null,
+    };
+  });
 
   if (filters?.query?.trim()) {
     const q = filters.query.trim().toLowerCase();
@@ -291,6 +365,9 @@ export async function listUsersForAdmin(filters?: { query?: string; role?: strin
   }
   if (filters?.role && filters.role !== "all") {
     list = list.filter((u) => u.role === filters.role);
+  }
+  if (filters?.tier && filters.tier !== "all") {
+    list = list.filter((u) => u.subscriptionTier === filters.tier);
   }
   return list;
 }
@@ -305,6 +382,8 @@ export async function createUserByAdmin(email: string, password: string, display
       displayName: result.user.displayName,
       role: result.user.role,
       status: "active",
+      subscriptionTier: result.user.subscriptionTier,
+      subscriptionStatus: result.user.subscriptionStatus,
       createdAt: new Date().toISOString(),
     },
   };
@@ -312,11 +391,20 @@ export async function createUserByAdmin(email: string, password: string, display
 
 export async function updateUserByAdmin(
   userId: string,
-  data: { displayName?: string; role?: AuthRole; status?: "active" | "disabled"; password?: string }
+  data: {
+    displayName?: string;
+    role?: AuthRole;
+    status?: "active" | "disabled";
+    password?: string;
+    subscriptionTier?: SubscriptionTier;
+    durationDays?: number;
+    targetExamSlug?: string | null;
+    targetExamName?: string | null;
+  }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const updates: string[] = [];
-    const params: (string | number)[] = [];
+    const params: (string | number | null)[] = [];
 
     if (data.displayName?.trim()) {
       updates.push("display_name = ?");
@@ -329,6 +417,21 @@ export async function updateUserByAdmin(
     if (data.status) {
       updates.push("status = ?");
       params.push(data.status);
+    }
+    if (data.subscriptionTier) {
+      updates.push("subscription_tier = ?");
+      params.push(data.subscriptionTier);
+      const days = data.durationDays || (data.subscriptionTier === "ultimate" ? 180 : 90);
+      updates.push("subscription_expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY)");
+      params.push(days);
+      if (data.targetExamSlug !== undefined) {
+        updates.push("target_exam_slug = ?");
+        params.push(data.targetExamSlug || null);
+      }
+      if (data.targetExamName !== undefined) {
+        updates.push("target_exam_name = ?");
+        params.push(data.targetExamName || null);
+      }
     }
     if (data.password && data.password.length >= 8) {
       const salt = randomBytes(16).toString("hex");

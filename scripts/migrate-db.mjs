@@ -84,6 +84,32 @@ async function migrate() {
     }
   }
 
+  // Ensure target_exam_slug in users
+  try {
+    await connection.query(`
+      ALTER TABLE users 
+      ADD COLUMN target_exam_slug VARCHAR(100) NULL
+    `);
+    console.log('  + Added target_exam_slug column to users table.');
+  } catch (err) {
+    if (err.code !== 'ER_DUP_FIELDNAME' && err.code !== 'ER_DUP_COLUMN_NAME') {
+      // Ignore
+    }
+  }
+
+  // Ensure target_exam_name in users
+  try {
+    await connection.query(`
+      ALTER TABLE users 
+      ADD COLUMN target_exam_name VARCHAR(150) NULL
+    `);
+    console.log('  + Added target_exam_name column to users table.');
+  } catch (err) {
+    if (err.code !== 'ER_DUP_FIELDNAME' && err.code !== 'ER_DUP_COLUMN_NAME') {
+      // Ignore
+    }
+  }
+
   // Ensure banner_image_url in tests
   try {
     await connection.query(`

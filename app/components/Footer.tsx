@@ -119,20 +119,13 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Disclaimer Bar */}
-        <div className="footer-disclaimer-bar">
-          <p>
-            <strong>Disclaimer:</strong> {portalName} is an edtech practice and mock testing portal developed and operated by <strong>W Technology</strong> (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer" style={{ color: "#c4dcd3", textDecoration: "underline" }}>wtechnology.in</a>) in association with <strong>Make My School</strong> (<a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer" style={{ color: "#c4dcd3", textDecoration: "underline" }}>makemyschool.com</a>). All examination names, syllabi references, and trademarks (such as BPSC, BSEB, CBSE, CTET, STET) belong to their respective government authorities.
-          </p>
-        </div>
-
-        {/* Bottom Bar with Powered By and Payments */}
+        {/* Bottom Bar with Powered By and Payment Logos */}
         <div className="footer-bottom-bar">
           <div className="footer-copyright">
             <span>© {new Date().getFullYear()} {portalName} · All Rights Reserved.</span>
           </div>
 
-          {/* Powered by W Technology & Make My School */}
+          {/* Powered by W Technology */}
           <div className="footer-powered-by">
             <span>Powered by </span>
             <a
@@ -143,26 +136,84 @@ export default function Footer() {
             >
               W Technology
             </a>
-            <span style={{ margin: "0 4px" }}>&</span>
-            <a
-              href="https://makemyschool.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="powered-by-link"
-            >
-              Make My School
-            </a>
           </div>
 
+          {/* Visual Payment Logos (Mastercard, Visa, UPI, RuPay, GPay, PhonePe, Paytm, NetBanking) */}
           <div className="footer-payment-icons">
-            <span className="payment-label">Supported Payments:</span>
-            <span className="pay-badge">UPI</span>
-            <span className="pay-badge">GPay</span>
-            <span className="pay-badge">PhonePe</span>
-            <span className="pay-badge">Paytm</span>
-            <span className="pay-badge">RuPay</span>
-            <span className="pay-badge">Visa / MC</span>
-            <span className="pay-badge">NetBanking</span>
+            <span className="payment-label">Accepted Payments:</span>
+
+            {/* UPI Logo */}
+            <div className="payment-logo-card" title="UPI Unified Payments Interface">
+              <svg viewBox="0 0 70 24" className="pay-svg" aria-label="UPI">
+                <rect width="70" height="24" rx="4" fill="#ffffff" />
+                <path d="M12 6L20 18H14L10 12L12 6Z" fill="#097939" />
+                <path d="M16 6L24 18H18L14 12L16 6Z" fill="#ED7524" />
+                <text x="27" y="16.5" fontFamily="Arial, Helvetica, sans-serif" fontWeight="900" fontSize="11" fill="#2d3748" letterSpacing="0.5">UPI</text>
+              </svg>
+            </div>
+
+            {/* Visa Logo */}
+            <div className="payment-logo-card" title="Visa">
+              <svg viewBox="0 0 50 24" className="pay-svg" aria-label="VISA">
+                <rect width="50" height="24" rx="4" fill="#ffffff" />
+                <text x="25" y="16.5" fontFamily="Arial, Helvetica, sans-serif" fontWeight="900" fontSize="13" fontStyle="italic" fill="#1A1F71" textAnchor="middle" letterSpacing="-0.5">VISA</text>
+              </svg>
+            </div>
+
+            {/* Mastercard Logo */}
+            <div className="payment-logo-card" title="Mastercard">
+              <svg viewBox="0 0 50 24" className="pay-svg" aria-label="Mastercard">
+                <rect width="50" height="24" rx="4" fill="#ffffff" />
+                <circle cx="20" cy="12" r="7" fill="#EB001B" />
+                <circle cx="30" cy="12" r="7" fill="#F79E1B" fillOpacity="0.88" />
+              </svg>
+            </div>
+
+            {/* RuPay Logo */}
+            <div className="payment-logo-card" title="RuPay">
+              <svg viewBox="0 0 58 24" className="pay-svg" aria-label="RuPay">
+                <rect width="58" height="24" rx="4" fill="#ffffff" />
+                <text x="6" y="16.5" fontFamily="Arial, Helvetica, sans-serif" fontWeight="900" fontSize="11" fill="#005B9F">Ru</text>
+                <text x="22" y="16.5" fontFamily="Arial, Helvetica, sans-serif" fontWeight="900" fontSize="11" fill="#E35205">Pay</text>
+                <polygon points="46,7 53,12 46,17" fill="#00A859" />
+              </svg>
+            </div>
+
+            {/* Google Pay Logo */}
+            <div className="payment-logo-card" title="Google Pay">
+              <svg viewBox="0 0 54 24" className="pay-svg" aria-label="Google Pay">
+                <rect width="54" height="24" rx="4" fill="#ffffff" />
+                <text x="8" y="16" fontFamily="Arial, Helvetica, sans-serif" fontWeight="700" fontSize="11" fill="#4285F4">G</text>
+                <text x="20" y="16" fontFamily="Arial, Helvetica, sans-serif" fontWeight="600" fontSize="10" fill="#5f6368">Pay</text>
+              </svg>
+            </div>
+
+            {/* PhonePe Logo */}
+            <div className="payment-logo-card" title="PhonePe">
+              <svg viewBox="0 0 54 24" className="pay-svg" aria-label="PhonePe">
+                <rect width="54" height="24" rx="4" fill="#ffffff" />
+                <circle cx="12" cy="12" r="7" fill="#5f259f" />
+                <text x="12" y="15.5" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="9" fill="#ffffff" textAnchor="middle">पे</text>
+                <text x="23" y="16" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="9" fill="#5f259f">PhonePe</text>
+              </svg>
+            </div>
+
+            {/* Paytm Logo */}
+            <div className="payment-logo-card" title="Paytm">
+              <svg viewBox="0 0 50 24" className="pay-svg" aria-label="Paytm">
+                <rect width="50" height="24" rx="4" fill="#ffffff" />
+                <text x="6" y="16" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#002970">Pay</text>
+                <text x="27" y="16" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="10" fill="#00BAF2">tm</text>
+              </svg>
+            </div>
+
+            {/* Net Banking */}
+            <div className="payment-logo-card" title="Net Banking">
+              <svg viewBox="0 0 64 24" className="pay-svg" aria-label="NetBanking">
+                <rect width="64" height="24" rx="4" fill="#ffffff" />
+                <text x="32" y="15.5" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="9" fill="#1e293b" textAnchor="middle">🏦 NetBanking</text>
+              </svg>
+            </div>
           </div>
         </div>
       </div>
