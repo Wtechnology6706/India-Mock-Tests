@@ -14,8 +14,19 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialPlan = searchParams.get("plan") === "sprint" ? "sprint" : "ultimate";
+  const initialExam = searchParams.get("exam") || "bpsc-tre-4";
+
+  const EXAM_OPTIONS = [
+    { slug: "bpsc-tre-4", name: "BPSC TRE 4.0 (Teaching Recruitment Exam)" },
+    { slug: "bihar-stet", name: "Bihar STET 2026 (Secondary Teacher Eligibility)" },
+    { slug: "ctet", name: "CTET Paper I & II (Central Teacher Eligibility)" },
+    { slug: "uppsc-ro-aro", name: "UPPSC Review Officer & ARO" },
+    { slug: "mppsc", name: "MPPSC State Service Preliminary Exam" },
+    { slug: "rajasthan-reet", name: "REET / Rajasthan Teacher Eligibility" },
+  ];
 
   const [selectedPlan, setSelectedPlan] = useState<"sprint" | "ultimate">(initialPlan);
+  const [targetExamSlug, setTargetExamSlug] = useState<string>(initialExam);
   const [couponCode, setCouponCode] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -126,6 +137,10 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     setProcessingStep("Connecting to Razorpay...");
 
     try {
+      const selectedExamObj = EXAM_OPTIONS.find((e) => e.slug === targetExamSlug);
+      const chosenExamName = selectedPlan === "sprint" ? (selectedExamObj?.name || "Target Exam Series") : undefined;
+      const chosenExamSlug = selectedPlan === "sprint" ? targetExamSlug : undefined;
+
       // Step 1: Create an authentic order on Razorpay backend
       const orderRes = await fetch("/api/razorpay/create-order", {
         method: "POST",
@@ -134,6 +149,8 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
           tier: activePlan.tier,
           planName: activePlan.name,
           amount: finalPrice,
+          targetExamSlug: chosenExamSlug,
+          targetExamName: chosenExamName,
         }),
       });
 
@@ -154,7 +171,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
         amount: orderData.amount,
         currency: orderData.currency || "INR",
         name: "India Mock Tests VIP",
-        description: `${activePlan.name} (${activePlan.durationLabel})`,
+        description: `${activePlan.name} (${activePlan.durationLabel})${chosenExamName ? ` - ${chosenExamName}` : ""}`,
         image: "https://cdn.razorpay.com/static/assets/logo/payment_gateway.png",
         order_id: orderData.orderId,
         handler: async function (response: any) {
@@ -174,6 +191,8 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
               amount: finalPrice,
               durationDays: activePlan.durationDays,
               couponCode: couponApplied ? couponCode.trim().toUpperCase() : undefined,
+              targetExamSlug: chosenExamSlug,
+              targetExamName: chosenExamName,
             }),
           });
 
@@ -318,6 +337,55 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
                   <small>3 Months · 1 Focused Exam Series</small>
                 </button>
               </div>
+
+              {selectedPlan === "sprint" && (
+                <div
+                  style={{
+                    marginTop: "16px",
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "10px",
+                    padding: "16px",
+                  }}
+                >
+                  <label
+                    htmlFor="target-exam-select"
+                    style={{
+                      display: "block",
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                      color: "#1e3a8a",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    🎯 Select Target Exam Series for this Sprint Pass:
+                  </label>
+                  <select
+                    id="target-exam-select"
+                    value={targetExamSlug}
+                    onChange={(e) => setTargetExamSlug(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid #93c5fd",
+                      background: "#ffffff",
+                      fontSize: "0.88rem",
+                      fontWeight: 600,
+                      color: "#1e293b",
+                    }}
+                  >
+                    {EXAM_OPTIONS.map((exam) => (
+                      <option key={exam.slug} value={exam.slug}>
+                        {exam.name}
+                      </option>
+                    ))}
+                  </select>
+                  <small style={{ display: "block", marginTop: "6px", color: "#2563eb", fontSize: "0.78rem" }}>
+                    ℹ️ This pass will grant full access exclusively to mock tests belonging to the chosen exam series.
+                  </small>
+                </div>
+              )}
             </div>
 
             {/* Selected Plan Details Card */}

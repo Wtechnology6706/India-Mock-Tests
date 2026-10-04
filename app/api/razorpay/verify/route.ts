@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
       amount,
       durationDays,
       couponCode,
+      targetExamSlug,
+      targetExamName,
     } = body;
 
     if (!razorpay_order_id || !razorpay_payment_id) {
@@ -58,6 +60,8 @@ export async function POST(request: NextRequest) {
       amountInRupees: subAmount,
       durationDays: subDurationDays,
       couponCode,
+      targetExamSlug: subTier === "sprint" ? targetExamSlug : undefined,
+      targetExamName: subTier === "sprint" ? targetExamName : undefined,
     });
 
     return NextResponse.json({

@@ -69,6 +69,10 @@ export async function PATCH(request: NextRequest) {
       role: body.role,
       status: body.status,
       password: body.password,
+      subscriptionTier: body.subscriptionTier,
+      durationDays: body.durationDays,
+      targetExamSlug: body.targetExamSlug,
+      targetExamName: body.targetExamName,
     });
 
     if ("error" in result && result.error) {

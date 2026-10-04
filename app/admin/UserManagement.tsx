@@ -1,17 +1,27 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { AdminUserRecord } from "../../lib/auth-store";
+import type { AdminUserRecord, SubscriptionTier } from "../../lib/auth-store";
 
 interface UserManagementProps {
   initialUsers: AdminUserRecord[];
   currentUserEmail: string;
 }
 
+const EXAM_OPTIONS = [
+  { slug: "bpsc-tre-4", name: "BPSC TRE 4.0" },
+  { slug: "bihar-stet", name: "Bihar STET 2026" },
+  { slug: "ctet", name: "CTET Paper I & II" },
+  { slug: "uppsc-ro-aro", name: "UPPSC Review Officer" },
+  { slug: "mppsc", name: "MPPSC State Service" },
+  { slug: "rajasthan-reet", name: "REET / Rajasthan TET" },
+];
+
 export default function UserManagement({ initialUsers, currentUserEmail }: UserManagementProps) {
   const [users, setUsers] = useState<AdminUserRecord[]>(initialUsers);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [tierFilter, setTierFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUserRecord | null>(null);
@@ -29,6 +39,9 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
   const [editStatus, setEditStatus] = useState<"active" | "disabled">("active");
   const [editDisplayName, setEditDisplayName] = useState("");
   const [editNewPassword, setEditNewPassword] = useState("");
+  const [editTier, setEditTier] = useState<SubscriptionTier>("free");
+  const [editDurationDays, setEditDurationDays] = useState<number>(90);
+  const [editExamSlug, setEditExamSlug] = useState<string>("bpsc-tre-4");
 
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
@@ -36,7 +49,8 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
       u.displayName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === "all" || u.role === roleFilter;
     const matchesStatus = statusFilter === "all" || u.status === statusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
+    const matchesTier = tierFilter === "all" || (u.subscriptionTier || "free") === tierFilter;
+    return matchesSearch && matchesRole && matchesStatus && matchesTier;
   });
 
   const adminCount = users.filter((u) => u.role === "admin").length;
@@ -44,6 +58,8 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
   const reviewerCount = users.filter((u) => u.role === "reviewer").length;
   const studentCount = users.filter((u) => u.role === "student").length;
   const activeCount = users.filter((u) => u.status === "active").length;
+  const ultimateCount = users.filter((u) => u.subscriptionTier === "ultimate" || u.role === "admin").length;
+  const sprintCount = users.filter((u) => u.subscriptionTier === "sprint").length;
 
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
@@ -85,6 +101,8 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
     if (!editingUser) return;
     setMessage(null);
 
+    const targetExamObj = EXAM_OPTIONS.find((ex) => ex.slug === editExamSlug);
+
     try {
       const res = await fetch("/api/admin/users", {
         method: "PATCH",
@@ -95,6 +113,10 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
           role: editRole,
           status: editStatus,
           password: editNewPassword.trim() ? editNewPassword : undefined,
+          subscriptionTier: editTier,
+          durationDays: editDurationDays,
+          targetExamSlug: editTier === "sprint" ? editExamSlug : null,
+          targetExamName: editTier === "sprint" ? (targetExamObj?.name || editExamSlug) : null,
         }),
       });
       const data = await res.json();
@@ -110,6 +132,10 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
                 displayName: editDisplayName,
                 role: editRole,
                 status: editStatus,
+                subscriptionTier: editTier,
+                subscriptionStatus: editTier !== "free" ? "active" : "none",
+                targetExamSlug: editTier === "sprint" ? editExamSlug : null,
+                targetExamName: editTier === "sprint" ? (targetExamObj?.name || editExamSlug) : null,
               }
             : u
         )
@@ -152,6 +178,9 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
     setEditRole(u.role);
     setEditStatus(u.status);
     setEditNewPassword("");
+    setEditTier(u.subscriptionTier || "free");
+    setEditDurationDays(u.subscriptionTier === "ultimate" ? 180 : 90);
+    setEditExamSlug(u.targetExamSlug || "bpsc-tre-4");
   }
 
   return (
@@ -159,10 +188,10 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
       {/* Header & Stats */}
       <div className="module-header-row">
         <div>
-          <span className="kicker">IDENTITY & ACCESS CONTROL</span>
-          <h2 className="module-title">User Management</h2>
+          <span className="kicker">IDENTITY, SUBSCRIPTIONS & ROLES</span>
+          <h2 className="module-title">User & Subscription Management</h2>
           <p className="module-desc">
-            Manage system administrators, content editors, question reviewers, and enrolled learners.
+            Monitor registered learners, manage Single Exam Sprint vs All-Exam Ultimate VIP passes, and administer team permissions.
           </p>
         </div>
         <button
@@ -188,24 +217,24 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
       {/* Metric Cards */}
       <div className="admin-mini-metrics">
         <div className="mini-metric-card">
-          <small>TOTAL USERS</small>
+          <small>TOTAL REGISTERED</small>
           <strong>{users.length}</strong>
           <span>{activeCount} active · {users.length - activeCount} disabled</span>
         </div>
-        <div className="mini-metric-card">
-          <small>ADMINISTRATORS</small>
-          <strong style={{ color: "#d96548" }}>{adminCount}</strong>
-          <span>Full platform authority</span>
+        <div className="mini-metric-card" style={{ borderLeft: "4px solid #b94a2b" }}>
+          <small>👑 ALL-EXAM ULTIMATE VIP</small>
+          <strong style={{ color: "#b94a2b" }}>{ultimateCount}</strong>
+          <span>Full access to all 150+ tests</span>
+        </div>
+        <div className="mini-metric-card" style={{ borderLeft: "4px solid #2563eb" }}>
+          <small>⚡ SINGLE EXAM SPRINT</small>
+          <strong style={{ color: "#2563eb" }}>{sprintCount}</strong>
+          <span>Targeted 1-exam pass holders</span>
         </div>
         <div className="mini-metric-card">
-          <small>EDITORS & REVIEWERS</small>
-          <strong style={{ color: "#3a7d65" }}>{editorCount + reviewerCount}</strong>
-          <span>{editorCount} editors · {reviewerCount} reviewers</span>
-        </div>
-        <div className="mini-metric-card">
-          <small>LEARNERS & STUDENTS</small>
-          <strong style={{ color: "#2563eb" }}>{studentCount}</strong>
-          <span>Exam takers & subscribers</span>
+          <small>STAFF & EDUCATORS</small>
+          <strong style={{ color: "#166534" }}>{adminCount + editorCount + reviewerCount}</strong>
+          <span>{adminCount} admins · {editorCount + reviewerCount} editors</span>
         </div>
       </div>
 
@@ -225,6 +254,16 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
               ✕
             </button>
           )}
+        </div>
+
+        <div className="filter-group">
+          <label>Pass Tier:</label>
+          <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)} className="admin-select">
+            <option value="all">All Subscription Tiers</option>
+            <option value="ultimate">👑 Ultimate VIP (All Exams)</option>
+            <option value="sprint">⚡ Single Exam Sprint</option>
+            <option value="free">🆓 Free Aspirants</option>
+          </select>
         </div>
 
         <div className="filter-group">
@@ -256,8 +295,8 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
               <th>User</th>
               <th>Email</th>
               <th>Role</th>
-              <th>Status</th>
-              <th>Created</th>
+              <th>Subscription Pass Details</th>
+              <th>Account</th>
               <th style={{ textAlign: "right" }}>Actions</th>
             </tr>
           </thead>
@@ -275,6 +314,9 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
             ) : (
               filteredUsers.map((user) => {
                 const isSelf = user.email === currentUserEmail;
+                const isUltimate = user.role === "admin" || user.subscriptionTier === "ultimate";
+                const isSprint = user.subscriptionTier === "sprint";
+
                 return (
                   <tr key={user.id} className={user.status === "disabled" ? "row-disabled" : ""}>
                     <td>
@@ -297,13 +339,67 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
                       </span>
                     </td>
                     <td>
+                      {isUltimate ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              background: "#fef3c7",
+                              color: "#92400e",
+                              border: "1px solid #fde68a",
+                              padding: "3px 8px",
+                              borderRadius: "4px",
+                              fontSize: "0.78rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            👑 Ultimate VIP (All Exams)
+                          </span>
+                          <small style={{ color: "#64748b", fontSize: "0.72rem" }}>
+                            {user.role === "admin" ? "Admin Lifetime Pass" : (user.subscriptionExpiresAt ? `Valid till ${new Date(user.subscriptionExpiresAt).toLocaleDateString()}` : "Active")}
+                          </small>
+                        </div>
+                      ) : isSprint ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              background: "#eff6ff",
+                              color: "#1e40af",
+                              border: "1px solid #bfdbfe",
+                              padding: "3px 8px",
+                              borderRadius: "4px",
+                              fontSize: "0.78rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            ⚡ Sprint: {user.targetExamName || user.targetExamSlug || "Single Exam"}
+                          </span>
+                          <small style={{ color: "#64748b", fontSize: "0.72rem" }}>
+                            {user.subscriptionExpiresAt ? `Valid till ${new Date(user.subscriptionExpiresAt).toLocaleDateString()}` : "Active 90-day pass"}
+                          </small>
+                        </div>
+                      ) : (
+                        <span
+                          style={{
+                            display: "inline-block",
+                            background: "#f1f5f9",
+                            color: "#64748b",
+                            padding: "3px 8px",
+                            borderRadius: "4px",
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                          }}
+                        >
+                          Free Aspirant
+                        </span>
+                      )}
+                    </td>
+                    <td>
                       <span className={`status-pill ${user.status === "active" ? "pill-active" : "pill-disabled"}`}>
                         <span className="status-dot-mini" />
                         {user.status === "active" ? "Active" : "Disabled"}
                       </span>
-                    </td>
-                    <td className="date-cell" suppressHydrationWarning>
-                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Database default"}
                     </td>
                     <td style={{ textAlign: "right" }}>
                       <div className="action-buttons-group">
@@ -311,9 +407,9 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
                           type="button"
                           className="table-action-btn edit-btn"
                           onClick={() => openEditModal(user)}
-                          title="Edit user role & settings"
+                          title="Edit user & subscription pass"
                         >
-                          ✎ Edit
+                          ✎ Edit / Assign Pass
                         </button>
                         {!isSelf && (
                           <button
@@ -411,9 +507,9 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
       {/* Edit User Modal */}
       {editingUser && (
         <div className="admin-modal-overlay" onClick={() => setEditingUser(null)}>
-          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "580px" }}>
             <div className="modal-header">
-              <h3>Edit User Account</h3>
+              <h3>Edit User & Manage Subscription</h3>
               <button type="button" className="modal-close" onClick={() => setEditingUser(null)}>✕</button>
             </div>
             <form onSubmit={handleUpdateUser} className="admin-modal-form">
@@ -448,6 +544,67 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
                 </select>
                 {editingUser.email === currentUserEmail && (
                   <small className="field-hint">You cannot change your own active admin role.</small>
+                )}
+              </div>
+
+              {/* Subscription Pass Assignment Section */}
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  margin: "12px 0",
+                }}
+              >
+                <h4 style={{ margin: "0 0 12px", fontSize: "0.95rem", color: "#1e293b" }}>
+                  🎟️ Subscription Pass & Exam Entitlement
+                </h4>
+
+                <div className="form-field">
+                  <label>Assigned Plan Tier</label>
+                  <select
+                    value={editTier}
+                    onChange={(e) => setEditTier(e.target.value as SubscriptionTier)}
+                    className="admin-input"
+                  >
+                    <option value="free">Free Aspirant (No paid access)</option>
+                    <option value="sprint">⚡ Single Exam Sprint Pass (Targeted 1 Exam)</option>
+                    <option value="ultimate">👑 All-Exam Ultimate VIP Pass (All 150+ Mocks)</option>
+                  </select>
+                </div>
+
+                {editTier === "sprint" && (
+                  <div className="form-field" style={{ marginTop: "10px" }}>
+                    <label>Target Exam Series (Scope of Pass) *</label>
+                    <select
+                      value={editExamSlug}
+                      onChange={(e) => setEditExamSlug(e.target.value)}
+                      className="admin-input"
+                    >
+                      {EXAM_OPTIONS.map((ex) => (
+                        <option key={ex.slug} value={ex.slug}>
+                          {ex.name}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="field-hint">User will only be allowed to attempt tests of this specific exam.</small>
+                  </div>
+                )}
+
+                {editTier !== "free" && (
+                  <div className="form-field" style={{ marginTop: "10px" }}>
+                    <label>Access Duration (Days from today)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={730}
+                      value={editDurationDays}
+                      onChange={(e) => setEditDurationDays(Number(e.target.value))}
+                      className="admin-input"
+                    />
+                    <small className="field-hint">e.g. 90 days for 3-month Sprint, 180 days for 6-month Ultimate.</small>
+                  </div>
                 )}
               </div>
 
@@ -491,3 +648,4 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
     </div>
   );
 }
+

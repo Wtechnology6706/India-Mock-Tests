@@ -2663,23 +2663,36 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .payment-label {
   font-size: 11px;
-  color: #6e847c;
+  color: #8da49b;
   margin-right: 4px;
 }
 
-.pay-badge {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #e2ede8;
-  font-size: 10.5px;
-  font-weight: 600;
-  padding: 2px 7px;
+.payment-logo-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
   border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+  height: 24px;
+}
+
+.payment-logo-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+.payment-logo-card .pay-svg {
+  height: 24px;
+  width: auto;
+  display: block;
 }
 
 @media (max-width: 900px) {
