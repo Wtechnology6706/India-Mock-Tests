@@ -530,6 +530,77 @@ export async function transitionQuestion(id: string, status: AdminQuestion["stat
   return question ?? { id, exam: "", subject: "", topic: "", stem: "", status, usedIn: [] };
 }
 
+export async function bulkTransitionQuestions(ids: string[], status: AdminQuestion["status"]): Promise<{ updatedCount: number }> {
+  if (!ids || ids.length === 0) return { updatedCount: 0 };
+  const nextStatus = toDatabaseStatus(status);
+  if (!["draft", "in_review", "approved", "published", "archived"].includes(nextStatus)) throw new Error("Invalid question status.");
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "UPDATE questions SET status = ?, version = version + 1 WHERE id IN (?)",
+      [nextStatus, ids]
+    );
+
+    // Update in-memory fallback
+    for (const id of ids) {
+      const q = localQuestions.find((item) => item.id === id);
+      if (q) q.status = status;
+    }
+
+    return { updatedCount: result.affectedRows };
+  } catch (error) {
+    // Fallback to local memory
+    let count = 0;
+    for (const id of ids) {
+      const q = localQuestions.find((item) => item.id === id);
+      if (q) {
+        q.status = status;
+        count++;
+      }
+    }
+    return { updatedCount: count };
+  }
+}
+
+export async function bulkDeleteQuestions(ids: string[]): Promise<{ deletedCount: number }> {
+  if (!ids || ids.length === 0) return { deletedCount: 0 };
+
+  try {
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.query("DELETE FROM question_options WHERE question_id IN (?)", [ids]);
+      await connection.query("DELETE FROM test_questions WHERE question_id IN (?)", [ids]);
+      const [res] = await connection.query<ResultSetHeader>("DELETE FROM questions WHERE id IN (?)", [ids]);
+      await connection.commit();
+
+      const idSet = new Set(ids);
+      for (let i = localQuestions.length - 1; i >= 0; i--) {
+        if (idSet.has(localQuestions[i].id)) {
+          localQuestions.splice(i, 1);
+        }
+      }
+
+      return { deletedCount: res.affectedRows };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  } catch {
+    const idSet = new Set(ids);
+    let count = 0;
+    for (let i = localQuestions.length - 1; i >= 0; i--) {
+      if (idSet.has(localQuestions[i].id)) {
+        localQuestions.splice(i, 1);
+        count++;
+      }
+    }
+    return { deletedCount: count };
+  }
+}
+
 export async function getTaxonomy() {
   try {
     const [exams] = await db.query<(RowDataPacket & { id: number; name: string; slug: string })[]>(

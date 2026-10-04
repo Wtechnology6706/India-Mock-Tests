@@ -51,3 +51,81 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function PATCH(request: NextRequest) {
+  const access = await requireAdmin(request);
+  if ("response" in access) return access.response;
+
+  try {
+    const body = await request.json();
+    const ids: string[] = Array.isArray(body.ids) ? body.ids.map(String) : [];
+    const status = body.status;
+
+    if (ids.length === 0) {
+      return NextResponse.json({ error: "No question IDs provided." }, { status: 400 });
+    }
+
+    const allowed = ["Draft", "In review", "Approved", "Published", "Archived"];
+    if (!allowed.includes(status)) {
+      return NextResponse.json({ error: "Invalid question workflow status." }, { status: 400 });
+    }
+
+    const { bulkTransitionQuestions } = await import("../../../../../lib/admin-content");
+    const result = await bulkTransitionQuestions(ids, status);
+
+    await recordAuditEvent({
+      actorId: access.user.id,
+      action: "question.bulk_status_change",
+      entityType: "question",
+      entityId: `bulk-status-${Date.now()}`,
+      details: { count: ids.length, updatedCount: result.updatedCount, newStatus: status },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Successfully updated ${result.updatedCount} question(s) to "${status}".`,
+      updatedCount: result.updatedCount,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to update questions in bulk." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const access = await requireAdmin(request);
+  if ("response" in access) return access.response;
+
+  try {
+    const body = await request.json();
+    const ids: string[] = Array.isArray(body.ids) ? body.ids.map(String) : [];
+
+    if (ids.length === 0) {
+      return NextResponse.json({ error: "No question IDs provided for deletion." }, { status: 400 });
+    }
+
+    const { bulkDeleteQuestions } = await import("../../../../../lib/admin-content");
+    const result = await bulkDeleteQuestions(ids);
+
+    await recordAuditEvent({
+      actorId: access.user.id,
+      action: "question.bulk_delete",
+      entityType: "question",
+      entityId: `bulk-delete-${Date.now()}`,
+      details: { count: ids.length, deletedCount: result.deletedCount },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Successfully deleted ${result.deletedCount} question(s).`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to delete questions in bulk." },
+      { status: 500 }
+    );
+  }
+}
