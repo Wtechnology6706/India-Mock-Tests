@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { RowDataPacket } from "mysql2";
 import { db } from "./db";
-import { attemptFixtures, type AttemptQuestion } from "./attempts";
+import { attemptFixtures, bpscGeneralStudiesQuestions, type AttemptQuestion } from "./attempts";
 import { fallbackExamDetails, type ExamDetail } from "./catalog";
+import { mockTests } from "./syllabus";
 
 export type AttemptResult = { id: string; score: number; maxScore: number; correct: number; incorrect: number; unanswered: number; submittedAt: number };
 type RuleSnapshot = { optionCount: number; marksCorrect: number; penaltyWrong: number; penaltyUnanswered: number };
@@ -124,6 +125,26 @@ export async function getTestStartInfo(testSlug: string): Promise<TestStartInfo 
         description: exam.description,
       };
     }
+  }
+
+  const foundMock = mockTests.find((m) => m.slug === testSlug);
+  if (foundMock) {
+    const isBpsc = foundMock.exam.toLowerCase().includes("bpsc");
+    return {
+      id: foundMock.slug,
+      slug: foundMock.slug,
+      name: foundMock.name,
+      type: foundMock.type,
+      questions: foundMock.questions,
+      duration: foundMock.duration,
+      access: foundMock.access,
+      examTitle: foundMock.exam,
+      examSlug: isBpsc ? "bpsc-tre-4" : "bihar-stet",
+      optionCount: isBpsc ? 5 : 4,
+      correctMarks: "+1",
+      wrongMarks: isBpsc ? "-0.25" : "No negative marking",
+      description: foundMock.description || `${foundMock.name} aligned with ${foundMock.subject} (${foundMock.track}).`,
+    };
   }
 
   return null;
@@ -248,6 +269,21 @@ export async function getTestAttemptDefinition(testSlug: string): Promise<TestDe
       exam: fixture.exam,
       durationSeconds: fixture.durationSeconds,
       questions: fixture.questions,
+      optionCount: isBpsc ? 5 : 4,
+      marksCorrect: 1,
+      penaltyWrong: isBpsc ? 0.25 : 0,
+    };
+  }
+
+  const foundMock = mockTests.find((m) => m.slug === testSlug);
+  if (foundMock) {
+    const isBpsc = foundMock.exam.toLowerCase().includes("bpsc");
+    const durationMins = parseInt(foundMock.duration, 10) || 150;
+    return {
+      title: foundMock.name,
+      exam: foundMock.exam,
+      durationSeconds: durationMins * 60,
+      questions: bpscGeneralStudiesQuestions,
       optionCount: isBpsc ? 5 : 4,
       marksCorrect: 1,
       penaltyWrong: isBpsc ? 0.25 : 0,

@@ -1,7 +1,7 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { db } from "./db";
 import { adminQuestions, adminTests, ruleProfiles, type AdminQuestion, type AdminTest, type RuleProfile, type QuestionOption } from "./phase1";
-import { syllabusTracks } from "./syllabus";
+import { syllabusTracks, mockTests as defaultMockCatalog } from "./syllabus";
 
 export type QuestionInput = {
   exam: string;
@@ -803,25 +803,32 @@ export type SubjectDemandRequest = {
   lastRequestedAt: string;
 };
 
-const localMockTests: MockTest[] = [
-  {
-    id: "2",
-    slug: "bpsc-tre-4-general-studies",
-    name: "General Studies: Full Mock 01",
-    examName: "BPSC TRE 4.0",
-    examSlug: "bpsc-tre-4",
-    trackSlug: "primary-1-5",
-    subjectName: "General Studies",
-    testType: "Full mock",
-    questionCount: 150,
-    durationMinutes: 150,
-    totalMarks: 150,
-    access: "Free",
-    status: "Published",
-    linkedQuestionsCount: 1,
-    description: "Realistic primary teacher recruitment practice mapped to Bihar GK, geography, and general science.",
-  },
-];
+const defaultCatalogMocks: MockTest[] = defaultMockCatalog.map((m, idx) => ({
+  id: `syllabus-${idx + 1}`,
+  slug: m.slug,
+  name: m.name,
+  examName: m.exam,
+  examSlug: m.exam.toLowerCase().includes("bpsc") ? "bpsc-tre-4" : "bihar-stet",
+  trackSlug: m.track.toLowerCase().includes("11-12") || m.track.toLowerCase().includes("pgt")
+    ? "higher-secondary-11-12"
+    : m.track.toLowerCase().includes("9-10") || m.track.toLowerCase().includes("tgt") || m.track.toLowerCase().includes("paper-1")
+      ? "secondary-9-10"
+      : m.track.toLowerCase().includes("6-8")
+        ? "middle-6-8"
+        : "primary-1-5",
+  subjectName: m.subject,
+  testType: m.type,
+  questionCount: m.questions,
+  durationMinutes: parseInt(m.duration, 10) || 150,
+  totalMarks: m.questions,
+  access: m.access,
+  status: "Published",
+  linkedQuestionsCount: 0,
+  description: m.description,
+  bannerImageUrl: m.bannerImageUrl,
+}));
+
+const localMockTests: MockTest[] = [...defaultCatalogMocks];
 
 const localSubjectRequests = new Map<string, SubjectDemandRequest>();
 
@@ -890,7 +897,7 @@ export async function listMockTests(filter?: {
       linked_count: number;
     })[]>(sql, params);
 
-    return rows.map((r) => ({
+    const dbMapped: MockTest[] = rows.map((r) => ({
       id: String(r.id),
       slug: r.slug || `test-${r.id}`,
       name: r.name,
@@ -910,9 +917,31 @@ export async function listMockTests(filter?: {
       description: r.description || undefined,
       bannerImageUrl: r.banner_image_url || undefined,
     }));
+
+    const existingSlugs = new Set(dbMapped.map((d) => d.slug));
+    const mergedList = [...dbMapped];
+    for (const catMock of defaultCatalogMocks) {
+      if (!existingSlugs.has(catMock.slug)) {
+        mergedList.push(catMock);
+      }
+    }
+
+    let filtered = mergedList;
+    if (filter?.examSlug && filter.examSlug !== "All") {
+      filtered = filtered.filter((t) => t.examSlug === filter.examSlug || t.examName.toLowerCase().includes(filter.examSlug!.toLowerCase()));
+    }
+    if (filter?.trackSlug && filter.trackSlug !== "All") {
+      filtered = filtered.filter((t) => t.trackSlug === filter.trackSlug);
+    }
+    if (filter?.subjectName && filter.subjectName !== "All") {
+      filtered = filtered.filter((t) => t.subjectName.toLowerCase() === filter.subjectName!.toLowerCase());
+    }
+    if (filter?.status && filter.status !== "All") {
+      filtered = filtered.filter((t) => t.status === filter.status);
+    }
+    return filtered;
   } catch (err) {
-    // Only fall back to local fixture mock tests if database connection failed
-    console.error("Database query error in listMockTests:", err);
+    // Fall back to catalog mock tests if database query failed
   }
 
   let results = [...localMockTests];
