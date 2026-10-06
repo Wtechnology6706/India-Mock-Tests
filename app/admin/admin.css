@@ -4667,4 +4667,267 @@
   color: var(--ink);
   font: 600 12px 'Space Grotesk', sans-serif;
   cursor: pointer;
-}
+}
+
+/* ==========================================================================
+   Mock Test Banner Upload & Management
+   ========================================================================== */
+.banner-config-section {
+  background: #f8faf9;
+  border: 1px solid #d4dfda;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 12px 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .banner-config-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.banner-setting-title {
+  font: 700 13px 'Space Grotesk', sans-serif;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.banner-config-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.banner-upload-dropzone {
+  border: 2px dashed #b7c8c0;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 14px 16px;
+  text-align: center;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.banner-upload-dropzone:hover {
+  border-color: #1e3a34;
+  background: #f4f8f6;
+}
+
+.banner-upload-dropzone.is-uploading {
+  border-color: #2e7d32;
+  background: #f1f8f3;
+  cursor: wait;
+}
+
+.banner-upload-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.banner-upload-label {
+  font: 600 12.5px 'DM Sans', sans-serif;
+  color: #1e3a34;
+}
+
+.banner-upload-subtext {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.banner-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1e3a34;
+  color: #ffffff;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 6px;
+  font: 700 11.5px 'Space Grotesk', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.banner-upload-btn:hover:not(:disabled) {
+  background: #142824;
+  transform: translateY(-1px);
+}
+
+.banner-upload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.banner-upload-status {
+  font-size: 11.5px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.banner-upload-status.success {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #c8e6c9;
+}
+
+.banner-upload-status.error {
+  background: #ffebee;
+  color: #b71c1c;
+  border: 1px solid #ffcdd2;
+}
+
+.banner-or-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  font: 700 10px 'Space Grotesk', sans-serif;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  margin: 4px 0;
+}
+
+.banner-or-divider::before,
+.banner-or-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #d4dfda;
+}
+
+.banner-or-divider:not(:empty)::before {
+  margin-right: .5em;
+}
+
+.banner-or-divider:not(:empty)::after {
+  margin-left: .5em;
+}
+
+.banner-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-clear-banner {
+  background: #faebe7;
+  border: 1px solid #f4c8bd;
+  color: #a43e2a;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font: 700 11.5px 'DM Sans', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-clear-banner:hover {
+  background: #a43e2a;
+  color: #ffffff;
+}
+
+.banner-live-preview-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-label {
+  font: 700 10px 'Space Grotesk', sans-serif;
+  color: #64748b;
+  letter-spacing: 0.5px;
+}
+
+.preview-banner-custom {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #d4dfda;
+  background: #1e293b;
+}
+
+.preview-custom-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preview-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.preview-banner-default {
+  height: 140px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1e3a34 0%, #11221e 100%);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid #d4dfda;
+}
+
+.preview-default-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-default-center {
+  text-align: center;
+  color: #8fa99e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.preview-default-icon {
+  font-size: 20px;
+}
+
+.preview-subject-pill {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1e3a34;
+  font: 700 10px 'Space Grotesk', sans-serif;
+  padding: 3px 8px;
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-access-pill {
+  background: #f59e0b;
+  color: #1a1a1a;
+  font: 800 9.5px 'Space Grotesk', sans-serif;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
