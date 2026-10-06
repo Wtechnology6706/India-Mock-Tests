@@ -355,14 +355,14 @@ export default function MockTestManager({
         body: JSON.stringify({ questionIds: [qId] }),
       });
       if (res.ok) {
-        const qToAdd = questions.find((q) => q.id === qId);
-        if (qToAdd) {
-          setLinkedQuestions((prev) => [...prev, qToAdd]);
-        }
+        const qRes = await fetch(`/api/admin/mock-tests/${editingTest.id}/questions`);
+        const qData = await qRes.json();
+        const updatedList = qData.questions || [];
+        setLinkedQuestions(updatedList);
         setTests((prev) =>
           prev.map((t) =>
             t.id === editingTest.id
-              ? { ...t, linkedQuestionsCount: t.linkedQuestionsCount + 1 }
+              ? { ...t, linkedQuestionsCount: updatedList.length }
               : t
           )
         );
@@ -386,11 +386,14 @@ export default function MockTestManager({
         body: JSON.stringify({ questionIds: idsToLink }),
       });
       if (res.ok) {
-        setLinkedQuestions((prev) => [...prev, ...availableToLink]);
+        const qRes = await fetch(`/api/admin/mock-tests/${editingTest.id}/questions`);
+        const qData = await qRes.json();
+        const updatedList = qData.questions || [];
+        setLinkedQuestions(updatedList);
         setTests((prev) =>
           prev.map((t) =>
             t.id === editingTest.id
-              ? { ...t, linkedQuestionsCount: t.linkedQuestionsCount + idsToLink.length }
+              ? { ...t, linkedQuestionsCount: updatedList.length }
               : t
           )
         );
@@ -412,11 +415,14 @@ export default function MockTestManager({
         body: JSON.stringify({ questionId: qId }),
       });
       if (res.ok) {
-        setLinkedQuestions((prev) => prev.filter((q) => q.id !== qId));
+        const qRes = await fetch(`/api/admin/mock-tests/${editingTest.id}/questions`);
+        const qData = await qRes.json();
+        const updatedList = qData.questions || [];
+        setLinkedQuestions(updatedList);
         setTests((prev) =>
           prev.map((t) =>
             t.id === editingTest.id
-              ? { ...t, linkedQuestionsCount: Math.max(0, t.linkedQuestionsCount - 1) }
+              ? { ...t, linkedQuestionsCount: updatedList.length }
               : t
           )
         );

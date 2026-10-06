@@ -832,19 +832,191 @@ const localMockTests: MockTest[] = [...defaultCatalogMocks];
 
 const localSubjectRequests = new Map<string, SubjectDemandRequest>();
 
+let hasSeededCatalog = false;
+
+export async function ensureCatalogMocksSeeded(): Promise<void> {
+  if (hasSeededCatalog) return;
+  try {
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // Ensure exams exist
+      const examNameMap = new Map<string, number>();
+      const [examRows] = await connection.query<(RowDataPacket & { id: number; name: string; slug: string })[]>(
+        "SELECT id, name, slug FROM exams"
+      );
+      for (const r of examRows) {
+        examNameMap.set(r.name.toLowerCase(), r.id);
+        examNameMap.set(r.slug.toLowerCase(), r.id);
+      }
+
+      const getOrCreateExam = async (examName: string): Promise<number> => {
+        const key = examName.toLowerCase();
+        if (examNameMap.has(key)) return examNameMap.get(key)!;
+        const slug = examName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        if (examNameMap.has(slug)) return examNameMap.get(slug)!;
+
+        const [ins] = await connection.execute<ResultSetHeader>(
+          "INSERT INTO exams (name, slug, status) VALUES (?, ?, 'published')",
+          [examName.trim(), slug]
+        );
+        examNameMap.set(key, ins.insertId);
+        examNameMap.set(slug, ins.insertId);
+        return ins.insertId;
+      };
+
+      // Ensure subjects exist
+      const subjectKeyMap = new Map<string, number>();
+      const [subjectRows] = await connection.query<(RowDataPacket & { id: number; exam_id: number; name: string })[]>(
+        "SELECT id, exam_id, name FROM subjects"
+      );
+      for (const r of subjectRows) {
+        subjectKeyMap.set(`${r.exam_id}:${r.name.toLowerCase()}`, r.id);
+      }
+
+      const getOrCreateSubject = async (examId: number, subjectName: string): Promise<number> => {
+        const key = `${examId}:${subjectName.toLowerCase().trim()}`;
+        if (subjectKeyMap.has(key)) return subjectKeyMap.get(key)!;
+        const slug = subjectName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const [ins] = await connection.execute<ResultSetHeader>(
+          "INSERT INTO subjects (exam_id, name, slug) VALUES (?, ?, ?)",
+          [examId, subjectName.trim(), slug]
+        );
+        subjectKeyMap.set(key, ins.insertId);
+        return ins.insertId;
+      };
+
+      // Ensure test series and rule profile
+      const seriesKeyMap = new Map<number, number>();
+      const [seriesRows] = await connection.query<(RowDataPacket & { id: number; exam_id: number })[]>(
+        "SELECT id, exam_id FROM test_series"
+      );
+      for (const r of seriesRows) {
+        seriesKeyMap.set(r.exam_id, r.id);
+      }
+
+      const getOrCreateSeries = async (examId: number, examName: string): Promise<number> => {
+        if (seriesKeyMap.has(examId)) return seriesKeyMap.get(examId)!;
+        const slug = `${examName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-series`;
+        const [ins] = await connection.execute<ResultSetHeader>(
+          "INSERT INTO test_series (exam_id, name, slug, access_type, status) VALUES (?, ?, ?, 'free', 'published')",
+          [examId, `${examName} Series`, slug]
+        );
+        seriesKeyMap.set(examId, ins.insertId);
+        return ins.insertId;
+      };
+
+      const rulesMap = new Map<number, number>();
+      const [ruleRows] = await connection.query<(RowDataPacket & { id: number; exam_id: number })[]>(
+        "SELECT id, exam_id FROM rule_profiles"
+      );
+      for (const r of ruleRows) {
+        rulesMap.set(r.exam_id, r.id);
+      }
+
+      const getOrCreateRule = async (examId: number, isBpsc: boolean): Promise<number> => {
+        if (rulesMap.has(examId)) return rulesMap.get(examId)!;
+        const [ins] = await connection.execute<ResultSetHeader>(
+          "INSERT INTO rule_profiles (exam_id, version, name, option_count, marks_per_correct, penalty_wrong, status) VALUES (?, 1, 'Standard Marking', ?, 1, ?, 'published')",
+          [examId, isBpsc ? 5 : 4, isBpsc ? 0.25 : 0]
+        );
+        rulesMap.set(examId, ins.insertId);
+        return ins.insertId;
+      };
+
+      // Existing tests in DB
+      const [existingTests] = await connection.query<(RowDataPacket & { id: number; slug: string })[]>(
+        "SELECT id, slug FROM tests"
+      );
+      const existingSlugSet = new Set(existingTests.map((t) => t.slug));
+
+      for (const cat of defaultCatalogMocks) {
+        if (!existingSlugSet.has(cat.slug)) {
+          const examId = await getOrCreateExam(cat.examName);
+          const subjectId = await getOrCreateSubject(examId, cat.subjectName);
+          const seriesId = await getOrCreateSeries(examId, cat.examName);
+          const ruleId = await getOrCreateRule(examId, cat.examSlug.includes("bpsc"));
+
+          await connection.execute(
+            `INSERT INTO tests (test_series_id, exam_id, subject_id, track_slug, name, slug, test_type, question_count, duration_minutes, total_marks, access_type, description, banner_image_url, status, rule_profile_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              seriesId,
+              examId,
+              subjectId,
+              cat.trackSlug || "primary-1-5",
+              cat.name,
+              cat.slug,
+              normalizeTestType(cat.testType),
+              cat.questionCount || 150,
+              cat.durationMinutes || 150,
+              cat.totalMarks || cat.questionCount || 150,
+              cat.access === "Premium" ? "premium" : "free",
+              cat.description || null,
+              cat.bannerImageUrl || null,
+              "published",
+              ruleId,
+            ]
+          );
+          existingSlugSet.add(cat.slug);
+        }
+      }
+
+      // Cleanup any corrupted test_questions with invalid test_id (e.g. 0)
+      await connection.execute("DELETE FROM test_questions WHERE test_id = 0 OR test_id NOT IN (SELECT id FROM tests)");
+
+      await connection.commit();
+      hasSeededCatalog = true;
+    } catch (e) {
+      await connection.rollback();
+      console.error("Error during ensureCatalogMocksSeeded:", e);
+    } finally {
+      connection.release();
+    }
+  } catch (err) {
+    console.error("Database connection error in ensureCatalogMocksSeeded:", err);
+  }
+}
+
+export async function resolveNumericTestId(connectionOrDb: any, testIdOrSlug: string): Promise<number | null> {
+  await ensureCatalogMocksSeeded();
+
+  // If already numeric and in tests table
+  if (/^\d+$/.test(testIdOrSlug)) {
+    const [rows] = await connectionOrDb.query("SELECT id FROM tests WHERE id = ? LIMIT 1", [Number(testIdOrSlug)]);
+    if (rows[0]) return rows[0].id;
+  }
+
+  // Look up by slug or name
+  const [bySlug] = await connectionOrDb.query("SELECT id FROM tests WHERE slug = ? OR name = ? LIMIT 1", [testIdOrSlug, testIdOrSlug]);
+  if (bySlug[0]) return bySlug[0].id;
+
+  // Look up from defaultCatalogMocks
+  const catMock = defaultCatalogMocks.find((m) => m.id === testIdOrSlug || m.slug === testIdOrSlug || m.name === testIdOrSlug);
+  if (catMock) {
+    const [byCat] = await connectionOrDb.query("SELECT id FROM tests WHERE slug = ? LIMIT 1", [catMock.slug]);
+    if (byCat[0]) return byCat[0].id;
+  }
+
+  return null;
+}
+
 export async function listMockTests(filter?: {
   examSlug?: string;
   trackSlug?: string;
   subjectName?: string;
   status?: string;
 }): Promise<MockTest[]> {
+  await ensureCatalogMocksSeeded();
+
   try {
     let sql = `
       SELECT t.id, t.slug, t.name, t.test_type, t.question_count, t.duration_minutes, t.total_marks,
              t.access_type, t.status, t.description, t.track_slug, t.banner_image_url,
              e.id AS exam_id, e.name AS exam_name, e.slug AS exam_slug,
              s.id AS subject_id, s.name AS subject_name,
-             (SELECT COUNT(*) FROM test_questions tq WHERE tq.test_id = t.id) AS linked_count
+             (SELECT COUNT(DISTINCT tq.question_id) FROM test_questions tq WHERE tq.test_id = t.id) AS linked_count
       FROM tests t
       LEFT JOIN exams e ON e.id = t.exam_id
       LEFT JOIN subjects s ON s.id = t.subject_id
@@ -918,30 +1090,9 @@ export async function listMockTests(filter?: {
       bannerImageUrl: r.banner_image_url || undefined,
     }));
 
-    const existingSlugs = new Set(dbMapped.map((d) => d.slug));
-    const mergedList = [...dbMapped];
-    for (const catMock of defaultCatalogMocks) {
-      if (!existingSlugs.has(catMock.slug)) {
-        mergedList.push(catMock);
-      }
-    }
-
-    let filtered = mergedList;
-    if (filter?.examSlug && filter.examSlug !== "All") {
-      filtered = filtered.filter((t) => t.examSlug === filter.examSlug || t.examName.toLowerCase().includes(filter.examSlug!.toLowerCase()));
-    }
-    if (filter?.trackSlug && filter.trackSlug !== "All") {
-      filtered = filtered.filter((t) => t.trackSlug === filter.trackSlug);
-    }
-    if (filter?.subjectName && filter.subjectName !== "All") {
-      filtered = filtered.filter((t) => t.subjectName.toLowerCase() === filter.subjectName!.toLowerCase());
-    }
-    if (filter?.status && filter.status !== "All") {
-      filtered = filtered.filter((t) => t.status === filter.status);
-    }
-    return filtered;
+    return dbMapped;
   } catch (err) {
-    // Fall back to catalog mock tests if database query failed
+    console.error("Error listing mock tests from DB:", err);
   }
 
   let results = [...localMockTests];
@@ -1087,11 +1238,14 @@ export async function createMockTest(input: MockTestInput): Promise<MockTest> {
       fallback.subjectId = String(subjects[0].id);
 
       // Link any initial questions
-      for (const [idx, qId] of (input.questionIds ?? []).entries()) {
-        await connection.execute(
-          "INSERT IGNORE INTO test_questions (test_id, question_id, sort_order, marks) VALUES (?, ?, ?, 1)",
-          [testId, qId, idx + 1]
-        );
+      if (input.questionIds && input.questionIds.length > 0) {
+        const uniqueQIds = Array.from(new Set(input.questionIds));
+        for (const [idx, qId] of uniqueQIds.entries()) {
+          await connection.execute(
+            "INSERT IGNORE INTO test_questions (test_id, question_id, sort_order, marks) VALUES (?, ?, ?, 1)",
+            [testId, Number(qId), idx + 1]
+          );
+        }
       }
 
       await connection.commit();
@@ -1114,6 +1268,11 @@ export async function updateMockTest(testId: string, input: Partial<MockTestInpu
     const connection = await db.getConnection();
     try {
       await connection.beginTransaction();
+
+      const numericTestId = await resolveNumericTestId(connection, testId);
+      if (!numericTestId) {
+        throw new Error(`Mock test "${testId}" could not be found.`);
+      }
 
       let examId: number | undefined;
       let subjectId: number | undefined;
@@ -1139,7 +1298,7 @@ export async function updateMockTest(testId: string, input: Partial<MockTestInpu
         const targetExamId = examId || (
           await connection.query<(RowDataPacket & { exam_id: number })[]>(
             "SELECT exam_id FROM tests WHERE id = ? LIMIT 1",
-            [testId]
+            [numericTestId]
           )
         )[0][0]?.exam_id;
 
@@ -1215,11 +1374,68 @@ export async function updateMockTest(testId: string, input: Partial<MockTestInpu
       }
 
       if (setClauses.length > 0) {
-        setParams.push(testId);
+        setParams.push(numericTestId);
         await connection.execute(`UPDATE tests SET ${setClauses.join(", ")} WHERE id = ?`, setParams);
       }
 
       await connection.commit();
+
+      // Query and return updated record directly from DB
+      const [updatedRows] = await connection.query<(RowDataPacket & {
+        id: number;
+        slug: string | null;
+        name: string;
+        test_type: string;
+        question_count: number;
+        duration_minutes: number;
+        total_marks: number;
+        access_type: string;
+        status: string;
+        description: string | null;
+        track_slug: string | null;
+        banner_image_url: string | null;
+        exam_id: number | null;
+        exam_name: string | null;
+        exam_slug: string | null;
+        subject_id: number | null;
+        subject_name: string | null;
+        linked_count: number;
+      })[]>(
+        `SELECT t.id, t.slug, t.name, t.test_type, t.question_count, t.duration_minutes, t.total_marks,
+                t.access_type, t.status, t.description, t.track_slug, t.banner_image_url,
+                e.id AS exam_id, e.name AS exam_name, e.slug AS exam_slug,
+                s.id AS subject_id, s.name AS subject_name,
+                (SELECT COUNT(DISTINCT tq.question_id) FROM test_questions tq WHERE tq.test_id = t.id) AS linked_count
+         FROM tests t
+         LEFT JOIN exams e ON e.id = t.exam_id
+         LEFT JOIN subjects s ON s.id = t.subject_id
+         WHERE t.id = ? LIMIT 1`,
+        [numericTestId]
+      );
+
+      if (updatedRows[0]) {
+        const r = updatedRows[0];
+        return {
+          id: String(r.id),
+          slug: r.slug || `test-${r.id}`,
+          name: r.name,
+          examId: r.exam_id ? String(r.exam_id) : undefined,
+          examName: r.exam_name || "Unassigned Exam",
+          examSlug: r.exam_slug || "bpsc-tre-4",
+          trackSlug: r.track_slug || "primary-1-5",
+          subjectId: r.subject_id ? String(r.subject_id) : undefined,
+          subjectName: r.subject_name || "General Studies",
+          testType: r.test_type || "Full mock",
+          questionCount: r.question_count || 150,
+          durationMinutes: r.duration_minutes || 150,
+          totalMarks: Number(r.total_marks) || 150,
+          access: r.access_type === "premium" ? "Premium" : "Free",
+          status: r.status === "published" ? "Published" : r.status === "archived" ? "Archived" : "Draft",
+          linkedQuestionsCount: Number(r.linked_count) || 0,
+          description: r.description || undefined,
+          bannerImageUrl: r.banner_image_url || undefined,
+        };
+      }
     } catch (err) {
       await connection.rollback();
       throw err;
@@ -1230,7 +1446,7 @@ export async function updateMockTest(testId: string, input: Partial<MockTestInpu
     if (process.env.NODE_ENV === "production") throw error;
   }
 
-  // Update local in-memory test
+  // Update local in-memory fallback
   const existingIndex = localMockTests.findIndex((t) => t.id === testId);
   if (existingIndex !== -1) {
     const current = localMockTests[existingIndex];
@@ -1253,11 +1469,7 @@ export async function updateMockTest(testId: string, input: Partial<MockTestInpu
     return localMockTests[existingIndex];
   }
 
-  // Reload and return updated test
-  const updatedList = await listMockTests();
-  const found = updatedList.find((t) => t.id === testId);
-  if (!found) throw new Error("Mock test not found after update.");
-  return found;
+  throw new Error("Mock test not found.");
 }
 
 export async function deleteMockTest(testId: string): Promise<boolean> {
@@ -1265,13 +1477,16 @@ export async function deleteMockTest(testId: string): Promise<boolean> {
     const connection = await db.getConnection();
     try {
       await connection.beginTransaction();
-      await connection.execute("DELETE FROM test_questions WHERE test_id = ?", [testId]);
-      const [res] = await connection.execute<ResultSetHeader>("DELETE FROM tests WHERE id = ?", [testId]);
+      const numericTestId = await resolveNumericTestId(connection, testId);
+      if (numericTestId) {
+        await connection.execute("DELETE FROM test_questions WHERE test_id = ?", [numericTestId]);
+        await connection.execute("DELETE FROM tests WHERE id = ?", [numericTestId]);
+      }
       await connection.commit();
 
       const idx = localMockTests.findIndex((t) => t.id === testId);
       if (idx !== -1) localMockTests.splice(idx, 1);
-      return res.affectedRows > 0;
+      return true;
     } catch (err) {
       await connection.rollback();
       throw err;
@@ -1291,7 +1506,10 @@ export async function deleteMockTest(testId: string): Promise<boolean> {
 export async function updateMockTestStatus(testId: string, status: "Draft" | "Published" | "Archived"): Promise<boolean> {
   const dbStatus = status.toLowerCase();
   try {
-    await db.execute("UPDATE tests SET status = ? WHERE id = ?", [dbStatus, testId]);
+    const numericTestId = await resolveNumericTestId(db, testId);
+    if (numericTestId) {
+      await db.execute("UPDATE tests SET status = ? WHERE id = ?", [dbStatus, numericTestId]);
+    }
   } catch {
     // fallback
   }
@@ -1306,17 +1524,27 @@ export async function addQuestionsToMockTest(testId: string, questionIds: string
     const connection = await db.getConnection();
     try {
       await connection.beginTransaction();
-      const [existing] = await connection.query<(RowDataPacket & { max_order: number })[]>(
-        "SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM test_questions WHERE test_id = ?",
-        [testId]
-      );
-      let nextOrder = existing[0]?.max_order || 0;
+      const numericTestId = await resolveNumericTestId(connection, testId);
+      if (!numericTestId) {
+        throw new Error(`Cannot link questions: Mock test "${testId}" not found in database.`);
+      }
 
-      for (const qId of questionIds) {
+      // Fetch already-linked question IDs to avoid duplicates
+      const [existingRows] = await connection.query<(RowDataPacket & { question_id: number; max_order: number })[]>(
+        "SELECT question_id, (SELECT COALESCE(MAX(sort_order), 0) FROM test_questions WHERE test_id = ?) AS max_order FROM test_questions WHERE test_id = ?",
+        [numericTestId, numericTestId]
+      );
+      const existingQSet = new Set(existingRows.map((r) => r.question_id));
+      let nextOrder = existingRows[0]?.max_order || 0;
+
+      // Filter to unique, unlinked question IDs
+      const uniqueNewQIds = Array.from(new Set(questionIds.map(Number))).filter((qId) => !isNaN(qId) && !existingQSet.has(qId));
+
+      for (const qId of uniqueNewQIds) {
         nextOrder++;
         const [res] = await connection.execute<ResultSetHeader>(
           "INSERT IGNORE INTO test_questions (test_id, question_id, sort_order, marks) VALUES (?, ?, ?, 1)",
-          [testId, qId, nextOrder]
+          [numericTestId, qId, nextOrder]
         );
         if (res.affectedRows > 0) count++;
       }
@@ -1327,8 +1555,8 @@ export async function addQuestionsToMockTest(testId: string, questionIds: string
     } finally {
       connection.release();
     }
-  } catch {
-    count = questionIds.length;
+  } catch (err) {
+    console.error("Error linking questions to mock test:", err);
   }
 
   const test = localMockTests.find((t) => t.id === testId);
@@ -1338,9 +1566,12 @@ export async function addQuestionsToMockTest(testId: string, questionIds: string
 
 export async function removeQuestionFromMockTest(testId: string, questionId: string): Promise<boolean> {
   try {
+    const numericTestId = await resolveNumericTestId(db, testId);
+    if (!numericTestId) return false;
+
     const [res] = await db.execute<ResultSetHeader>(
       "DELETE FROM test_questions WHERE test_id = ? AND question_id = ?",
-      [testId, questionId]
+      [numericTestId, Number(questionId)]
     );
     const test = localMockTests.find((t) => t.id === testId);
     if (test && test.linkedQuestionsCount > 0) test.linkedQuestionsCount--;
@@ -1354,6 +1585,9 @@ export async function removeQuestionFromMockTest(testId: string, questionId: str
 
 export async function getQuestionsForMockTest(testId: string): Promise<AdminQuestion[]> {
   try {
+    const numericTestId = await resolveNumericTestId(db, testId);
+    if (!numericTestId) return [];
+
     const [rows] = await db.query<(RowDataPacket & {
       id: number;
       exam: string | null;
@@ -1372,8 +1606,9 @@ export async function getQuestionsForMockTest(testId: string): Promise<AdminQues
        LEFT JOIN exams e ON e.id = s.exam_id
        LEFT JOIN topics t ON t.id = q.topic_id
        WHERE tq.test_id = ?
+       GROUP BY q.id, e.name, s.name, t.name, q.stem, q.explanation, q.difficulty, q.status, tq.sort_order
        ORDER BY tq.sort_order ASC`,
-      [testId]
+      [numericTestId]
     );
 
     if (rows.length > 0) {
@@ -1408,17 +1643,17 @@ export async function getQuestionsForMockTest(testId: string): Promise<AdminQues
         subject: r.subject || "Unassigned",
         topic: r.topic || "Unassigned",
         stem: r.stem,
-        explanation: r.explanation || "",
-        difficulty: (r.difficulty as "easy" | "medium" | "hard") || "medium",
-        status: normalizeQuestionStatus(r.status),
-        options: optionsMap.get(r.id) ?? [],
+        explanation: r.explanation || undefined,
+        difficulty: (r.difficulty as any) || "Medium",
+        status: (r.status as any) || "Published",
+        options: optionsMap.get(r.id) || [],
         usedIn: [],
       }));
     }
-  } catch {
-    // Fall back to questions matching test
+  } catch (err) {
+    console.error("Error in getQuestionsForMockTest:", err);
   }
-  return [...localQuestions].slice(0, 5);
+  return [];
 }
 
 export async function recordSubjectRequest(
