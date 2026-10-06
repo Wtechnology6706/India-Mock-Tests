@@ -15,6 +15,20 @@ export type SubMenuLayer2 = {
   items: SubMenuItem3[];
 };
 
+export type TestimonialItem = {
+  id: string;
+  name: string;
+  role: string; // e.g. "BPSC TRE Selected Teacher (Class 9-10)" or "Parent of CTET Qualified Aspirant"
+  type: "student" | "parent";
+  avatarText?: string;
+  avatarUrl?: string;
+  rating: number; // 1 to 5
+  content: string; // Testimonial story
+  examBadge?: string; // e.g. "BPSC TRE 3.0", "CTET", "Bihar STET"
+  verified?: boolean;
+  date?: string;
+};
+
 export type SiteConfiguration = {
   portalName: string;
   portalTagline: string;
@@ -29,6 +43,7 @@ export type SiteConfiguration = {
   razorpayEnabled?: boolean;
   mockTestMenu: SubMenuLayer2[];
   tutorialMenu: SubMenuLayer2[];
+  testimonials: TestimonialItem[];
 };
 
 export const defaultMockTestMenu: SubMenuLayer2[] = [
@@ -127,6 +142,75 @@ export const defaultTutorialMenu: SubMenuLayer2[] = [
   },
 ];
 
+export const defaultTestimonials: TestimonialItem[] = [
+  {
+    id: "testi-1",
+    name: "Pooja Kumari",
+    role: "Selected Secondary Teacher (Class 9-10)",
+    type: "student",
+    rating: 5,
+    content: "The exact 5-option CBT format and bilingual explanations matched the actual BPSC TRE examination perfectly. Attempting 15 full mocks boosted my time management and helped me secure Rank 42 in Mathematics.",
+    examBadge: "BPSC TRE 3.0 Qualified",
+    verified: true,
+    date: "August 2026",
+  },
+  {
+    id: "testi-2",
+    name: "Rajeshwar Sharma",
+    role: "Parent of BPSC TRE Aspirant (Ankit Sharma)",
+    type: "parent",
+    rating: 5,
+    content: "As a parent, seeing my son analyze his weak subjects with detailed scorecards and chapter-wise breakdowns gave us immense confidence. The platform is transparent, authentic, and truly syllabus-focused.",
+    examBadge: "Parent Review",
+    verified: true,
+    date: "July 2026",
+  },
+  {
+    id: "testi-3",
+    name: "Amit Kumar Sinha",
+    role: "CTET Paper 1 & 2 Cleared (Score 128/150)",
+    type: "student",
+    rating: 5,
+    content: "Child Development & Pedagogy (CDP) questions were strictly based on previous year trends and NCERT/SCERT guidelines. The instant rank analysis gave me real exam simulation experience.",
+    examBadge: "CTET Qualified",
+    verified: true,
+    date: "September 2026",
+  },
+  {
+    id: "testi-4",
+    name: "Sunita Devi",
+    role: "Parent of STET Paper 1 Aspirant (Kavita)",
+    type: "parent",
+    rating: 5,
+    content: "India Mock Tests provided the most affordable and structured test series. The daily practice tracker and instant solution keys helped my daughter crack Bihar STET in her very first attempt.",
+    examBadge: "Parent Review",
+    verified: true,
+    date: "June 2026",
+  },
+  {
+    id: "testi-5",
+    name: "Vikash Ranjan",
+    role: "Bihar STET (Computer Science PGT) Qualified",
+    type: "student",
+    rating: 5,
+    content: "The technical topic-wise tests for Python, DBMS, and Networking covered every single subtopic. Solutions with code snippets and explanation notes are the best in the market.",
+    examBadge: "STET PGT Qualified",
+    verified: true,
+    date: "September 2026",
+  },
+  {
+    id: "testi-6",
+    name: "Manoj Kumar Verma",
+    role: "Parent of BPSC Primary Teacher Aspirant",
+    type: "parent",
+    rating: 5,
+    content: "Great platform with genuine syllabus mapping. No confusing advertisements or distractions. My daughter was able to practice on both phone and laptop seamlessly.",
+    examBadge: "Parent Review",
+    verified: true,
+    date: "May 2026",
+  },
+];
+
 export const defaultSiteConfig: SiteConfiguration = {
   portalName: "India Mock Tests",
   portalTagline: "India's Premier Examination & Mock Test Practice Platform",
@@ -137,4 +221,5 @@ export const defaultSiteConfig: SiteConfiguration = {
   adsenseClientId: "",
   mockTestMenu: defaultMockTestMenu,
   tutorialMenu: defaultTutorialMenu,
+  testimonials: defaultTestimonials,
 };

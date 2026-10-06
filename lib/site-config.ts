@@ -5,6 +5,7 @@ import {
   defaultSiteConfig,
   defaultMockTestMenu,
   defaultTutorialMenu,
+  defaultTestimonials,
 } from "./site-config-defaults";
 
 export * from "./site-config-defaults";
@@ -37,6 +38,7 @@ export async function getSiteConfiguration(): Promise<SiteConfiguration> {
         ...parsed,
         mockTestMenu: parsed.mockTestMenu && parsed.mockTestMenu.length > 0 ? parsed.mockTestMenu : defaultMockTestMenu,
         tutorialMenu: parsed.tutorialMenu && parsed.tutorialMenu.length > 0 ? parsed.tutorialMenu : defaultTutorialMenu,
+        testimonials: parsed.testimonials && parsed.testimonials.length > 0 ? parsed.testimonials : defaultTestimonials,
       };
       globalForConfig.siteConfig = merged;
       return merged;
@@ -56,6 +58,7 @@ export async function saveSiteConfiguration(config: Partial<SiteConfiguration>):
     portalName: config.portalName?.trim() || current.portalName,
     mockTestMenu: config.mockTestMenu || current.mockTestMenu,
     tutorialMenu: config.tutorialMenu || current.tutorialMenu,
+    testimonials: config.testimonials || current.testimonials,
   };
 
   globalForConfig.siteConfig = updated;

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { SiteConfiguration, SubMenuLayer2, SubMenuItem3 } from "../../lib/site-config-defaults";
-import { defaultMockTestMenu, defaultTutorialMenu, defaultSiteConfig } from "../../lib/site-config-defaults";
+import type { SiteConfiguration, SubMenuLayer2, SubMenuItem3, TestimonialItem } from "../../lib/site-config-defaults";
+import { defaultMockTestMenu, defaultTutorialMenu, defaultSiteConfig, defaultTestimonials } from "../../lib/site-config-defaults";
 
 export default function MenuAndSiteConfigManager() {
   const [config, setConfig] = useState<SiteConfiguration>(defaultSiteConfig);
-  const [activeMenuTab, setActiveMenuTab] = useState<"general" | "mock-test" | "tutorial">("general");
+  const [activeMenuTab, setActiveMenuTab] = useState<"general" | "mock-test" | "tutorial" | "testimonials">("general");
   const [selectedLayer2Id, setSelectedLayer2Id] = useState<string>("bpsc-tre-4");
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -16,7 +16,11 @@ export default function MenuAndSiteConfigManager() {
       .then((res) => res.json())
       .then((data) => {
         if (data?.config) {
-          setConfig(data.config);
+          setConfig({
+            ...defaultSiteConfig,
+            ...data.config,
+            testimonials: data.config.testimonials?.length ? data.config.testimonials : defaultTestimonials,
+          });
           if (data.config.mockTestMenu?.[0]) {
             setSelectedLayer2Id(data.config.mockTestMenu[0].id);
           }
@@ -39,7 +43,7 @@ export default function MenuAndSiteConfigManager() {
       setConfig(data.config);
       setFeedback({
         type: "success",
-        message: "Portal branding and dynamic menu navigation saved successfully! Changes are live across the portal.",
+        message: "Portal branding, dynamic navigation, and testimonials saved successfully! Changes are live across the portal.",
       });
     } catch (err) {
       setFeedback({
@@ -131,15 +135,60 @@ export default function MenuAndSiteConfigManager() {
     }));
   }
 
+  // Testimonials management
+  function addTestimonial() {
+    const newTestimonial: TestimonialItem = {
+      id: `testi-${Date.now()}`,
+      name: "New Student / Parent",
+      role: "Aspirant / Selected Candidate",
+      type: "student",
+      rating: 5,
+      content: "Write student or parent review feedback here. India Mock Tests helped me clear the examination with confidence.",
+      examBadge: "BPSC TRE 4.0",
+      verified: true,
+      date: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    };
+
+    setConfig((prev) => ({
+      ...prev,
+      testimonials: [newTestimonial, ...(prev.testimonials || [])],
+    }));
+  }
+
+  function updateTestimonial(id: string, field: keyof TestimonialItem, value: any) {
+    setConfig((prev) => ({
+      ...prev,
+      testimonials: (prev.testimonials || []).map((item) => (item.id === id ? { ...item, [field]: value } : item)),
+    }));
+  }
+
+  function removeTestimonial(id: string) {
+    if (!window.confirm("Are you sure you want to delete this testimonial?")) return;
+    setConfig((prev) => ({
+      ...prev,
+      testimonials: (prev.testimonials || []).filter((item) => item.id !== id),
+    }));
+  }
+
+  function moveTestimonial(index: number, direction: "up" | "down") {
+    const list = [...(config.testimonials || [])];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIndex];
+    list[targetIndex] = temp;
+    setConfig((prev) => ({ ...prev, testimonials: list }));
+  }
+
   return (
     <div className="site-config-manager">
       {/* Header */}
       <div className="studio-top-header">
         <div>
-          <span className="studio-kicker">PORTAL BRANDING & MENU STUDIO</span>
-          <h2>Website Configuration & Mega Menu Manager</h2>
+          <span className="studio-kicker">PORTAL BRANDING, MENUS & TESTIMONIALS</span>
+          <h2>Website Configuration Studio</h2>
           <p>
-            Update portal name branding, Google AdSense setup, and dynamically configure every 2nd and 3rd layer menu item and link.
+            Update portal branding, Google AdSense setup, mega menu layers, and manage student & parent testimonials displayed on the home page.
           </p>
         </div>
 
@@ -185,6 +234,14 @@ export default function MenuAndSiteConfigManager() {
         >
           🎓 3. Tutorial Menu Configuration
         </button>
+
+        <button
+          type="button"
+          className={`config-tab-btn ${activeMenuTab === "testimonials" ? "active" : ""}`}
+          onClick={() => setActiveMenuTab("testimonials")}
+        >
+          ⭐ 4. Testimonials ({config.testimonials?.length || 0})
+        </button>
       </div>
 
       {/* TAB 1: GENERAL BRANDING & PORTAL NAME */}
@@ -211,80 +268,18 @@ export default function MenuAndSiteConfigManager() {
             </div>
 
             <div className="config-field">
-              <label>Portal Tagline / Slogan</label>
+              <label>Portal Tagline</label>
               <input
                 type="text"
                 value={config.portalTagline}
                 onChange={(e) => setConfig({ ...config, portalTagline: e.target.value })}
                 placeholder="e.g. India's Premier Examination & Mock Test Practice Platform"
               />
-            </div>
-
-            {/* Logo Configuration & Live Preview */}
-            <div className="config-field" style={{ gridColumn: "1 / -1" }}>
-              <div className="logo-config-box" style={{ background: "#f8faf9", border: "1.5px solid #d4dfda", borderRadius: "10px", padding: "16px 20px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "20px", alignItems: "center" }}>
-                  <div>
-                    <label style={{ font: "700 13px 'Space Grotesk', sans-serif", color: "#172824", display: "block", marginBottom: "4px" }}>
-                      🖼️ Custom Header Logo Image URL
-                    </label>
-                    <p style={{ fontSize: "12px", color: "#637770", margin: "0 0 10px", lineHeight: "1.4" }}>
-                      Provide a direct image URL for your brand logo (PNG, SVG, or JPG with transparent/light background). If left blank, the portal will automatically display the sleek dynamic text logo.
-                    </p>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <input
-                        type="url"
-                        value={config.logoImageUrl || ""}
-                        onChange={(e) => setConfig({ ...config, logoImageUrl: e.target.value })}
-                        placeholder="https://.../logo.png or /images/logo.svg"
-                        style={{ flex: 1, padding: "8px 12px", borderRadius: "6px", border: "1px solid #c7d8d0", fontSize: "12.5px" }}
-                      />
-                      {config.logoImageUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setConfig({ ...config, logoImageUrl: "" })}
-                          style={{ background: "#faeae6", border: "1px solid #f2c7bd", color: "#a83f2a", borderRadius: "6px", padding: "8px 12px", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}
-                        >
-                          ✕ Remove Logo
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Real-time Live Logo Preview */}
-                  <div style={{ background: "#ffffff", border: "1px solid #d4dfda", borderRadius: "8px", padding: "12px 16px", textAlign: "center" }}>
-                    <span style={{ font: "700 9.5px 'Space Grotesk', sans-serif", color: "#7a8e87", textTransform: "uppercase", letterSpacing: "0.8px", display: "block", marginBottom: "10px" }}>
-                      LIVE HEADER LOGO PREVIEW
-                    </span>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "44px", padding: "4px" }}>
-                      {config.logoImageUrl ? (
-                        <img
-                          src={config.logoImageUrl}
-                          alt={config.portalName}
-                          style={{ maxHeight: "38px", maxWidth: "180px", objectFit: "contain" }}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", font: "700 17px 'Space Grotesk', sans-serif", color: "#172824" }}>
-                          <span style={{ display: "grid", placeItems: "center", width: "30px", height: "30px", borderRadius: "6px", background: "#e8623b", color: "#ffffff", fontWeight: "800", fontSize: "15px" }}>
-                            {config.portalName ? config.portalName.slice(0, 1).toUpperCase() : "I"}
-                          </span>
-                          <span>
-                            {config.portalName ? config.portalName : "India Mock Tests"}
-                            <span style={{ color: "#e8623b" }}>.</span>
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <small>Hero subheader and SEO description metadata.</small>
             </div>
 
             <div className="config-field">
-              <label>Support / Contact Email</label>
+              <label>Support Email Address</label>
               <input
                 type="email"
                 value={config.contactEmail}
@@ -294,7 +289,7 @@ export default function MenuAndSiteConfigManager() {
             </div>
 
             <div className="config-field">
-              <label>Support Helpline Number</label>
+              <label>Support Phone / WhatsApp</label>
               <input
                 type="text"
                 value={config.supportPhone}
@@ -303,65 +298,27 @@ export default function MenuAndSiteConfigManager() {
               />
             </div>
 
-            <div className="config-field" style={{ gridColumn: "1 / -1" }}>
-              <label>Google AdSense Publisher Client ID</label>
+            <div className="config-field full-width">
+              <label>Google AdSense Client ID</label>
               <input
                 type="text"
-                value={config.adsenseClientId}
+                value={config.adsenseClientId || ""}
                 onChange={(e) => setConfig({ ...config, adsenseClientId: e.target.value })}
                 placeholder="ca-pub-XXXXXXXXXXXXXXXX"
               />
-              <small>
-                Once approved by Google AdSense, paste your Publisher ID here. AdSense scripts and ad units will render automatically.
-              </small>
+              <small>Your approved AdSense publisher ID to dynamically inject ad units.</small>
             </div>
 
-            {/* Razorpay Gateway Configuration */}
-            <div className="config-field">
-              <label>Razorpay Key ID</label>
+            <div className="config-field full-width">
+              <label>Custom Header Logo Image URL (Optional)</label>
               <input
                 type="text"
-                value={config.razorpayKeyId || ""}
-                onChange={(e) => setConfig({ ...config, razorpayKeyId: e.target.value })}
-                placeholder="rzp_live_... or rzp_test_..."
+                value={config.logoImageUrl || ""}
+                onChange={(e) => setConfig({ ...config, logoImageUrl: e.target.value })}
+                placeholder="https://.../logo.png"
               />
-              <small>Your public Razorpay Key ID from the Razorpay Dashboard API Keys section.</small>
+              <small>If empty, the clean typography logo with orange accent mark is shown.</small>
             </div>
-
-            <div className="config-field">
-              <label>Razorpay Key Secret</label>
-              <input
-                type="password"
-                value={config.razorpayKeySecret || ""}
-                onChange={(e) => setConfig({ ...config, razorpayKeySecret: e.target.value })}
-                placeholder="Key Secret from Razorpay Dashboard"
-              />
-              <small>Used on server to authenticate order creation and verify HMAC-SHA256 signatures.</small>
-            </div>
-
-            <div className="config-field" style={{ gridColumn: "1 / -1" }}>
-              <label>Razorpay Webhook Secret (Optional)</label>
-              <input
-                type="password"
-                value={config.razorpayWebhookSecret || ""}
-                onChange={(e) => setConfig({ ...config, razorpayWebhookSecret: e.target.value })}
-                placeholder="Secret configured in Razorpay Webhooks tab"
-              />
-              <small>Webhook URL for your domain: <code>https://yourdomain.com/api/razorpay/webhook</code></small>
-            </div>
-          </div>
-
-          {/* Live Branding Preview */}
-          <div className="branding-preview-box">
-            <span className="preview-heading">LIVE HEADER LOGO PREVIEW</span>
-            <div className="preview-logo-render">
-              <span className="preview-mark">{config.portalName.slice(0, 1).toUpperCase()}</span>
-              <span className="preview-text">
-                {config.portalName.toLowerCase()}
-                <span className="preview-dot">.</span>
-              </span>
-            </div>
-            <small style={{ color: "#778581" }}>Tagline: {config.portalTagline}</small>
           </div>
         </div>
       )}
@@ -370,55 +327,54 @@ export default function MenuAndSiteConfigManager() {
       {activeMenuTab === "mock-test" && (
         <div className="config-panel">
           <div className="panel-section-title">
-            <h3>Mock Test Menu Architecture (3-Layer Hierarchy)</h3>
+            <h3>Mock Test Mega Menu Structure (Layer 1, 2 & 3)</h3>
             <p>
-              Configure Layer 2 Exam columns and customize every 3rd Layer link (e.g. link "Class 11-12" to <code>/exams/bpsc-tre-4</code>).
-              If a link is set to empty or unconfigured, it will be <strong>disabled / non-clickable</strong> on the user website.
+              Configure the secondary categories (Layer 2) and tertiary examination level links (Layer 3) with custom names and destination URLs.
             </p>
           </div>
 
-          {/* Layer 2 Category selector buttons */}
-          <div className="layer2-selector-bar">
-            <span className="layer2-bar-label">Layer 2 Categories:</span>
+          <div className="layer2-tabs-selector">
             {config.mockTestMenu.map((cat) => (
               <button
                 type="button"
                 key={cat.id}
-                className={`layer2-cat-chip ${selectedLayer2Id === cat.id ? "active" : ""}`}
+                className={`layer2-pill ${selectedLayer2Id === cat.id ? "active" : ""}`}
                 onClick={() => setSelectedLayer2Id(cat.id)}
               >
-                {cat.label} ({cat.items.length} links)
+                <span>{cat.label}</span>
+                <small>({cat.items.length} links)</small>
               </button>
             ))}
           </div>
 
           {currentMockLayer2 && (
-            <div className="layer2-edit-card">
+            <div className="layer2-editor-box">
               <div className="layer2-header-edit">
-                <div className="config-field" style={{ flex: 1 }}>
-                  <label>2nd Layer Category Label *</label>
+                <div>
+                  <label>Layer 2 Category Display Name:</label>
                   <input
                     type="text"
+                    className="layer2-title-input"
                     value={currentMockLayer2.label}
                     onChange={(e) => updateMockLayer2Label(currentMockLayer2.id, e.target.value)}
                   />
                 </div>
+
                 <button
                   type="button"
                   className="btn-add-layer3"
                   onClick={() => addMockLayer3Item(currentMockLayer2.id)}
                 >
-                  + Add 3rd Layer Submenu Link
+                  + Add Layer 3 Exam/Class Link
                 </button>
               </div>
 
-              {/* 3rd Layer Submenu Items Table */}
               <div className="layer3-items-list">
-                <div className="layer3-table-head">
-                  <span>3rd Layer Label</span>
-                  <span>Subtitle / Audience</span>
-                  <span>Destination Target Link</span>
-                  <span>Status</span>
+                <div className="layer3-table-header">
+                  <span>Class / Exam Name</span>
+                  <span>Audience / Subtext</span>
+                  <span>Target Destination URL</span>
+                  <span>Clickable Status</span>
                   <span>Action</span>
                 </div>
 
@@ -428,7 +384,7 @@ export default function MenuAndSiteConfigManager() {
                       type="text"
                       className="layer3-input"
                       value={item.name}
-                      placeholder="e.g. Class 11–12"
+                      placeholder="e.g. Class 1–5"
                       onChange={(e) =>
                         updateMockLayer3Item(currentMockLayer2.id, item.id, "name", e.target.value)
                       }
@@ -438,65 +394,23 @@ export default function MenuAndSiteConfigManager() {
                       type="text"
                       className="layer3-input"
                       value={item.audience || ""}
-                      placeholder="e.g. Higher Secondary (PGT)"
+                      placeholder="e.g. Primary Teacher"
                       onChange={(e) =>
                         updateMockLayer3Item(currentMockLayer2.id, item.id, "audience", e.target.value)
                       }
                     />
 
-                    <div className="url-select-wrap">
-                      <input
-                        type="text"
-                        className="layer3-input"
-                        value={item.targetUrl}
-                        placeholder="e.g. /exams/bpsc-tre-4 or /attempt/..."
-                        onChange={(e) =>
-                          updateMockLayer3Item(currentMockLayer2.id, item.id, "targetUrl", e.target.value)
-                        }
-                      />
-                      <div className="url-quick-presets">
-                        <small>Quick Link Presets:</small>
-                        <button
-                          type="button"
-                          className="preset-btn"
-                          onClick={() =>
-                            updateMockLayer3Item(
-                              currentMockLayer2.id,
-                              item.id,
-                              "targetUrl",
-                              `/exams/${currentMockLayer2.slug}`
-                            )
-                          }
-                        >
-                          Exam Page
-                        </button>
-                        <button
-                          type="button"
-                          className="preset-btn"
-                          onClick={() =>
-                            updateMockLayer3Item(
-                              currentMockLayer2.id,
-                              item.id,
-                              "targetUrl",
-                              `/tracks/${currentMockLayer2.slug}/${item.slug}`
-                            )
-                          }
-                        >
-                          Under Development
-                        </button>
-                        <button
-                          type="button"
-                          className="preset-btn danger"
-                          onClick={() =>
-                            updateMockLayer3Item(currentMockLayer2.id, item.id, "targetUrl", "")
-                          }
-                        >
-                          Unlink (Disabled)
-                        </button>
-                      </div>
-                    </div>
+                    <input
+                      type="text"
+                      className="layer3-input"
+                      value={item.targetUrl}
+                      placeholder="/exams/..."
+                      onChange={(e) =>
+                        updateMockLayer3Item(currentMockLayer2.id, item.id, "targetUrl", e.target.value)
+                      }
+                    />
 
-                    <div className="layer3-status-col">
+                    <div className="layer3-toggle-wrap">
                       <label className="toggle-label">
                         <input
                           type="checkbox"
@@ -569,6 +483,212 @@ export default function MenuAndSiteConfigManager() {
                       </label>
                     </div>
                   ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: TESTIMONIALS (STUDENTS & PARENTS) */}
+      {activeMenuTab === "testimonials" && (
+        <div className="config-panel">
+          <div className="panel-section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+            <div>
+              <h3>Student & Parent Testimonials Manager</h3>
+              <p>
+                Manage verified reviews, ratings, and success stories shown in the Testimonials section of the home page.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="btn-add-layer3"
+              style={{ background: "#1e3a34", color: "#fff", padding: "10px 18px", borderRadius: "6px", fontWeight: 700, border: "none", cursor: "pointer" }}
+              onClick={addTestimonial}
+            >
+              + Add New Testimonial
+            </button>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "18px", marginTop: "20px" }}>
+            {(config.testimonials || []).map((item, idx) => (
+              <div
+                key={item.id}
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "10px",
+                  padding: "20px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                }}
+              >
+                {/* Top Row: Reorder, Type Badge, Delete */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontWeight: 800, color: "#94a3b8", fontSize: "0.85rem" }}>
+                      #{idx + 1}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => moveTestimonial(idx, "up")}
+                      style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "2px 8px", cursor: idx === 0 ? "not-allowed" : "pointer" }}
+                      title="Move Up"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === (config.testimonials?.length || 1) - 1}
+                      onClick={() => moveTestimonial(idx, "down")}
+                      style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "2px 8px", cursor: idx === (config.testimonials?.length || 1) - 1 ? "not-allowed" : "pointer" }}
+                      title="Move Down"
+                    >
+                      ▼
+                    </button>
+
+                    {/* Type Selector */}
+                    <select
+                      value={item.type}
+                      onChange={(e) => updateTestimonial(item.id, "type", e.target.value as "student" | "parent")}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        fontWeight: 700,
+                        fontSize: "0.82rem",
+                        border: "1px solid #cbd5e1",
+                        background: item.type === "parent" ? "#fef3c7" : "#dbeafe",
+                        color: item.type === "parent" ? "#92400e" : "#1e40af",
+                      }}
+                    >
+                      <option value="student">🎓 Student Review</option>
+                      <option value="parent">👨‍👩‍👧 Parent Review</option>
+                    </select>
+
+                    {/* Rating Selector */}
+                    <select
+                      value={item.rating}
+                      onChange={(e) => updateTestimonial(item.id, "rating", Number(e.target.value))}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        fontWeight: 700,
+                        fontSize: "0.82rem",
+                        border: "1px solid #cbd5e1",
+                        background: "#fff",
+                        color: "#f59e0b",
+                      }}
+                    >
+                      <option value={5}>⭐⭐⭐⭐⭐ (5/5)</option>
+                      <option value={4}>⭐⭐⭐⭐ (4/5)</option>
+                      <option value={3}>⭐⭐⭐ (3/5)</option>
+                    </select>
+
+                    <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", fontWeight: 600, color: "#475569", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={item.verified ?? true}
+                        onChange={(e) => updateTestimonial(item.id, "verified", e.target.checked)}
+                      />
+                      <span>✓ Verified Badge</span>
+                    </label>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => removeTestimonial(item.id)}
+                    style={{
+                      background: "#fee2e2",
+                      color: "#991b1b",
+                      border: "1px solid #fca5a5",
+                      borderRadius: "6px",
+                      padding: "4px 12px",
+                      fontSize: "0.82rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    🗑 Delete Review
+                  </button>
+                </div>
+
+                {/* Form Fields Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+                      Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={item.name}
+                      onChange={(e) => updateTestimonial(item.id, "name", e.target.value)}
+                      placeholder="e.g. Pooja Kumari"
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+                      Role / Selection Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={item.role}
+                      onChange={(e) => updateTestimonial(item.id, "role", e.target.value)}
+                      placeholder="e.g. Selected Secondary Teacher (Class 9-10) or Parent of Aspirant"
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+                      Exam / Category Badge
+                    </label>
+                    <input
+                      type="text"
+                      value={item.examBadge || ""}
+                      onChange={(e) => updateTestimonial(item.id, "examBadge", e.target.value)}
+                      placeholder="e.g. BPSC TRE 3.0 Qualified / Parent Review"
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+                      Date
+                    </label>
+                    <input
+                      type="text"
+                      value={item.date || ""}
+                      onChange={(e) => updateTestimonial(item.id, "date", e.target.value)}
+                      placeholder="e.g. August 2026"
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                    />
+                  </div>
+                </div>
+
+                {/* Content Area */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+                    Testimonial / Review Quote *
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={item.content}
+                    onChange={(e) => updateTestimonial(item.id, "content", e.target.value)}
+                    placeholder="Enter student or parent review story..."
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.88rem",
+                      fontFamily: "inherit",
+                      lineHeight: "1.5",
+                      resize: "vertical",
+                    }}
+                  />
                 </div>
               </div>
             ))}

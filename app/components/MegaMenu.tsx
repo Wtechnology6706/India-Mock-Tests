@@ -352,7 +352,7 @@ export default function MegaMenu() {
             {user ? (
               <div className="logged-in-nav-group">
                 <Link className="btn-dashboard-nav" href="/dashboard">
-                  ◈ Dashboard
+                  📊 Dashboard
                 </Link>
 
                 {/* Profile dropdown trigger */}
@@ -380,17 +380,17 @@ export default function MegaMenu() {
 
                       <div className="header-dropdown-links">
                         <Link href="/dashboard" className="header-dropdown-item">
-                          ◈ Student Dashboard
+                          📊 Student Dashboard
                         </Link>
                         <Link href="/dashboard#tests" className="header-dropdown-item">
-                          ▣ My Mock Tests
+                          📝 My Mock Tests
                         </Link>
                         <Link href="/dashboard#progress" className="header-dropdown-item">
-                          ↗ Practice Results
+                          📈 Practice Results
                         </Link>
                         {user.role === "admin" && (
                           <Link href="/admin" className="header-dropdown-item admin-item">
-                            🛡 Admin Studio
+                            🛡️ Admin Studio
                           </Link>
                         )}
                         <button
@@ -398,7 +398,7 @@ export default function MegaMenu() {
                           className="header-dropdown-logout"
                           onClick={handleLogout}
                         >
-                          ⏻ Log out
+                          🚪 Log out
                         </button>
                       </div>
                     </div>

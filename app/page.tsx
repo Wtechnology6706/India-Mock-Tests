@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { featuredExams } from "../lib/catalog";
+import { getSiteConfiguration } from "../lib/site-config";
 import MegaMenu from "./components/MegaMenu";
 import HeroSearch from "./components/HeroSearch";
+import TestimonialsSection from "./components/TestimonialsSection";
 import Footer from "./components/Footer";
 
 const exams = featuredExams;
@@ -13,7 +15,8 @@ const categories = [
   ["Engineering", "GATE · JE · Technical & CS", "⌘", "sky", "engineering"],
 ];
 
-export default function Home() {
+export default async function Home() {
+  const config = await getSiteConfiguration();
   return (
     <main>
       {/* Dynamic 3-Layer Mega Menu */}
@@ -268,6 +271,9 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
+      {/* Student & Parent Testimonials Section */}
+      <TestimonialsSection initialTestimonials={config.testimonials} />
 
       {/* Final CTA */}
       <section className="final-cta">
