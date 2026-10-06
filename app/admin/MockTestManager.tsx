@@ -41,6 +41,7 @@ export default function MockTestManager({
   const [createStatus, setCreateStatus] = useState<"Draft" | "Published">("Published");
   const [createDescription, setCreateDescription] = useState("");
   const [createBannerImageUrl, setCreateBannerImageUrl] = useState("");
+  const [createBannerPreviewUrl, setCreateBannerPreviewUrl] = useState("");
   const [isUploadingCreateBanner, setIsUploadingCreateBanner] = useState(false);
   const [createUploadFeedback, setCreateUploadFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const createFileInputRef = useRef<HTMLInputElement>(null);
@@ -67,6 +68,7 @@ export default function MockTestManager({
   const [editStatus, setEditStatus] = useState<"Draft" | "Published" | "Archived">("Published");
   const [editDescription, setEditDescription] = useState("");
   const [editBannerImageUrl, setEditBannerImageUrl] = useState("");
+  const [editBannerPreviewUrl, setEditBannerPreviewUrl] = useState("");
   const [isUploadingEditBanner, setIsUploadingEditBanner] = useState(false);
   const [editUploadFeedback, setEditUploadFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
@@ -206,6 +208,7 @@ export default function MockTestManager({
     setEditStatus(test.status);
     setEditDescription(test.description || "");
     setEditBannerImageUrl(test.bannerImageUrl || "");
+    setEditBannerPreviewUrl("");
     setEditFeedback(null);
     setEditUploadFeedback(null);
 
@@ -225,6 +228,17 @@ export default function MockTestManager({
   // Handle Banner Image File Upload
   async function handleBannerUpload(file: File, isEdit: boolean) {
     const testName = isEdit ? (editTitle.trim() || editingTest?.name || "mock-test") : (createTitle.trim() || "mock-test");
+    
+    // Create instant local blob preview
+    try {
+      const localBlob = URL.createObjectURL(file);
+      if (isEdit) {
+        setEditBannerPreviewUrl(localBlob);
+      } else {
+        setCreateBannerPreviewUrl(localBlob);
+      }
+    } catch {}
+
     if (isEdit) {
       setIsUploadingEditBanner(true);
       setEditUploadFeedback(null);
@@ -908,23 +922,27 @@ export default function MockTestManager({
                 </div>
               )}
 
-              <div className="banner-or-divider">OR SPECIFY DIRECT URL</div>
+              <div className="banner-or-divider">OR SPECIFY DIRECT URL / PATH</div>
 
               <div className="banner-input-row">
                 <input
-                  type="url"
+                  type="text"
                   placeholder="https://images.unsplash.com/... or /uploads/banners/image.jpg"
                   value={createBannerImageUrl}
-                  onChange={(e) => setCreateBannerImageUrl(e.target.value)}
+                  onChange={(e) => {
+                    setCreateBannerImageUrl(e.target.value);
+                    setCreateBannerPreviewUrl("");
+                  }}
                   className="admin-form-input"
                   style={{ flex: 1 }}
                 />
-                {createBannerImageUrl && (
+                {(createBannerImageUrl || createBannerPreviewUrl) && (
                   <button
                     type="button"
                     className="btn-clear-banner"
                     onClick={() => {
                       setCreateBannerImageUrl("");
+                      setCreateBannerPreviewUrl("");
                       setCreateUploadFeedback(null);
                     }}
                   >
@@ -937,15 +955,12 @@ export default function MockTestManager({
             {/* Live Banner Preview */}
             <div className="banner-live-preview-box">
               <span className="preview-label">LIVE BANNER PREVIEW (ON CARDS & TEST EXPLORER)</span>
-              {createBannerImageUrl ? (
+              {(createBannerPreviewUrl || createBannerImageUrl) ? (
                 <div className="preview-banner-custom">
                   <img
-                    src={createBannerImageUrl}
+                    src={createBannerPreviewUrl || createBannerImageUrl}
                     alt="Banner Preview"
                     className="preview-custom-img"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop&q=80";
-                    }}
                   />
                   <div className="preview-overlay">
                     <span className="preview-subject-pill">{createSubject}</span>
@@ -1324,23 +1339,27 @@ export default function MockTestManager({
                         </div>
                       )}
 
-                      <div className="banner-or-divider">OR EDIT IMAGE URL DIRECTLY</div>
+                      <div className="banner-or-divider">OR EDIT IMAGE URL / PATH DIRECTLY</div>
 
                       <div className="banner-input-row">
                         <input
-                          type="url"
+                          type="text"
                           placeholder="https://images.unsplash.com/... or /uploads/banners/image.jpg"
                           value={editBannerImageUrl}
-                          onChange={(e) => setEditBannerImageUrl(e.target.value)}
+                          onChange={(e) => {
+                            setEditBannerImageUrl(e.target.value);
+                            setEditBannerPreviewUrl("");
+                          }}
                           className="admin-form-input"
                           style={{ flex: 1 }}
                         />
-                        {editBannerImageUrl && (
+                        {(editBannerImageUrl || editBannerPreviewUrl) && (
                           <button
                             type="button"
                             className="btn-clear-banner"
                             onClick={() => {
                               setEditBannerImageUrl("");
+                              setEditBannerPreviewUrl("");
                               setEditUploadFeedback(null);
                             }}
                           >
@@ -1353,15 +1372,12 @@ export default function MockTestManager({
                     {/* Live Banner Preview */}
                     <div className="banner-live-preview-box">
                       <span className="preview-label">LIVE BANNER PREVIEW (ON CARDS & TEST EXPLORER)</span>
-                      {editBannerImageUrl ? (
+                      {(editBannerPreviewUrl || editBannerImageUrl) ? (
                         <div className="preview-banner-custom">
                           <img
-                            src={editBannerImageUrl}
+                            src={editBannerPreviewUrl || editBannerImageUrl}
                             alt="Banner Preview"
                             className="preview-custom-img"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop&q=80";
-                            }}
                           />
                           <div className="preview-overlay">
                             <span className="preview-subject-pill">{editSubject}</span>
