@@ -129,7 +129,7 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
             className={`dashboard-nav-btn ${activeTab === "overview" ? "active" : ""}`}
             onClick={() => switchTab("overview")}
           >
-            <span>◈</span>
+            <span>📊</span>
             Overview
           </button>
 
@@ -138,7 +138,7 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
             className={`dashboard-nav-btn ${activeTab === "tests" ? "active" : ""}`}
             onClick={() => switchTab("tests")}
           >
-            <span>▣</span>
+            <span>📝</span>
             Mock tests
           </button>
 
@@ -147,7 +147,7 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
             className={`dashboard-nav-btn ${activeTab === "exams" ? "active" : ""}`}
             onClick={() => switchTab("exams")}
           >
-            <span>▦</span>
+            <span>🏛️</span>
             Exam directory
           </button>
 
@@ -156,7 +156,7 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
             className={`dashboard-nav-btn ${activeTab === "progress" ? "active" : ""}`}
             onClick={() => switchTab("progress")}
           >
-            <span>↗</span>
+            <span>📈</span>
             Test results ({stats.totalAttempts})
           </button>
 
@@ -176,7 +176,7 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
             className={`dashboard-nav-btn ${activeTab === "settings" ? "active" : ""}`}
             onClick={() => switchTab("settings")}
           >
-            <span>⚙</span>
+            <span>⚙️</span>
             Account Settings
           </button>
 
@@ -186,7 +186,7 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
               className="dashboard-nav-btn admin-link-btn"
               style={{ marginBottom: "16px", color: "#b94a2b" }}
             >
-              <span>🛡</span>
+              <span>🛡️</span>
               Admin Studio
             </Link>
           )}
@@ -203,7 +203,7 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
               onClick={handleLogout}
               title="Log out"
             >
-              ⏻
+              🚪
             </button>
           </div>
         </div>
@@ -298,23 +298,23 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
                   </div>
                   <div className="menu-items">
                     <button type="button" onClick={() => switchTab("overview")}>
-                      ◈ Dashboard Overview
+                      <span>📊</span> Dashboard Overview
                     </button>
                     <button type="button" onClick={() => switchTab("tests")}>
-                      ▣ My Mock Tests
+                      <span>📝</span> My Mock Tests
                     </button>
                     <button type="button" onClick={() => switchTab("progress")}>
-                      ↗ Test Performance ({stats.totalAttempts})
+                      <span>📈</span> Test Performance ({stats.totalAttempts})
                     </button>
                     <button type="button" onClick={() => switchTab("membership")}>
-                      👑 VIP Pass & Invoices
+                      <span>👑</span> VIP Pass & Invoices
                     </button>
                     <button type="button" onClick={() => switchTab("settings")}>
-                      ⚙ Account Settings
+                      <span>⚙️</span> Account Settings
                     </button>
                     {user.role === "admin" && (
                       <Link href="/admin" className="admin-menu-link">
-                        🛡 Admin Console →
+                        <span>🛡️</span> Admin Console →
                       </Link>
                     )}
                     <button
@@ -323,7 +323,7 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
                       onClick={handleLogout}
                       disabled={isLoggingOut}
                     >
-                      {isLoggingOut ? "Logging out..." : "⏻ Sign Out"}
+                      <span>🚪</span> {isLoggingOut ? "Logging out..." : "Sign Out"}
                     </button>
                   </div>
                 </div>

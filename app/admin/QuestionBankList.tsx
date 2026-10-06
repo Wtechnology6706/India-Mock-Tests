@@ -17,6 +17,7 @@ export default function QuestionBankList({
   const [questions, setQuestions] = useState<AdminQuestion[]>(initialQuestions);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedExam, setSelectedExam] = useState("All");
+  const [selectedSubject, setSelectedSubject] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [selectedDifficulty, setSelectedDifficulty] = useState("All");
   const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
@@ -39,10 +40,17 @@ export default function QuestionBankList({
     [questions]
   );
 
+  // Extract unique subjects for filter (cascaded when an exam is selected)
+  const subjectList = useMemo(() => {
+    const pool = selectedExam === "All" ? questions : questions.filter((q) => q.exam === selectedExam);
+    return Array.from(new Set(pool.map((q) => q.subject).filter(Boolean))).sort();
+  }, [questions, selectedExam]);
+
   // Filtered questions
   const filtered = useMemo(() => {
     return questions.filter((q) => {
       if (selectedExam !== "All" && q.exam !== selectedExam) return false;
+      if (selectedSubject !== "All" && q.subject !== selectedSubject) return false;
       if (selectedStatus !== "All" && q.status !== selectedStatus) return false;
       if (selectedDifficulty !== "All" && (q.difficulty || "medium") !== selectedDifficulty)
         return false;
@@ -58,7 +66,7 @@ export default function QuestionBankList({
 
       return true;
     });
-  }, [questions, selectedExam, selectedStatus, selectedDifficulty, searchQuery]);
+  }, [questions, selectedExam, selectedSubject, selectedStatus, selectedDifficulty, searchQuery]);
 
   // Total pages and Paginated Slice
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -111,6 +119,12 @@ export default function QuestionBankList({
   // Filter change handlers (resets page to 1)
   function handleFilterExamChange(exam: string) {
     setSelectedExam(exam);
+    setSelectedSubject("All");
+    setCurrentPage(1);
+  }
+
+  function handleFilterSubjectChange(subject: string) {
+    setSelectedSubject(subject);
     setCurrentPage(1);
   }
 
@@ -343,6 +357,16 @@ export default function QuestionBankList({
         </div>
 
         <div className="qb-filter-group">
+          {/* Subject Filter */}
+          <select value={selectedSubject} onChange={(e) => handleFilterSubjectChange(e.target.value)}>
+            <option value="All">All Subjects ({subjectList.length})</option>
+            {subjectList.map((subject) => (
+              <option key={subject} value={subject}>
+                {subject}
+              </option>
+            ))}
+          </select>
+
           {/* Exam Filter */}
           <select value={selectedExam} onChange={(e) => handleFilterExamChange(e.target.value)}>
             <option value="All">All Exams ({questions.length})</option>
@@ -386,6 +410,7 @@ export default function QuestionBankList({
 
           {(searchQuery ||
             selectedExam !== "All" ||
+            selectedSubject !== "All" ||
             selectedStatus !== "All" ||
             selectedDifficulty !== "All") && (
             <button
@@ -394,6 +419,7 @@ export default function QuestionBankList({
               onClick={() => {
                 setSearchQuery("");
                 setSelectedExam("All");
+                setSelectedSubject("All");
                 setSelectedStatus("All");
                 setSelectedDifficulty("All");
                 setCurrentPage(1);
