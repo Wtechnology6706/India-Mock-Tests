@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { AuthUser } from "../../lib/auth-store";
 import type { UserDashboardPayload, UserAttemptHistoryItem } from "../../lib/dashboard-store";
 import type { OrderRecord } from "../../lib/commerce-store";
+import type { MockTest } from "../../lib/admin-content";
 import { mockTests } from "../../lib/syllabus";
 import { featuredExams } from "../../lib/catalog";
 
@@ -14,9 +15,10 @@ type TabKey = "overview" | "tests" | "exams" | "progress" | "membership" | "sett
 type DashboardClientProps = {
   user: AuthUser;
   initialData?: UserDashboardPayload;
+  initialMockTests?: MockTest[];
 };
 
-export default function DashboardClient({ user, initialData }: DashboardClientProps) {
+export default function DashboardClient({ user, initialData, initialMockTests }: DashboardClientProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,9 +76,27 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
     }
   }
 
+  // Available tests with database banners
+  const availableTests = useMemo(() => {
+    if (initialMockTests && initialMockTests.length > 0) {
+      return initialMockTests.map((t) => ({
+        slug: t.slug,
+        name: t.name,
+        exam: t.examName,
+        subject: t.subjectName,
+        track: t.trackSlug.replace(/-/g, " ").toUpperCase(),
+        questions: t.questionCount,
+        duration: `${t.durationMinutes} min`,
+        access: t.access,
+        bannerImageUrl: t.bannerImageUrl,
+      }));
+    }
+    return mockTests;
+  }, [initialMockTests]);
+
   // Filtered mock tests for the "tests" tab
   const filteredTests = useMemo(() => {
-    return mockTests.filter((test) => {
+    return availableTests.filter((test) => {
       if (examFilter !== "All" && !test.exam.toLowerCase().includes(examFilter.toLowerCase())) {
         return false;
       }
@@ -91,7 +111,7 @@ export default function DashboardClient({ user, initialData }: DashboardClientPr
       }
       return true;
     });
-  }, [examFilter, searchQuery]);
+  }, [availableTests, examFilter, searchQuery]);
 
   const initials = (user.displayName || "User")
     .split(" ")
