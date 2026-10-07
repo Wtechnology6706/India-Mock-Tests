@@ -106,28 +106,34 @@ export async function listQuestions(filters?: { exam?: string; subject?: string;
     if (conditions.length > 0) {
       sql += " WHERE " + conditions.join(" AND ");
     }
-    sql += " ORDER BY q.id DESC LIMIT 500";
+    sql += " ORDER BY q.id DESC";
 
     const [rows] = await db.query<QuestionRow[]>(sql, params);
 
     if (rows.length > 0) {
       const qIds = rows.map((r) => r.id);
-      const [optRows] = await db.query<OptionRow[]>(
-        `SELECT question_id, option_key, option_text, is_correct, sort_order
-         FROM question_options
-         WHERE question_id IN (?)
-         ORDER BY question_id, sort_order ASC`,
-        [qIds]
-      );
-
       const optionsMap = new Map<number, QuestionOption[]>();
-      for (const opt of optRows) {
-        if (!optionsMap.has(opt.question_id)) optionsMap.set(opt.question_id, []);
-        optionsMap.get(opt.question_id)!.push({
-          key: opt.option_key,
-          text: opt.option_text,
-          correct: Boolean(opt.is_correct),
-        });
+
+      // Fetch options in chunks of 1000 to prevent MySQL parameter limits
+      const chunkSize = 1000;
+      for (let i = 0; i < qIds.length; i += chunkSize) {
+        const slice = qIds.slice(i, i + chunkSize);
+        const [optRows] = await db.query<OptionRow[]>(
+          `SELECT question_id, option_key, option_text, is_correct, sort_order
+           FROM question_options
+           WHERE question_id IN (?)
+           ORDER BY question_id, sort_order ASC`,
+          [slice]
+        );
+
+        for (const opt of optRows) {
+          if (!optionsMap.has(opt.question_id)) optionsMap.set(opt.question_id, []);
+          optionsMap.get(opt.question_id)!.push({
+            key: opt.option_key,
+            text: opt.option_text,
+            correct: Boolean(opt.is_correct),
+          });
+        }
       }
 
       return rows.map((row) => ({
@@ -231,8 +237,8 @@ export async function createQuestion(input: QuestionInput): Promise<AdminQuestio
       }
 
       let [subjects] = await connection.query<(RowDataPacket & { id: number })[]>(
-        "SELECT id FROM subjects WHERE exam_id = ? AND name = ? LIMIT 1",
-        [exams[0].id, input.subject.trim()]
+        "SELECT id FROM subjects WHERE exam_id = ? AND (name = ? OR slug = ?) LIMIT 1",
+        [exams[0].id, input.subject.trim(), input.subject.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")]
       );
       if (!subjects[0]) {
         const subjectSlug = input.subject.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -245,16 +251,16 @@ export async function createQuestion(input: QuestionInput): Promise<AdminQuestio
 
       let topicId: number | null = null;
       if (input.topic?.trim()) {
+        const tSlug = input.topic.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
         const [topics] = await connection.query<(RowDataPacket & { id: number })[]>(
-          "SELECT id FROM topics WHERE subject_id = ? AND name = ? LIMIT 1",
-          [subjects[0].id, input.topic.trim()]
+          "SELECT id FROM topics WHERE subject_id = ? AND (name = ? OR slug = ?) LIMIT 1",
+          [subjects[0].id, input.topic.trim(), tSlug]
         );
         topicId = topics[0]?.id ?? null;
         if (!topicId) {
-          const topicSlug = input.topic.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
           const [topicInsert] = await connection.execute<ResultSetHeader>(
             "INSERT INTO topics (subject_id, name, slug) VALUES (?, ?, ?)",
-            [subjects[0].id, input.topic.trim(), topicSlug || `topic-${Date.now()}`]
+            [subjects[0].id, input.topic.trim(), tSlug || `topic-${Date.now()}`]
           );
           topicId = topicInsert.insertId;
         }
@@ -267,7 +273,7 @@ export async function createQuestion(input: QuestionInput): Promise<AdminQuestio
       );
 
       for (const [index, option] of cleanOptions.entries()) {
-        const key = option.key || String.fromCharCode(65 + index);
+        const key = option.key?.trim() ? option.key.trim().slice(0, 1).toUpperCase() : String.fromCharCode(65 + index);
         await connection.execute(
           "INSERT INTO question_options (question_id, option_key, option_text, is_correct, sort_order) VALUES (?, ?, ?, ?, ?)",
           [insert.insertId, key, option.text.trim(), option.correct ? 1 : 0, index]
@@ -283,7 +289,9 @@ export async function createQuestion(input: QuestionInput): Promise<AdminQuestio
       connection.release();
     }
   } catch (error) {
-    if (process.env.NODE_ENV === "production") throw new Error("Question storage is unavailable. Check the database connection and schema.");
+    if (process.env.DB_HOST || process.env.NODE_ENV === "production") {
+      throw new Error(error instanceof Error ? `Failed to create question: ${error.message}` : "Question storage is unavailable.");
+    }
     localQuestions.unshift(fallback);
   }
 
@@ -346,7 +354,7 @@ export async function createQuestionsBulk(inputs: QuestionInput[]): Promise<Bulk
       input: item,
       index: rowNum,
       options: cleanOptions.map((opt, idx) => ({
-        key: opt.key || String.fromCharCode(65 + idx),
+        key: opt.key?.trim() ? opt.key.trim().slice(0, 1).toUpperCase() : String.fromCharCode(65 + idx),
         text: opt.text.trim(),
         correct: Boolean(opt.correct),
       })),
@@ -372,14 +380,14 @@ export async function createQuestionsBulk(inputs: QuestionInput[]): Promise<Bulk
         let examId = examCache.get(examName.toLowerCase());
 
         if (!examId) {
+          const examSlug = examName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
           const [exams] = await connection.query<(RowDataPacket & { id: number })[]>(
             "SELECT id FROM exams WHERE slug = ? OR name = ? LIMIT 1",
-            [examName, examName]
+            [examSlug || examName, examName]
           );
           if (exams[0]) {
             examId = exams[0].id;
           } else {
-            const examSlug = examName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
             const [examInsert] = await connection.execute<ResultSetHeader>(
               "INSERT INTO exams (name, slug, status, visual_tone, visual_symbol) VALUES (?, ?, 'published', 'saffron', '✦')",
               [examName, examSlug || `exam-${Date.now()}`]
@@ -394,14 +402,14 @@ export async function createQuestionsBulk(inputs: QuestionInput[]): Promise<Bulk
         let subjectId = subjectCache.get(subKey);
 
         if (!subjectId) {
+          const subjectSlug = subjectName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
           const [subjects] = await connection.query<(RowDataPacket & { id: number })[]>(
-            "SELECT id FROM subjects WHERE exam_id = ? AND name = ? LIMIT 1",
-            [examId, subjectName]
+            "SELECT id FROM subjects WHERE exam_id = ? AND (name = ? OR slug = ?) LIMIT 1",
+            [examId, subjectName, subjectSlug || subjectName]
           );
           if (subjects[0]) {
             subjectId = subjects[0].id;
           } else {
-            const subjectSlug = subjectName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
             const [subjectInsert] = await connection.execute<ResultSetHeader>(
               "INSERT INTO subjects (exam_id, name, slug) VALUES (?, ?, ?)",
               [examId, subjectName, subjectSlug || `subject-${Date.now()}`]
@@ -418,14 +426,14 @@ export async function createQuestionsBulk(inputs: QuestionInput[]): Promise<Bulk
           topicId = topicCache.get(topKey) ?? null;
 
           if (!topicId) {
+            const topicSlug = topicName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
             const [topics] = await connection.query<(RowDataPacket & { id: number })[]>(
-              "SELECT id FROM topics WHERE subject_id = ? AND name = ? LIMIT 1",
-              [subjectId, topicName]
+              "SELECT id FROM topics WHERE subject_id = ? AND (name = ? OR slug = ?) LIMIT 1",
+              [subjectId, topicName, topicSlug || topicName]
             );
             if (topics[0]) {
               topicId = topics[0].id;
             } else {
-              const topicSlug = topicName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
               const [topicInsert] = await connection.execute<ResultSetHeader>(
                 "INSERT INTO topics (subject_id, name, slug) VALUES (?, ?, ?)",
                 [subjectId, topicName, topicSlug || `topic-${Date.now()}`]
@@ -443,9 +451,10 @@ export async function createQuestionsBulk(inputs: QuestionInput[]): Promise<Bulk
         );
 
         for (const [idx, opt] of options.entries()) {
+          const key = opt.key?.trim() ? opt.key.trim().slice(0, 1).toUpperCase() : String.fromCharCode(65 + idx);
           await connection.execute(
             "INSERT INTO question_options (question_id, option_key, option_text, is_correct, sort_order) VALUES (?, ?, ?, ?, ?)",
-            [insert.insertId, opt.key, opt.text, opt.correct ? 1 : 0, idx]
+            [insert.insertId, key, opt.text, opt.correct ? 1 : 0, idx]
           );
         }
 
@@ -472,8 +481,12 @@ export async function createQuestionsBulk(inputs: QuestionInput[]): Promise<Bulk
     } finally {
       connection.release();
     }
-  } catch {
-    // If DB is unavailable, fall back to in-memory store
+  } catch (error) {
+    console.error("Bulk question import error:", error);
+    if (process.env.DB_HOST || process.env.NODE_ENV === "production") {
+      throw new Error(error instanceof Error ? `Database bulk import failed: ${error.message}` : "Failed to import questions to database.");
+    }
+    // If DB is unavailable in local offline dev, fall back to in-memory store
     for (const { input, options } of validInputs) {
       const importedQ: AdminQuestion = {
         id: `q-bulk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
