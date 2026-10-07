@@ -6,7 +6,7 @@ import { defaultMockTestMenu, defaultTutorialMenu, defaultSiteConfig, defaultTes
 
 export default function MenuAndSiteConfigManager() {
   const [config, setConfig] = useState<SiteConfiguration>(defaultSiteConfig);
-  const [activeMenuTab, setActiveMenuTab] = useState<"general" | "mock-test" | "tutorial" | "testimonials">("general");
+  const [activeMenuTab, setActiveMenuTab] = useState<"general" | "mock-test" | "tutorial" | "testimonials" | "payment">("general");
   const [selectedLayer2Id, setSelectedLayer2Id] = useState<string>("bpsc-tre-4");
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -241,6 +241,14 @@ export default function MenuAndSiteConfigManager() {
           onClick={() => setActiveMenuTab("testimonials")}
         >
           ⭐ 4. Testimonials ({config.testimonials?.length || 0})
+        </button>
+
+        <button
+          type="button"
+          className={`config-tab-btn ${activeMenuTab === "payment" ? "active" : ""}`}
+          onClick={() => setActiveMenuTab("payment")}
+        >
+          💳 5. Payment Gateway (Razorpay)
         </button>
       </div>
 
@@ -692,6 +700,96 @@ export default function MenuAndSiteConfigManager() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: PAYMENT GATEWAY (RAZORPAY) CONFIGURATION */}
+      {activeMenuTab === "payment" && (
+        <div className="config-panel">
+          <div className="panel-section-title">
+            <h3>Payment Gateway Integration (Razorpay)</h3>
+            <p>
+              Configure your Razorpay API credentials to accept UPI (Google Pay, PhonePe, Paytm), Credit/Debit Cards, Net Banking, and Wallets from students for VIP Passes and Test purchases.
+            </p>
+          </div>
+
+          {/* Live / Test Mode Status Banner */}
+          <div className="gateway-status-banner">
+            <div className="gateway-status-info">
+              <span className="gateway-status-badge">
+                {config.razorpayEnabled !== false && config.razorpayKeyId && config.razorpayKeySecret
+                  ? config.razorpayKeyId.startsWith("rzp_live")
+                    ? "🟢 LIVE PRODUCTION READY (REAL TRANSACTIONS)"
+                    : "🟡 TEST / SANDBOX MODE (SIMULATED PAYMENTS)"
+                  : "🔴 PAYMENT GATEWAY NOT CONFIGURED"}
+              </span>
+              <span className="gateway-status-subtext">
+                {config.razorpayKeyId?.startsWith("rzp_live")
+                  ? "Your portal is configured with live production Razorpay credentials. Student payments will be processed and settled into your linked bank account."
+                  : config.razorpayKeyId
+                  ? "Your portal is connected to Razorpay in Test Mode. You can test checkout using Razorpay test cards & UPI without actual deductions."
+                  : "Enter your Razorpay Key ID and Key Secret below and save to activate student payments."}
+              </span>
+            </div>
+          </div>
+
+          <div className="config-form-grid-2">
+            <div className="config-field full-width">
+              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={config.razorpayEnabled ?? true}
+                  onChange={(e) => setConfig({ ...config, razorpayEnabled: e.target.checked })}
+                  style={{ width: 18, height: 18, accentColor: "#e65100" }}
+                />
+                <strong style={{ fontSize: "0.95rem" }}>Enable Razorpay Gateway for Student Checkouts</strong>
+              </label>
+              <small>When enabled, students clicking &quot;Upgrade to VIP&quot; or purchasing mock tests will pay through this Razorpay account.</small>
+            </div>
+
+            <div className="config-field">
+              <label>Razorpay Key ID *</label>
+              <input
+                type="text"
+                value={config.razorpayKeyId || ""}
+                onChange={(e) => setConfig({ ...config, razorpayKeyId: e.target.value.trim() })}
+                placeholder="e.g. rzp_live_xxxxxxxx or rzp_test_xxxxxxxx"
+                required
+              />
+              <small>Found in your Razorpay Dashboard &rarr; Settings &rarr; API Keys.</small>
+            </div>
+
+            <div className="config-field">
+              <label>Razorpay Key Secret *</label>
+              <input
+                type="password"
+                value={config.razorpayKeySecret || ""}
+                onChange={(e) => setConfig({ ...config, razorpayKeySecret: e.target.value.trim() })}
+                placeholder="Enter Razorpay Key Secret..."
+              />
+              <small>Confidential secret key used to generate and verify payment orders.</small>
+            </div>
+
+            <div className="config-field full-width">
+              <label>Razorpay Webhook Secret (Optional)</label>
+              <input
+                type="password"
+                value={config.razorpayWebhookSecret || ""}
+                onChange={(e) => setConfig({ ...config, razorpayWebhookSecret: e.target.value.trim() })}
+                placeholder="Enter webhook secret if you configured webhooks..."
+              />
+              <small>
+                Webhook endpoint to configure in Razorpay: <code>https://mock.makemyschool.com/api/razorpay/webhook</code> (Events: <code>payment.captured</code>, <code>order.paid</code>)
+              </small>
+            </div>
+          </div>
+
+          <div className="payment-guide-box">
+            <h4>📌 Supported Payment Methods & Multi-Domain Association</h4>
+            <p>
+              Your Razorpay integration automatically activates <strong>UPI (GPay, PhonePe, Paytm, BHIM)</strong>, <strong>Debit / Credit Cards (RuPay, Visa, Mastercard)</strong>, <strong>Net Banking (50+ Indian banks)</strong>, and <strong>Wallets</strong>. This configuration is stored centrally in the database and applied dynamically across all portal subdomains.
+            </p>
           </div>
         </div>
       )}

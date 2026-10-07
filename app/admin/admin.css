@@ -4940,4 +4940,49 @@
   border-radius: 4px;
   letter-spacing: 0.3px;
 }
+
+/* Payment Gateway Admin Config */
+.gateway-status-banner {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.gateway-status-badge {
+  display: inline-block;
+  font: 700 12px 'Space Grotesk', sans-serif;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.gateway-status-subtext {
+  display: block;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.payment-guide-box {
+  margin-top: 24px;
+  padding: 16px 20px;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-radius: 8px;
+}
+
+.payment-guide-box h4 {
+  font: 700 14px 'Space Grotesk', sans-serif;
+  color: #92400e;
+  margin: 0 0 6px;
+}
+
+.payment-guide-box p {
+  font-size: 13px;
+  color: #78350f;
+  margin: 0;
+  line-height: 1.5;
+}
+
 

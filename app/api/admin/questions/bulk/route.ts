@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (rawQuestions.length > 500) {
+    if (rawQuestions.length > 25000) {
       return NextResponse.json(
-        { error: "Maximum bulk import size is 500 questions per batch. Please split your file into smaller batches." },
+        { error: "Maximum bulk import size is 25,000 questions per batch. Please split your file into smaller batches if larger." },
         { status: 400 }
       );
     }
