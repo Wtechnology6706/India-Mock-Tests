@@ -128,15 +128,15 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
         prev.map((u) =>
           u.id === editingUser.id
             ? {
-                ...u,
-                displayName: editDisplayName,
-                role: editRole,
-                status: editStatus,
-                subscriptionTier: editTier,
-                subscriptionStatus: editTier !== "free" ? "active" : "none",
-                targetExamSlug: editTier === "sprint" ? editExamSlug : null,
-                targetExamName: editTier === "sprint" ? (targetExamObj?.name || editExamSlug) : null,
-              }
+              ...u,
+              displayName: editDisplayName,
+              role: editRole,
+              status: editStatus,
+              subscriptionTier: editTier,
+              subscriptionStatus: editTier !== "free" ? "active" : "none",
+              targetExamSlug: editTier === "sprint" ? editExamSlug : null,
+              targetExamName: editTier === "sprint" ? (targetExamObj?.name || editExamSlug) : null,
+            }
             : u
         )
       );
@@ -418,7 +418,7 @@ export default function UserManagement({ initialUsers, currentUserEmail }: UserM
                             onClick={() => handleDeleteUser(user)}
                             title="Delete user"
                           >
-                            🗑
+                            🗑️
                           </button>
                         )}
                       </div>
