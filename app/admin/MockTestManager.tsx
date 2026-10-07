@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import type { MockTest, SubjectDemandRequest } from "../../lib/admin-content";
 import type { AdminQuestion } from "../../lib/phase1";
-import { syllabusTracks } from "../../lib/syllabus";
+import { syllabusTracks, formatTestType } from "../../lib/syllabus";
 
 interface MockTestManagerProps {
   initialTests: MockTest[];
@@ -95,13 +95,21 @@ export default function MockTestManager({
   const [createQSearch, setCreateQSearch] = useState("");
 
   // Tracks for create exam
-  const currentExamSlug = createExam === "BPSC TRE 4.0" ? "bpsc-tre-4" : createExam === "Bihar STET" ? "bihar-stet" : "ctet";
+  const currentExamSlug = (createExam || "").toLowerCase().includes("bpsc") || (createExam || "").toLowerCase().includes("tre")
+    ? "bpsc-tre-4"
+    : (createExam || "").toLowerCase().includes("stet") || (createExam || "").toLowerCase().includes("bihar")
+    ? "bihar-stet"
+    : "ctet";
   const tracksForSelectedExam = syllabusTracks[currentExamSlug] ?? [];
   const activeTrackObj = tracksForSelectedExam.find((t) => t.slug === createTrack) || tracksForSelectedExam[0];
   const subjectsForActiveTrack = activeTrackObj?.subjects ?? [];
 
   // Tracks for edit exam
-  const editExamSlug = editExam === "BPSC TRE 4.0" ? "bpsc-tre-4" : editExam === "Bihar STET" ? "bihar-stet" : "ctet";
+  const editExamSlug = (editExam || "").toLowerCase().includes("bpsc") || (editExam || "").toLowerCase().includes("tre")
+    ? "bpsc-tre-4"
+    : (editExam || "").toLowerCase().includes("stet") || (editExam || "").toLowerCase().includes("bihar")
+    ? "bihar-stet"
+    : "ctet";
   const tracksForEditExam = syllabusTracks[editExamSlug] ?? [];
   const editTrackObj = tracksForEditExam.find((t) => t.slug === editTrack) || tracksForEditExam[0];
   const subjectsForEditTrack = editTrackObj?.subjects ?? [];
@@ -195,17 +203,25 @@ export default function MockTestManager({
   async function handleOpenEdit(test: MockTest) {
     setEditingTest(test);
     setEditTab("details");
-    setEditTitle(test.name);
-    setEditExam(test.examName || "BPSC TRE 4.0");
+    setEditTitle(test.name || "");
+    const rawExam = test.examName || "BPSC TRE 4.0";
+    const normExam = rawExam.toLowerCase().includes("bpsc") || rawExam.toLowerCase().includes("tre")
+      ? "BPSC TRE 4.0"
+      : rawExam.toLowerCase().includes("stet") || rawExam.toLowerCase().includes("bihar")
+      ? "Bihar STET"
+      : rawExam.toLowerCase().includes("ctet")
+      ? "CTET"
+      : rawExam;
+    setEditExam(normExam);
     setEditTrack(test.trackSlug || "primary-1-5");
     setEditSubject(test.subjectName || "General Studies");
     setEditCustomSubject("");
-    setEditType(test.testType || "Full mock");
+    setEditType(formatTestType(test.testType));
     setEditDuration(String(test.durationMinutes || 150));
     setEditQuestionsCount(String(test.questionCount || 150));
-    setEditTotalMarks(String(test.totalMarks || test.questionCount || 150));
-    setEditAccess(test.access);
-    setEditStatus(test.status);
+    setEditTotalMarks(String(test.totalMarks ?? test.questionCount ?? 150));
+    setEditAccess(test.access === "Premium" ? "Premium" : "Free");
+    setEditStatus(test.status === "Published" ? "Published" : test.status === "Archived" ? "Archived" : "Draft");
     setEditDescription(test.description || "");
     setEditBannerImageUrl(test.bannerImageUrl || "");
     setEditBannerPreviewUrl("");
@@ -228,7 +244,7 @@ export default function MockTestManager({
   // Handle Banner Image File Upload
   async function handleBannerUpload(file: File, isEdit: boolean) {
     const testName = isEdit ? (editTitle.trim() || editingTest?.name || "mock-test") : (createTitle.trim() || "mock-test");
-    
+
     // Create instant local blob preview
     try {
       const localBlob = URL.createObjectURL(file);
@@ -237,7 +253,7 @@ export default function MockTestManager({
       } else {
         setCreateBannerPreviewUrl(localBlob);
       }
-    } catch {}
+    } catch { }
 
     if (isEdit) {
       setIsUploadingEditBanner(true);
@@ -677,6 +693,7 @@ export default function MockTestManager({
                         {test.examName} · {test.trackSlug}
                       </span>
                       <div className="admin-test-pills">
+                        <span className="type-pill">{test.testType}</span>
                         <span className={`status-pill ${test.status.toLowerCase()}`}>
                           {test.status}
                         </span>
@@ -727,7 +744,7 @@ export default function MockTestManager({
                         onClick={() => handleDeleteTest(test.id)}
                         title="Delete test"
                       >
-                        🗑
+                        🗑️
                       </button>
                     </div>
                   </div>
@@ -753,7 +770,8 @@ export default function MockTestManager({
                 value={createExam}
                 onChange={(e) => {
                   setCreateExam(e.target.value);
-                  const newExamSlug = e.target.value === "BPSC TRE 4.0" ? "bpsc-tre-4" : e.target.value === "Bihar STET" ? "bihar-stet" : "ctet";
+                  const ex = e.target.value.toLowerCase();
+                  const newExamSlug = ex.includes("bpsc") || ex.includes("tre") ? "bpsc-tre-4" : ex.includes("stet") || ex.includes("bihar") ? "bihar-stet" : "ctet";
                   const tracks = syllabusTracks[newExamSlug] ?? [];
                   if (tracks[0]) setCreateTrack(tracks[0].slug);
                 }}
@@ -832,6 +850,7 @@ export default function MockTestManager({
                 <option value="Subject test">Subject Practice Test</option>
                 <option value="Sectional drill">Sectional Drill</option>
                 <option value="Chapter test">Chapter Test</option>
+                <option value="Previous Year Paper">Previous Year Paper</option>
               </select>
             </div>
 
@@ -1160,7 +1179,8 @@ export default function MockTestManager({
                         className="admin-form-select"
                         onChange={(e) => {
                           setEditExam(e.target.value);
-                          const newSlug = e.target.value === "BPSC TRE 4.0" ? "bpsc-tre-4" : e.target.value === "Bihar STET" ? "bihar-stet" : "ctet";
+                          const ex = e.target.value.toLowerCase();
+                          const newSlug = ex.includes("bpsc") || ex.includes("tre") ? "bpsc-tre-4" : ex.includes("stet") || ex.includes("bihar") ? "bihar-stet" : "ctet";
                           const tracks = syllabusTracks[newSlug] ?? [];
                           if (tracks[0]) setEditTrack(tracks[0].slug);
                         }}
@@ -1168,6 +1188,9 @@ export default function MockTestManager({
                         <option value="BPSC TRE 4.0">BPSC TRE 4.0</option>
                         <option value="Bihar STET">Bihar STET</option>
                         <option value="CTET">CTET</option>
+                        {editExam && !["BPSC TRE 4.0", "Bihar STET", "CTET"].includes(editExam) && (
+                          <option value={editExam}>{editExam}</option>
+                        )}
                       </select>
                     </div>
 
@@ -1187,6 +1210,9 @@ export default function MockTestManager({
                             {t.audience} - {t.name}
                           </option>
                         ))}
+                        {editTrack && !tracksForEditExam.some((t) => t.slug === editTrack) && (
+                          <option value={editTrack}>{editTrack}</option>
+                        )}
                       </select>
                     </div>
 
@@ -1202,6 +1228,9 @@ export default function MockTestManager({
                             {s.name}
                           </option>
                         ))}
+                        {editSubject && editSubject !== "__custom__" && !subjectsForEditTrack.some((s) => s.name === editSubject) && (
+                          <option value={editSubject}>{editSubject}</option>
+                        )}
                         <option value="__custom__">+ Custom Subject...</option>
                       </select>
                     </div>
@@ -1229,6 +1258,10 @@ export default function MockTestManager({
                         <option value="Subject test">Subject Practice Test</option>
                         <option value="Sectional drill">Sectional Drill</option>
                         <option value="Chapter test">Chapter Test</option>
+                        <option value="Previous Year Paper">Previous Year Paper</option>
+                        {editType && !["Full mock", "Subject test", "Sectional drill", "Chapter test", "Previous Year Paper"].includes(editType) && (
+                          <option value={editType}>{editType}</option>
+                        )}
                       </select>
                     </div>
 

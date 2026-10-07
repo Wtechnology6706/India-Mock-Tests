@@ -26,7 +26,7 @@ export default function MenuAndSiteConfigManager() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   async function handleSave() {
@@ -429,7 +429,7 @@ export default function MenuAndSiteConfigManager() {
                       title="Delete this link"
                       onClick={() => removeMockLayer3Item(currentMockLayer2.id, item.id)}
                     >
-                      🗑
+                      🗑️
                     </button>
                   </div>
                 ))}
@@ -609,7 +609,7 @@ export default function MenuAndSiteConfigManager() {
                       cursor: "pointer",
                     }}
                   >
-                    🗑 Delete Review
+                    🗑️ Delete Review
                   </button>
                 </div>
 

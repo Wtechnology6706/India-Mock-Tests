@@ -25,6 +25,30 @@ export type MockTestItem = {
   bannerImageUrl?: string;
 };
 
+export function formatTestType(val?: string): string {
+  if (!val) return "Full mock";
+  const lower = val.toLowerCase().trim();
+  if (lower.includes("subject")) return "Subject test";
+  if (lower.includes("section")) return "Sectional drill";
+  if (lower.includes("topic") || lower.includes("chapter")) return "Chapter test";
+  if (lower.includes("pyq") || lower.includes("previous")) return "Previous Year Paper";
+  if (lower.includes("live")) return "Live Test";
+  if (lower.includes("mini")) return "Mini Mock";
+  return "Full mock";
+}
+
+export function normalizeTestType(val?: string): string {
+  if (!val) return "full";
+  const lower = val.toLowerCase().trim();
+  if (lower.includes("subject")) return "subject";
+  if (lower.includes("section")) return "section";
+  if (lower.includes("topic") || lower.includes("chapter")) return "topic";
+  if (lower.includes("pyq") || lower.includes("previous")) return "pyq";
+  if (lower.includes("live")) return "live";
+  if (lower.includes("mini")) return "mini";
+  return "full";
+}
+
 const languages = [
   "Grammar & language use",
   "Vocabulary & Synonyms/Antonyms",

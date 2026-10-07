@@ -51,16 +51,28 @@ if (process.env.NODE_ENV !== "production") {
   globalForAdminContent.tests = localTests;
 }
 
-function normalizeTestType(val?: string): string {
+export function normalizeTestType(val?: string): string {
   if (!val) return "full";
   const lower = val.toLowerCase().trim();
   if (lower.includes("subject")) return "subject";
   if (lower.includes("section")) return "section";
   if (lower.includes("topic") || lower.includes("chapter")) return "topic";
-  if (lower.includes("pyq")) return "pyq";
+  if (lower.includes("pyq") || lower.includes("previous")) return "pyq";
   if (lower.includes("live")) return "live";
   if (lower.includes("mini")) return "mini";
   return "full";
+}
+
+export function formatTestType(val?: string): string {
+  if (!val) return "Full mock";
+  const lower = val.toLowerCase().trim();
+  if (lower.includes("subject")) return "Subject test";
+  if (lower.includes("section")) return "Sectional drill";
+  if (lower.includes("topic") || lower.includes("chapter")) return "Chapter test";
+  if (lower.includes("pyq") || lower.includes("previous")) return "Previous Year Paper";
+  if (lower.includes("live")) return "Live Test";
+  if (lower.includes("mini")) return "Mini Mock";
+  return "Full mock";
 }
 
 export async function listQuestions(filters?: { exam?: string; subject?: string; status?: string; query?: string }) {
@@ -1079,7 +1091,7 @@ export async function listMockTests(filter?: {
       trackSlug: r.track_slug || "primary-1-5",
       subjectId: r.subject_id ? String(r.subject_id) : undefined,
       subjectName: r.subject_name || "General Studies",
-      testType: r.test_type || "Full mock",
+      testType: formatTestType(r.test_type),
       questionCount: r.question_count || 150,
       durationMinutes: r.duration_minutes || 150,
       totalMarks: Number(r.total_marks) || 150,
@@ -1425,7 +1437,7 @@ export async function updateMockTest(testId: string, input: Partial<MockTestInpu
           trackSlug: r.track_slug || "primary-1-5",
           subjectId: r.subject_id ? String(r.subject_id) : undefined,
           subjectName: r.subject_name || "General Studies",
-          testType: r.test_type || "Full mock",
+          testType: formatTestType(r.test_type),
           questionCount: r.question_count || 150,
           durationMinutes: r.duration_minutes || 150,
           totalMarks: Number(r.total_marks) || 150,
