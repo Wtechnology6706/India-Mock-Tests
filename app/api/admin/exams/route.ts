@@ -61,21 +61,37 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Exam slug is required." }, { status: 400 });
     }
 
-    try {
-      await db.execute<ResultSetHeader>(
-        `UPDATE exams SET image_url = ?, badge = COALESCE(?, badge) WHERE slug = ?`,
-        [imageUrl || null, badge || null, slug]
-      );
-    } catch {
-      // update in memory fallback
-      const match = featuredExams.find((e) => e.slug === slug);
-      if (match) {
-        match.imageUrl = imageUrl || undefined;
-        if (badge) match.badge = badge;
-      }
+    // 1. Update in-memory fallback
+    const match = featuredExams.find(
+      (e) => e.slug === slug || e.title.toLowerCase() === slug.toLowerCase()
+    );
+    if (match) {
+      match.imageUrl = imageUrl || undefined;
+      if (badge) match.badge = badge;
     }
 
-    return NextResponse.json({ success: true, slug, imageUrl });
+    // 2. Update Database with auto-column ensure
+    try {
+      try {
+        await db.execute<ResultSetHeader>(
+          `UPDATE exams SET image_url = ?, badge = COALESCE(?, badge) WHERE slug = ? OR name LIKE ?`,
+          [imageUrl || null, badge || null, slug, `%${slug}%`]
+        );
+      } catch (err: any) {
+        // If image_url column is missing, add it and retry
+        if (err.message && err.message.includes("image_url")) {
+          await db.query(`ALTER TABLE exams ADD COLUMN image_url VARCHAR(500) NULL AFTER visual_symbol`);
+          await db.execute<ResultSetHeader>(
+            `UPDATE exams SET image_url = ?, badge = COALESCE(?, badge) WHERE slug = ? OR name LIKE ?`,
+            [imageUrl || null, badge || null, slug, `%${slug}%`]
+          );
+        }
+      }
+    } catch (dbErr) {
+      console.warn("Notice updating exams in DB:", dbErr);
+    }
+
+    return NextResponse.json({ success: true, slug, imageUrl, badge });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to update exam image." },

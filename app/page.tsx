@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { featuredExams } from "../lib/catalog";
+import { getFeaturedExams } from "../lib/catalog-server";
 import { getSiteConfiguration } from "../lib/site-config";
 import MegaMenu from "./components/MegaMenu";
 import HeroSearch from "./components/HeroSearch";
 import TestimonialsSection from "./components/TestimonialsSection";
 import ConditionalCTA from "./components/ConditionalCTA";
 import Footer from "./components/Footer";
-
-const exams = featuredExams;
 
 const categories = [
   ["Teaching", "BPSC · STET · CTET · BTET", "▥", "peach", "teaching"],
@@ -17,7 +15,10 @@ const categories = [
 ];
 
 export default async function Home() {
-  const config = await getSiteConfiguration();
+  const [config, exams] = await Promise.all([
+    getSiteConfiguration(),
+    getFeaturedExams(),
+  ]);
   return (
     <main>
       {/* Dynamic 3-Layer Mega Menu */}
@@ -111,39 +112,46 @@ export default async function Home() {
         </div>
 
         <div className="exam-grid">
-          {exams.map((exam) => (
-            <article className={`exam-card ${exam.tone}`} key={exam.title}>
-              <div className="exam-visual">
-                {exam.imageUrl ? (
-                  <img
-                    src={exam.imageUrl}
-                    alt={exam.title}
-                    className="exam-card-custom-img"
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                ) : (
-                  <>
-                    <span className="exam-symbol">{exam.symbol}</span>
-                    <span className="exam-badge">{exam.badge}</span>
-                    <div className="ring-shape" />
-                  </>
-                )}
-                {exam.imageUrl && (
-                  <span className="exam-badge" style={{ position: "absolute", top: "12px", right: "12px", background: "rgba(255,255,255,0.9)" }}>
-                    {exam.badge}
-                  </span>
-                )}
-              </div>
-              <div className="exam-body">
-                <small>{exam.meta}</small>
-                <h3>{exam.title}</h3>
-                <p>{exam.tests}<span> · </span>Free & premium</p>
-                <Link href={`/exams/${exam.slug}`}>
-                  View test series <span>→</span>
-                </Link>
-              </div>
-            </article>
-          ))}
+          {exams.map((exam) => {
+            const imgSrc = exam.imageUrl
+              ? exam.imageUrl.startsWith("http") || exam.imageUrl.startsWith("/")
+                ? exam.imageUrl
+                : `/${exam.imageUrl}`
+              : null;
+            return (
+              <article className={`exam-card ${exam.tone}`} key={exam.title}>
+                <div className="exam-visual">
+                  {imgSrc ? (
+                    <img
+                      src={imgSrc}
+                      alt={exam.title}
+                      className="exam-card-custom-img"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  ) : (
+                    <>
+                      <span className="exam-symbol">{exam.symbol}</span>
+                      <span className="exam-badge">{exam.badge}</span>
+                      <div className="ring-shape" />
+                    </>
+                  )}
+                  {imgSrc && exam.badge && (
+                    <span className="exam-badge" style={{ position: "absolute", top: "12px", right: "12px", background: "rgba(255,255,255,0.95)", color: "#0f172a" }}>
+                      {exam.badge}
+                    </span>
+                  )}
+                </div>
+                <div className="exam-body">
+                  <small>{exam.meta}</small>
+                  <h3>{exam.title}</h3>
+                  <p>{exam.tests}<span> · </span>Free & premium</p>
+                  <Link href={`/exams/${exam.slug}`}>
+                    View test series <span>→</span>
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 

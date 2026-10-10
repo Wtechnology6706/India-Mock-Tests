@@ -77,7 +77,30 @@ export default function ExamTaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to upload image.");
       setActiveImageUrl(data.url);
-      setFeedback("Cover image uploaded from device successfully!");
+
+      // Auto-save to exams metadata immediately
+      await fetch("/api/admin/exams", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: selectedExam.slug,
+          imageUrl: data.url,
+          badge: activeBadge.trim() || undefined,
+        }),
+      });
+
+      setExamMeta((prev) => ({
+        ...prev,
+        [selectedExam.slug]: {
+          ...prev[selectedExam.slug],
+          slug: selectedExam.slug,
+          title: selectedExam.name,
+          imageUrl: data.url,
+          badge: activeBadge.trim() || undefined,
+        },
+      }));
+
+      setFeedback("Cover image uploaded and saved successfully! Changes are live on the Home page.");
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : "Failed to upload image.");
     } finally {
