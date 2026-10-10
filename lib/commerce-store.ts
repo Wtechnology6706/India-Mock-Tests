@@ -57,6 +57,21 @@ export async function ensureCommercePlans() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    // Ensure columns exist if created with old schema
+    const alterStatements = [
+      "ALTER TABLE commerce_plans MODIFY COLUMN id VARCHAR(64) NOT NULL",
+      "ALTER TABLE commerce_plans ADD COLUMN features TEXT NULL",
+      "ALTER TABLE commerce_plans ADD COLUMN validity_days INT NOT NULL DEFAULT 90",
+      "ALTER TABLE commerce_plans ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    ];
+    for (const stmt of alterStatements) {
+      try {
+        await db.execute(stmt);
+      } catch {
+        // Ignore column exists or constraint errors
+      }
+    }
+
     const [rows] = await db.query<RowDataPacket[]>("SELECT id, slug FROM commerce_plans");
     const existing = new Set(rows.map((r) => r.slug));
 
