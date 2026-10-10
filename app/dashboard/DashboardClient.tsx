@@ -26,6 +26,18 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<OrderRecord | null>(null);
+  const [logoImageUrl, setLogoImageUrl] = useState("");
+  const [portalName, setPortalName] = useState("India Mock Tests");
+
+  useEffect(() => {
+    fetch("/api/admin/config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.config?.logoImageUrl) setLogoImageUrl(data.config.logoImageUrl);
+        if (data?.config?.portalName) setPortalName(data.config.portalName);
+      })
+      .catch(() => {});
+  }, []);
 
   // Settings state
   const [displayName, setDisplayName] = useState(user.displayName);
@@ -136,11 +148,22 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
     <main className="dashboard-page">
       {/* Persistent Left Sidebar */}
       <aside className="dashboard-sidebar">
-        <Link className="logo" href="/">
-          <span className="logo-mark">I</span>
-          <span>
-            India Mock Tests<span className="logo-dot">.</span>
-          </span>
+        <Link className="logo dashboard-logo-link" href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+          {logoImageUrl ? (
+            <img
+              src={logoImageUrl}
+              alt={portalName}
+              style={{ height: "38px", maxHeight: "44px", maxWidth: "160px", width: "auto", objectFit: "contain", display: "block" }}
+              onError={() => setLogoImageUrl("")}
+            />
+          ) : (
+            <>
+              <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>
+              <span>
+                {portalName}<span className="logo-dot">.</span>
+              </span>
+            </>
+          )}
         </Link>
 
         <nav className="dashboard-nav">
@@ -234,7 +257,18 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
         {/* Top bar with Search & User Menu */}
         <header className="dashboard-topbar">
           <div className="dashboard-mobile-logo">
-            <span className="logo-mark">I</span>India Mock Tests
+            {logoImageUrl ? (
+              <img
+                src={logoImageUrl}
+                alt={portalName}
+                style={{ height: "30px", maxHeight: "36px", maxWidth: "120px", width: "auto", objectFit: "contain", display: "inline-block" }}
+                onError={() => setLogoImageUrl("")}
+              />
+            ) : (
+              <>
+                <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>{portalName}
+              </>
+            )}
           </div>
 
           <div className="dashboard-search-container">

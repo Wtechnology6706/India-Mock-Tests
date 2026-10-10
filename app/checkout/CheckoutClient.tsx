@@ -98,10 +98,21 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [successOrder, setSuccessOrder] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [logoImageUrl, setLogoImageUrl] = useState("");
+  const [portalName, setPortalName] = useState("India Mock Tests");
 
-  // Fetch dynamic plans, active coupons, and wallet balance
+  // Fetch dynamic plans, active coupons, wallet balance, and site branding
   useEffect(() => {
-    // 1. Fetch DB plans
+    // 1. Fetch site config
+    fetch("/api/admin/config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.config?.logoImageUrl) setLogoImageUrl(data.config.logoImageUrl);
+        if (data?.config?.portalName) setPortalName(data.config.portalName);
+      })
+      .catch(() => {});
+
+    // 2. Fetch DB plans
     fetch("/api/plans")
       .then((res) => res.json())
       .then((data) => {
@@ -115,7 +126,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
       })
       .catch(() => {});
 
-    // 2. Fetch active coupons
+    // 3. Fetch active coupons
     fetch("/api/coupons/active")
       .then((res) => res.json())
       .then((data) => {
@@ -125,7 +136,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
       })
       .catch(() => {});
 
-    // 3. Fetch user's wallet
+    // 4. Fetch user's wallet
     if (user) {
       fetch("/api/wallet")
         .then((res) => res.json())
@@ -137,7 +148,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
         .catch(() => {});
     }
 
-    // 4. Load Razorpay script
+    // 5. Load Razorpay script
     if (typeof window !== "undefined" && !(window as any).Razorpay) {
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -355,9 +366,20 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     return (
       <div className="checkout-page-container">
         <header className="checkout-topbar">
-          <Link href="/" className="checkout-logo">
-            <span className="logo-mark">I</span>
-            <span>India Mock Tests<span className="logo-dot">.</span></span>
+          <Link href="/" className="checkout-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+            {logoImageUrl ? (
+              <img
+                src={logoImageUrl}
+                alt={portalName}
+                style={{ height: "40px", maxHeight: "46px", maxWidth: "180px", width: "auto", objectFit: "contain", display: "block" }}
+                onError={() => setLogoImageUrl("")}
+              />
+            ) : (
+              <>
+                <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>
+                <span>{portalName}<span className="logo-dot">.</span></span>
+              </>
+            )}
           </Link>
           <div className="checkout-security-tag">
             <span>✓ Verified Secure Payment</span>
@@ -420,9 +442,20 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     <div className="checkout-page-container">
       {/* Top Header */}
       <header className="checkout-topbar">
-        <Link href="/" className="checkout-logo">
-          <span className="logo-mark">I</span>
-          <span>India Mock Tests<span className="logo-dot">.</span></span>
+        <Link href="/" className="checkout-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+          {logoImageUrl ? (
+            <img
+              src={logoImageUrl}
+              alt={portalName}
+              style={{ height: "40px", maxHeight: "46px", maxWidth: "180px", width: "auto", objectFit: "contain", display: "block" }}
+              onError={() => setLogoImageUrl("")}
+            />
+          ) : (
+            <>
+              <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>
+              <span>{portalName}<span className="logo-dot">.</span></span>
+            </>
+          )}
         </Link>
         <div className="checkout-security-tag">
           <span>🔒 256-Bit SSL Encrypted Checkout</span>

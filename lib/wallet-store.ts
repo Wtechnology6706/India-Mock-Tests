@@ -288,7 +288,7 @@ export async function getAllWalletTransactions(
     const total = Number(countRows[0]?.total || 0);
 
     const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT wt.*, u.name as user_name, u.email as user_email 
+      `SELECT wt.*, u.display_name as user_name, u.email as user_email 
        FROM wallet_transactions wt
        LEFT JOIN users u ON wt.user_id = u.id
        ORDER BY wt.created_at DESC 
