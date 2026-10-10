@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import MegaMenu from "../components/MegaMenu";
 import Footer from "../components/Footer";
+import ConditionalCTA from "../components/ConditionalCTA";
 
 export default function PricingPage() {
   const [portalName, setPortalName] = useState("India Mock Tests");
@@ -122,9 +123,14 @@ export default function PricingPage() {
               <li className="disabled-feat">✕ Step-by-step detailed explanations</li>
               <li className="disabled-feat">✕ All India Rank estimation</li>
             </ul>
-            <Link href="/register" className="btn-plan-action outline">
-              Get Started Free
-            </Link>
+            <ConditionalCTA
+              loggedOutText="Get Started Free"
+              loggedOutHref="/register"
+              loggedInText="Current Free Plan (Active)"
+              loggedInHref="/dashboard"
+              className="btn-plan-action outline"
+              showArrow={false}
+            />
           </div>
 
           {/* Single Exam Pass (Featured) */}

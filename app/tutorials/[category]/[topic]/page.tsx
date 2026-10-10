@@ -1,6 +1,7 @@
 import Link from "next/link";
 import MegaMenu from "../../../components/MegaMenu";
 import EarlyAccessNotifyForm from "../../../components/EarlyAccessNotifyForm";
+import Footer from "@/app/components/Footer";
 
 interface TutorialPageProps {
   params: Promise<{ category: string; topic: string }>;
@@ -104,25 +105,18 @@ export default async function TutorialPage({ params }: TutorialPageProps) {
               <p>Pedagogy, Art of Teaching & Subject Practice</p>
               <span className="dev-card-link">Start practice →</span>
             </Link>
+
+            <Link href="/pyq" className="dev-exam-card saffron">
+              <span className="dev-card-icon">📑</span>
+              <h3>Previous Year Papers (PYQ)</h3>
+              <p>Official solved PDFs with answer keys & explanations</p>
+              <span className="dev-card-link">Explore PYQs →</span>
+            </Link>
           </div>
         </section>
       </div>
 
-      <footer className="footer">
-        <Link className="logo" href="/">
-          <span className="logo-mark">I</span>
-          <span>India Mock Tests<span className="logo-dot">.</span></span>
-        </Link>
-        <p>Find your exam. Find your focus. Find your way forward.</p>
-        <div className="footer-links">
-          <Link href="/exams">Exams</Link>
-          <Link href="/plans">Plans</Link>
-          <Link href="/notifications">Notifications</Link>
-          <Link href="/about">About</Link>
-          <Link href="/contact">Support</Link>
-        </div>
-        <small>© 2026 India Mock Tests · Privacy · Terms</small>
-      </footer>
+      <Footer />
     </main>
   );
 }

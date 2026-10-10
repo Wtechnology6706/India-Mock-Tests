@@ -1,12 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { SiteConfiguration, SubMenuLayer2, SubMenuItem3, TestimonialItem } from "../../lib/site-config-defaults";
-import { defaultMockTestMenu, defaultTutorialMenu, defaultSiteConfig, defaultTestimonials } from "../../lib/site-config-defaults";
+import type {
+  SiteConfiguration,
+  SubMenuLayer2,
+  SubMenuItem3,
+  TestimonialItem,
+  CustomNavItem,
+  CustomNavSubItem,
+} from "../../lib/site-config-defaults";
+import {
+  defaultMockTestMenu,
+  defaultTutorialMenu,
+  defaultSiteConfig,
+  defaultTestimonials,
+} from "../../lib/site-config-defaults";
 
 export default function MenuAndSiteConfigManager() {
   const [config, setConfig] = useState<SiteConfiguration>(defaultSiteConfig);
-  const [activeMenuTab, setActiveMenuTab] = useState<"general" | "mock-test" | "tutorial" | "testimonials" | "payment">("general");
+  const [activeMenuTab, setActiveMenuTab] = useState<
+    "general" | "mock-test" | "tutorial" | "custom-nav" | "testimonials" | "payment"
+  >("general");
   const [selectedLayer2Id, setSelectedLayer2Id] = useState<string>("bpsc-tre-4");
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -20,6 +34,7 @@ export default function MenuAndSiteConfigManager() {
             ...defaultSiteConfig,
             ...data.config,
             testimonials: data.config.testimonials?.length ? data.config.testimonials : defaultTestimonials,
+            customNavMenu: data.config.customNavMenu || [],
           });
           if (data.config.mockTestMenu?.[0]) {
             setSelectedLayer2Id(data.config.mockTestMenu[0].id);
@@ -180,6 +195,84 @@ export default function MenuAndSiteConfigManager() {
     setConfig((prev) => ({ ...prev, testimonials: list }));
   }
 
+  // Custom Navigation Menu (Shopify-Style Customizer)
+  function addCustomNavItem() {
+    const newItem: CustomNavItem = {
+      id: `nav-${Date.now()}`,
+      label: "New Navigation Menu",
+      linkType: "page",
+      targetUrl: "/about",
+      badgeText: "",
+      subItems: [],
+    };
+    setConfig((prev) => ({
+      ...prev,
+      customNavMenu: [...(prev.customNavMenu || []), newItem],
+    }));
+  }
+
+  function updateCustomNavItem(id: string, field: keyof CustomNavItem, value: any) {
+    setConfig((prev) => ({
+      ...prev,
+      customNavMenu: (prev.customNavMenu || []).map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
+      ),
+    }));
+  }
+
+  function removeCustomNavItem(id: string) {
+    if (!window.confirm("Delete this navigation menu item?")) return;
+    setConfig((prev) => ({
+      ...prev,
+      customNavMenu: (prev.customNavMenu || []).filter((item) => item.id !== id),
+    }));
+  }
+
+  function addCustomNavSubItem(parentId: string) {
+    const newSubItem: CustomNavSubItem = {
+      id: `sub-${Date.now()}`,
+      label: "Sub-menu Link",
+      targetUrl: "/exams",
+      audience: "Quick link",
+    };
+    setConfig((prev) => ({
+      ...prev,
+      customNavMenu: (prev.customNavMenu || []).map((item) =>
+        item.id === parentId
+          ? { ...item, subItems: [...(item.subItems || []), newSubItem] }
+          : item
+      ),
+    }));
+  }
+
+  function updateCustomNavSubItem(parentId: string, subId: string, field: keyof CustomNavSubItem, value: any) {
+    setConfig((prev) => ({
+      ...prev,
+      customNavMenu: (prev.customNavMenu || []).map((item) => {
+        if (item.id !== parentId) return item;
+        return {
+          ...item,
+          subItems: (item.subItems || []).map((sub) =>
+            sub.id === subId ? { ...sub, [field]: value } : sub
+          ),
+        };
+      }),
+    }));
+  }
+
+  function removeCustomNavSubItem(parentId: string, subId: string) {
+    setConfig((prev) => ({
+      ...prev,
+      customNavMenu: (prev.customNavMenu || []).map((item) => {
+        if (item.id !== parentId) return item;
+        return {
+          ...item,
+          subItems: (item.subItems || []).filter((sub) => sub.id !== subId),
+        };
+      }),
+    }));
+  }
+
   return (
     <div className="site-config-manager">
       {/* Header */}
@@ -188,7 +281,7 @@ export default function MenuAndSiteConfigManager() {
           <span className="studio-kicker">PORTAL BRANDING, MENUS & TESTIMONIALS</span>
           <h2>Website Configuration Studio</h2>
           <p>
-            Update portal branding, Google AdSense setup, mega menu layers, and manage student & parent testimonials displayed on the home page.
+            Update portal branding, Google AdSense setup, mega menu layers, custom navigation menus, and manage payment gateway credentials.
           </p>
         </div>
 
@@ -237,10 +330,18 @@ export default function MenuAndSiteConfigManager() {
 
         <button
           type="button"
+          className={`config-tab-btn ${activeMenuTab === "custom-nav" ? "active" : ""}`}
+          onClick={() => setActiveMenuTab("custom-nav")}
+        >
+          🧭 4. Custom Navigation Menus ({config.customNavMenu?.length || 0})
+        </button>
+
+        <button
+          type="button"
           className={`config-tab-btn ${activeMenuTab === "testimonials" ? "active" : ""}`}
           onClick={() => setActiveMenuTab("testimonials")}
         >
-          ⭐ 4. Testimonials ({config.testimonials?.length || 0})
+          ⭐ 5. Testimonials ({config.testimonials?.length || 0})
         </button>
 
         <button
@@ -248,7 +349,7 @@ export default function MenuAndSiteConfigManager() {
           className={`config-tab-btn ${activeMenuTab === "payment" ? "active" : ""}`}
           onClick={() => setActiveMenuTab("payment")}
         >
-          💳 5. Payment Gateway (Razorpay)
+          💳 6. Payment Gateway (Razorpay)
         </button>
       </div>
 
@@ -704,34 +805,249 @@ export default function MenuAndSiteConfigManager() {
         </div>
       )}
 
-      {/* TAB 5: PAYMENT GATEWAY (RAZORPAY) CONFIGURATION */}
+      {/* TAB 4: CUSTOM TOP NAVIGATION MENUS (SHOPIFY-STYLE) */}
+      {activeMenuTab === "custom-nav" && (
+        <div className="config-panel">
+          <div className="panel-section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+            <div>
+              <h3>Dynamic Top Navigation Customizer</h3>
+              <p>
+                Manage, add, and reorder header menu items, dropdown sub-menus, and links pointing dynamically to mock test series, syllabus pages, tutorials, or external resources (Shopify-style menu management).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addCustomNavItem}
+              className="admin-btn-secondary"
+              style={{ padding: "8px 18px", fontSize: "0.88rem", fontWeight: 700 }}
+            >
+              + Add Main Menu Item
+            </button>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "18px", marginTop: "16px" }}>
+            {(!config.customNavMenu || config.customNavMenu.length === 0) && (
+              <div style={{ padding: "30px", background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: "10px", textAlign: "center", color: "#64748b" }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>No custom navigation menu items created yet.</p>
+                <small style={{ display: "block", marginTop: "4px" }}>Click &quot;+ Add Main Menu Item&quot; to add custom links like &quot;Syllabus&quot;, &quot;Results&quot;, &quot;Current Affairs&quot;, or nested dropdowns.</small>
+              </div>
+            )}
+
+            {(config.customNavMenu || []).map((navItem, index) => (
+              <div
+                key={navItem.id}
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "18px 20px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 800, background: "#f1f5f9", color: "#475569", padding: "3px 8px", borderRadius: "6px" }}>
+                      #{index + 1}
+                    </span>
+                    <strong style={{ fontSize: "1.05rem", color: "#0f172a" }}>{navItem.label || "Untitled Menu"}</strong>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      type="button"
+                      onClick={() => addCustomNavSubItem(navItem.id)}
+                      style={{
+                        background: "rgba(16, 185, 129, 0.1)",
+                        color: "#059669",
+                        border: "1px solid rgba(16, 185, 129, 0.3)",
+                        borderRadius: "6px",
+                        padding: "4px 12px",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      + Add Dropdown Sub-item
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeCustomNavItem(navItem.id)}
+                      style={{
+                        background: "#fee2e2",
+                        color: "#991b1b",
+                        border: "1px solid #fca5a5",
+                        borderRadius: "6px",
+                        padding: "4px 12px",
+                        fontSize: "0.82rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+
+                {/* Item fields */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+                      Menu Label *
+                    </label>
+                    <input
+                      type="text"
+                      value={navItem.label}
+                      onChange={(e) => updateCustomNavItem(navItem.id, "label", e.target.value)}
+                      placeholder="e.g. About, Contact Us, Syllabus"
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+                      Target Destination URL *
+                    </label>
+                    <input
+                      type="text"
+                      value={navItem.targetUrl}
+                      onChange={(e) => updateCustomNavItem(navItem.id, "targetUrl", e.target.value)}
+                      placeholder="e.g. /about, /contact, /exams/bpsc-tre-4"
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+                      Highlight Badge (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={navItem.badgeText || ""}
+                      onChange={(e) => updateCustomNavItem(navItem.id, "badgeText", e.target.value)}
+                      placeholder="e.g. NEW, HOT, FREE"
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                    />
+                  </div>
+                </div>
+
+                {/* Sub items list */}
+                {navItem.subItems && navItem.subItems.length > 0 && (
+                  <div style={{ marginTop: "12px", padding: "12px 14px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "8px" }}>
+                      Dropdown Sub-menu Items ({navItem.subItems.length})
+                    </span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {navItem.subItems.map((sub) => (
+                        <div key={sub.id} style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr auto", gap: "10px", alignItems: "center" }}>
+                          <input
+                            type="text"
+                            value={sub.label}
+                            onChange={(e) => updateCustomNavSubItem(navItem.id, sub.id, "label", e.target.value)}
+                            placeholder="Sub-item label"
+                            style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.82rem" }}
+                          />
+                          <input
+                            type="text"
+                            value={sub.targetUrl}
+                            onChange={(e) => updateCustomNavSubItem(navItem.id, sub.id, "targetUrl", e.target.value)}
+                            placeholder="Target link (/... or https://...)"
+                            style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.82rem" }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeCustomNavSubItem(navItem.id, sub.id)}
+                            style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: "6px", padding: "6px 10px", fontSize: "0.8rem", cursor: "pointer" }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: PAYMENT GATEWAY (RAZORPAY) CONFIGURATION */}
       {activeMenuTab === "payment" && (
         <div className="config-panel">
           <div className="panel-section-title">
             <h3>Payment Gateway Integration (Razorpay)</h3>
             <p>
-              Configure your Razorpay API credentials to accept UPI (Google Pay, PhonePe, Paytm), Credit/Debit Cards, Net Banking, and Wallets from students for VIP Passes and Test purchases.
+              Configure your Razorpay API credentials for student checkouts. You can configure both Test (Sandbox) and Live (Production) keys and toggle between them seamlessly.
             </p>
           </div>
 
-          {/* Live / Test Mode Status Banner */}
-          <div className="gateway-status-banner">
-            <div className="gateway-status-info">
-              <span className="gateway-status-badge">
-                {config.razorpayEnabled !== false && config.razorpayKeyId && config.razorpayKeySecret
-                  ? config.razorpayKeyId.startsWith("rzp_live")
-                    ? "🟢 LIVE PRODUCTION READY (REAL TRANSACTIONS)"
-                    : "🟡 TEST / SANDBOX MODE (SIMULATED PAYMENTS)"
-                  : "🔴 PAYMENT GATEWAY NOT CONFIGURED"}
-              </span>
-              <span className="gateway-status-subtext">
-                {config.razorpayKeyId?.startsWith("rzp_live")
-                  ? "Your portal is configured with live production Razorpay credentials. Student payments will be processed and settled into your linked bank account."
-                  : config.razorpayKeyId
-                  ? "Your portal is connected to Razorpay in Test Mode. You can test checkout using Razorpay test cards & UPI without actual deductions."
-                  : "Enter your Razorpay Key ID and Key Secret below and save to activate student payments."}
-              </span>
+          {/* Master Mode Switch Toggle Card */}
+          <div
+            style={{
+              background: config.razorpayTestMode !== false ? "#fffbeb" : "#f0fdf4",
+              border: `1.5px solid ${config.razorpayTestMode !== false ? "#fde68a" : "#bbf7d0"}`,
+              borderRadius: "14px",
+              padding: "20px 24px",
+              marginBottom: "24px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "4px 10px",
+                    borderRadius: "999px",
+                    fontWeight: 800,
+                    fontSize: "12px",
+                    background: config.razorpayTestMode !== false ? "#f59e0b" : "#10b981",
+                    color: "#fff",
+                  }}
+                >
+                  {config.razorpayTestMode !== false ? "🧪 TEST / SANDBOX MODE ACTIVE" : "⚡ LIVE PRODUCTION MODE ACTIVE"}
+                </span>
+                <span style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>
+                  {config.razorpayTestMode !== false ? "Simulated Payments Mode" : "Real Money Deductions Active"}
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: "13px", color: "#475569" }}>
+                {config.razorpayTestMode !== false
+                  ? "Checkouts will automatically use Test API Keys. You can test purchases with Razorpay test UPI IDs / test cards without actual money deductions."
+                  : "Checkouts will automatically use Live Production API Keys. Payments will be collected and deposited into your merchant bank account."}
+              </p>
             </div>
+
+            {/* Toggle Switch Button */}
+            <button
+              type="button"
+              onClick={() =>
+                setConfig({
+                  ...config,
+                  razorpayTestMode: !(config.razorpayTestMode !== false),
+                })
+              }
+              style={{
+                padding: "10px 22px",
+                background: config.razorpayTestMode !== false ? "#10b981" : "#f59e0b",
+                color: "#fff",
+                border: "none",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontWeight: 800,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span>{config.razorpayTestMode !== false ? "⚡ Switch to Live Mode" : "🧪 Switch to Test Mode"}</span>
+            </button>
           </div>
 
           <div className="config-form-grid-2">
@@ -748,30 +1064,119 @@ export default function MenuAndSiteConfigManager() {
               <small>When enabled, students clicking &quot;Upgrade to VIP&quot; or purchasing mock tests will pay through this Razorpay account.</small>
             </div>
 
-            <div className="config-field">
-              <label>Razorpay Key ID *</label>
-              <input
-                type="text"
-                value={config.razorpayKeyId || ""}
-                onChange={(e) => setConfig({ ...config, razorpayKeyId: e.target.value.trim() })}
-                placeholder="e.g. rzp_live_xxxxxxxx or rzp_test_xxxxxxxx"
-                required
-              />
-              <small>Found in your Razorpay Dashboard &rarr; Settings &rarr; API Keys.</small>
+            {/* TEST MODE SECTION */}
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                background: "#fefce8",
+                border: "1px solid #fef08a",
+                borderRadius: "12px",
+                padding: "18px 20px",
+                marginTop: "8px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+                <span style={{ fontSize: "16px" }}>🧪</span>
+                <strong style={{ fontSize: "15px", color: "#854d0e" }}>Test Mode (Sandbox) Credentials</strong>
+                {config.razorpayTestMode !== false && (
+                  <span style={{ fontSize: "11px", fontWeight: 800, background: "#fef08a", color: "#a16207", padding: "2px 8px", borderRadius: "999px" }}>
+                    ACTIVE IN CHECKOUT
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#713f12", marginBottom: "4px" }}>
+                    Test Key ID (rzp_test_...)
+                  </label>
+                  <input
+                    type="text"
+                    value={config.razorpayTestKeyId || ""}
+                    onChange={(e) => setConfig({ ...config, razorpayTestKeyId: e.target.value.trim() })}
+                    placeholder="rzp_test_xxxxxxxxxxxxxxxx"
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "6px", border: "1px solid #ca8a04", fontSize: "0.88rem" }}
+                  />
+                  <small style={{ color: "#a16207", display: "block", marginTop: "4px" }}>
+                    Leave empty to fallback to <code>RAZORPAY_TEST_KEY_ID</code> or <code>RAZORPAY_KEY_ID</code> in .env.
+                  </small>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#713f12", marginBottom: "4px" }}>
+                    Test Key Secret
+                  </label>
+                  <input
+                    type="password"
+                    value={config.razorpayTestKeySecret || ""}
+                    onChange={(e) => setConfig({ ...config, razorpayTestKeySecret: e.target.value.trim() })}
+                    placeholder="Enter Test Key Secret..."
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "6px", border: "1px solid #ca8a04", fontSize: "0.88rem" }}
+                  />
+                  <small style={{ color: "#a16207", display: "block", marginTop: "4px" }}>
+                    Leave empty to fallback to <code>RAZORPAY_TEST_KEY_SECRET</code> in .env.
+                  </small>
+                </div>
+              </div>
             </div>
 
-            <div className="config-field">
-              <label>Razorpay Key Secret *</label>
-              <input
-                type="password"
-                value={config.razorpayKeySecret || ""}
-                onChange={(e) => setConfig({ ...config, razorpayKeySecret: e.target.value.trim() })}
-                placeholder="Enter Razorpay Key Secret..."
-              />
-              <small>Confidential secret key used to generate and verify payment orders.</small>
+            {/* LIVE PRODUCTION SECTION */}
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                background: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                borderRadius: "12px",
+                padding: "18px 20px",
+                marginTop: "8px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+                <span style={{ fontSize: "16px" }}>⚡</span>
+                <strong style={{ fontSize: "15px", color: "#166534" }}>Live Production Credentials</strong>
+                {config.razorpayTestMode === false && (
+                  <span style={{ fontSize: "11px", fontWeight: 800, background: "#bbf7d0", color: "#15803d", padding: "2px 8px", borderRadius: "999px" }}>
+                    ACTIVE IN CHECKOUT
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#14532d", marginBottom: "4px" }}>
+                    Live Key ID (rzp_live_...)
+                  </label>
+                  <input
+                    type="text"
+                    value={config.razorpayLiveKeyId || ""}
+                    onChange={(e) => setConfig({ ...config, razorpayLiveKeyId: e.target.value.trim() })}
+                    placeholder="rzp_live_xxxxxxxxxxxxxxxx"
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "6px", border: "1px solid #16a34a", fontSize: "0.88rem" }}
+                  />
+                  <small style={{ color: "#15803d", display: "block", marginTop: "4px" }}>
+                    Leave empty to fallback to <code>RAZORPAY_LIVE_KEY_ID</code> in .env.
+                  </small>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#14532d", marginBottom: "4px" }}>
+                    Live Key Secret
+                  </label>
+                  <input
+                    type="password"
+                    value={config.razorpayLiveKeySecret || ""}
+                    onChange={(e) => setConfig({ ...config, razorpayLiveKeySecret: e.target.value.trim() })}
+                    placeholder="Enter Live Key Secret..."
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "6px", border: "1px solid #16a34a", fontSize: "0.88rem" }}
+                  />
+                  <small style={{ color: "#15803d", display: "block", marginTop: "4px" }}>
+                    Confidential production secret key from your Razorpay Dashboard.
+                  </small>
+                </div>
+              </div>
             </div>
 
-            <div className="config-field full-width">
+            <div className="config-field full-width" style={{ marginTop: "12px" }}>
               <label>Razorpay Webhook Secret (Optional)</label>
               <input
                 type="password"
@@ -785,7 +1190,7 @@ export default function MenuAndSiteConfigManager() {
             </div>
           </div>
 
-          <div className="payment-guide-box">
+          <div className="payment-guide-box" style={{ marginTop: "20px" }}>
             <h4>📌 Supported Payment Methods & Multi-Domain Association</h4>
             <p>
               Your Razorpay integration automatically activates <strong>UPI (GPay, PhonePe, Paytm, BHIM)</strong>, <strong>Debit / Credit Cards (RuPay, Visa, Mastercard)</strong>, <strong>Net Banking (50+ Indian banks)</strong>, and <strong>Wallets</strong>. This configuration is stored centrally in the database and applied dynamically across all portal subdomains.

@@ -9,11 +9,14 @@ export type AdminTab =
   | "add-question"
   | "bulk-import"
   | "tests"
+  | "pyq"
   | "rules"
   | "taxonomy"
   | "users"
   | "demands"
   | "commerce"
+  | "coupons"
+  | "wallets"
   | "notifications"
   | "audit"
   | "site-config"
@@ -143,6 +146,16 @@ export default function AdminSidebar({
 
             <button
               type="button"
+              className={`nav-link-btn ${activeTab === "pyq" ? "active" : ""}`}
+              onClick={() => handleTabClick("pyq")}
+            >
+              <span className="nav-icon">📑</span>
+              <span className="nav-label">PYQ Papers Hub</span>
+              <span className="nav-tag-batch" style={{ background: "#059669" }}>PDF</span>
+            </button>
+
+            <button
+              type="button"
               className={`nav-link-btn ${activeTab === "rules" ? "active" : ""}`}
               onClick={() => handleTabClick("rules")}
             >
@@ -192,7 +205,25 @@ export default function AdminSidebar({
               onClick={() => handleTabClick("commerce")}
             >
               <span className="nav-icon">💳</span>
-              <span className="nav-label">Commerce & Plans</span>
+              <span className="nav-label">Pricing Plans & Orders</span>
+            </button>
+
+            <button
+              type="button"
+              className={`nav-link-btn ${activeTab === "coupons" ? "active" : ""}`}
+              onClick={() => handleTabClick("coupons")}
+            >
+              <span className="nav-icon">🏷️</span>
+              <span className="nav-label">Coupons & Discounts</span>
+            </button>
+
+            <button
+              type="button"
+              className={`nav-link-btn ${activeTab === "wallets" ? "active" : ""}`}
+              onClick={() => handleTabClick("wallets")}
+            >
+              <span className="nav-icon">👛</span>
+              <span className="nav-label">Student Wallets & Txns</span>
             </button>
 
             <button

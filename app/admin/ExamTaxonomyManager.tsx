@@ -24,6 +24,7 @@ export default function ExamTaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }
   const [activeImageUrl, setActiveImageUrl] = useState("");
   const [activeBadge, setActiveBadge] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const selectedExam = taxonomy.exams.find((e) => e.id === selectedExamId) || taxonomy.exams[0];
@@ -58,6 +59,32 @@ export default function ExamTaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }
       setFeedback(null);
     }
   }, [selectedExam, examMeta]);
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !selectedExam) return;
+    setUploading(true);
+    setFeedback(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("examSlug", selectedExam.slug);
+
+      const res = await fetch("/api/admin/taxonomy/upload-cover", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to upload image.");
+      setActiveImageUrl(data.url);
+      setFeedback("Cover image uploaded from device successfully!");
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : "Failed to upload image.");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
 
   async function handleSaveImage(e: React.FormEvent) {
     e.preventDefault();
@@ -214,23 +241,65 @@ export default function ExamTaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }
                 </div>
 
                 {/* Form to update image & badge */}
-                <form onSubmit={handleSaveImage} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <form onSubmit={handleSaveImage} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                   <div className="form-field">
-                    <label>Exam Card Cover Image URL (Optional)</label>
+                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, marginBottom: "6px" }}>
+                      Upload Exam Card Cover Image from Device
+                    </label>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                      <label
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "8px 16px",
+                          background: "#0f766e",
+                          color: "#fff",
+                          borderRadius: "8px",
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                          cursor: uploading ? "not-allowed" : "pointer",
+                          boxShadow: "0 2px 4px rgba(15, 118, 110, 0.2)",
+                        }}
+                      >
+                        <span>📁</span>
+                        <span>{uploading ? "Uploading Image..." : "Choose Local Image"}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                          disabled={uploading}
+                          style={{ display: "none" }}
+                        />
+                      </label>
+                      {activeImageUrl && (
+                        <span style={{ fontSize: "12px", color: "#059669", fontWeight: 600 }}>
+                          ✓ Custom image selected
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="form-field">
+                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, marginBottom: "6px" }}>
+                      Or Enter Image URL (Optional)
+                    </label>
                     <input
-                      type="url"
-                      placeholder="https://images.unsplash.com/... or /images/exam.jpg"
+                      type="text"
+                      placeholder="https://images.unsplash.com/... or /uploads/taxonomy/..."
                       value={activeImageUrl}
                       onChange={(e) => setActiveImageUrl(e.target.value)}
                       className="admin-input"
                     />
-                    <small className="field-hint">
+                    <small className="field-hint" style={{ marginTop: "4px", display: "block" }}>
                       When set, this image will replace the background on Home and Search result cards. Leave empty to display the default aesthetic gradient design.
                     </small>
                   </div>
 
                   <div className="form-field">
-                    <label>Status Badge Text</label>
+                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, marginBottom: "6px" }}>
+                      Status Badge Text
+                    </label>
                     <input
                       type="text"
                       placeholder="e.g. Popular, Trending, New Series"

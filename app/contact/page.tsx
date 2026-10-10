@@ -21,7 +21,7 @@ export default function ContactPage() {
           if (data.config.supportPhone) setSupportPhone(data.config.supportPhone);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   function handleSubmit(e: React.FormEvent) {
@@ -46,15 +46,6 @@ export default function ContactPage() {
             <h3>Student Helpdesk & Operating Office</h3>
             <p>Our academic support counselors and technical team respond to every learner ticket promptly.</p>
 
-            <div className="contact-channel-item">
-              <span className="channel-icon">🏢</span>
-              <div>
-                <strong>Operating Enterprise & Network</strong>
-                <span>
-                  W Technology (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral)", fontWeight: 600 }}>wtechnology.in</a>) & Make My School (<a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral)", fontWeight: 600 }}>makemyschool.com</a>)
-                </span>
-              </div>
-            </div>
 
             <div className="contact-channel-item">
               <span className="channel-icon">✉️</span>

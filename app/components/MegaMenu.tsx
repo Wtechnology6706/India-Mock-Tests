@@ -83,15 +83,22 @@ export const tutorialMegaMenu: MegaMenuItem[] = [
 export default function MegaMenu() {
   const router = useRouter();
   const [activeMenu, setActiveMenu] = useState<"mock-test" | "tutorial" | null>(null);
+  const [selectedMockCatIndex, setSelectedMockCatIndex] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ id: string; email: string; displayName: string; role: string } | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [topupAmount, setTopupAmount] = useState<number>(500);
+  const [topupLoading, setTopupLoading] = useState(false);
+  const [topupMsg, setTopupMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [portalName, setPortalName] = useState("India Mock Tests");
   const [logoImageUrl, setLogoImageUrl] = useState("");
   const [mockMenu, setMockMenu] = useState(mockTestMegaMenu);
   const [tutMenu, setTutMenu] = useState(tutorialMegaMenu);
+  const [customNav, setCustomNav] = useState<any[]>([]);
   const [mobileExpandedCat, setMobileExpandedCat] = useState<string | null>(null);
   const [mobileSectionTab, setMobileSectionTab] = useState<"mock" | "tutorial">("mock");
   const menuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -103,6 +110,15 @@ export default function MegaMenu() {
       .then((data) => {
         if (data?.user) {
           setUser(data.user);
+          // Fetch wallet balance
+          fetch("/api/wallet")
+            .then((r) => r.json())
+            .then((wData) => {
+              if (wData?.success && wData.wallet) {
+                setWalletBalance(wData.wallet.balance);
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {});
@@ -116,10 +132,107 @@ export default function MegaMenu() {
           if (data.config.logoImageUrl) setLogoImageUrl(data.config.logoImageUrl);
           if (data.config.mockTestMenu?.length) setMockMenu(data.config.mockTestMenu);
           if (data.config.tutorialMenu?.length) setTutMenu(data.config.tutorialMenu);
+          if (data.config.customNavMenu) setCustomNav(data.config.customNavMenu);
         }
       })
       .catch(() => {});
   }, []);
+
+  async function handleWalletTopup(amount: number) {
+    setTopupLoading(true);
+    setTopupMsg(null);
+    try {
+      const res = await fetch("/api/wallet/topup/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setTopupMsg({ text: data.error || "Top-up failed", type: "error" });
+        setTopupLoading(false);
+        return;
+      }
+
+      if (data.mode === "simulated") {
+        const verifyRes = await fetch("/api/wallet/topup/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount,
+            isSimulated: true,
+            razorpayOrderId: data.orderId,
+          }),
+        });
+        const verifyData = await verifyRes.json();
+        if (verifyData.success) {
+          setWalletBalance(verifyData.newBalance);
+          setTopupMsg({ text: `₹${amount} added to your wallet successfully!`, type: "success" });
+          setTimeout(() => {
+            setWalletModalOpen(false);
+            setTopupMsg(null);
+          }, 1500);
+        } else {
+          setTopupMsg({ text: verifyData.error || "Top-up failed", type: "error" });
+        }
+      } else if (data.mode === "razorpay") {
+        // Razorpay checkout
+        if (!(window as any).Razorpay) {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.async = true;
+          document.body.appendChild(script);
+          await new Promise((resolve) => {
+            script.onload = resolve;
+          });
+        }
+
+        const options = {
+          key: data.keyId,
+          amount: data.amount,
+          currency: data.currency || "INR",
+          name: portalName,
+          description: "Wallet Top-up",
+          order_id: data.orderId,
+          prefill: {
+            name: user?.displayName,
+            email: user?.email,
+          },
+          theme: { color: "#2563eb" },
+          handler: async function (response: any) {
+            const verifyRes = await fetch("/api/wallet/topup/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                amount,
+              }),
+            });
+            const vData = await verifyRes.json();
+            if (vData.success) {
+              setWalletBalance(vData.newBalance);
+              setTopupMsg({ text: `₹${amount} added successfully!`, type: "success" });
+              setTimeout(() => {
+                setWalletModalOpen(false);
+                setTopupMsg(null);
+              }, 1500);
+            } else {
+              setTopupMsg({ text: vData.error || "Verification failed", type: "error" });
+            }
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      }
+    } catch (err: any) {
+      setTopupMsg({ text: err.message || "Network error", type: "error" });
+    } finally {
+      setTopupLoading(false);
+    }
+  }
 
   async function handleLogout() {
     try {
@@ -188,7 +301,7 @@ export default function MegaMenu() {
               Home
             </Link>
 
-            {/* Mock Test Mega Menu Trigger */}
+            {/* Mock Test Mega Menu Trigger (2-Column Sidebar Layout as per India Mock Tests (1).html & Screenshot 5) */}
             <div
               className={`nav-item-dropdown ${activeMenu === "mock-test" ? "open" : ""}`}
               onMouseEnter={() => handleMouseEnter("mock-test")}
@@ -203,38 +316,85 @@ export default function MegaMenu() {
               </button>
 
               {activeMenu === "mock-test" && (
-                <div className="mega-dropdown-panel" onMouseEnter={() => handleMouseEnter("mock-test")} onMouseLeave={handleMouseLeave}>
-                  <div className="mega-dropdown-inner">
-                    <div className="mega-dropdown-header">
-                      <div>
-                        <span className="kicker">SELECT TARGET EXAM & CLASS LEVEL</span>
-                        <h3>All Examination Mock Series</h3>
-                      </div>
-                      <Link href="/exams" className="mega-view-all" onClick={() => setActiveMenu(null)}>
-                        View All Exams Directory →
-                      </Link>
-                    </div>
+                <div
+                  className="mega-dropdown-panel mega-mock-2col"
+                  onMouseEnter={() => handleMouseEnter("mock-test")}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  {/* Left Sidebar Category Tabs */}
+                  <div className="mega-sidebar-col">
+                    {mockMenu.map((col, idx) => {
+                      const icons: Record<string, string> = {
+                        "bpsc-tre-4": "🎯",
+                        "bihar-stet": "📖",
+                        btet: "🎓",
+                        ctet: "📝",
+                        teaching: "🎯",
+                        banking: "🏦",
+                        upsc: "🏛️",
+                        ssc: "📋",
+                        railways: "🚆",
+                        "state-pscs": "🎖️",
+                      };
+                      const icon = icons[col.slug] || "📚";
+                      const isActive = idx === selectedMockCatIndex;
 
-                    <div className="mega-columns-grid">
-                      {mockMenu.map((col) => (
-                        <div key={col.id || col.slug} className="mega-column">
-                          <div className="mega-col-title">
-                            <span className="layer-2-badge">{col.label}</span>
+                      return (
+                        <button
+                          key={col.id || col.slug}
+                          type="button"
+                          className={`mega-sidebar-tab ${isActive ? "active" : ""}`}
+                          onMouseEnter={() => setSelectedMockCatIndex(idx)}
+                          onClick={() => setSelectedMockCatIndex(idx)}
+                        >
+                          <span className="mega-tab-ico">{icon}</span>
+                          <span className="mega-tab-info">
+                            <b>{col.label}</b>
+                            <span>{col.items.length} classes / tracks</span>
+                          </span>
+                          <span style={{ fontSize: "16px", opacity: isActive ? 1 : 0.4, color: isActive ? "#059669" : "inherit" }}>
+                            ›
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Right Dynamic Category Content */}
+                  {(() => {
+                    const activeCol = mockMenu[selectedMockCatIndex] || mockMenu[0];
+                    if (!activeCol) return null;
+                    return (
+                      <div className="mega-main-content">
+                        <div>
+                          <div className="mega-dropdown-header">
+                            <div>
+                              <span className="kicker">SELECT TARGET EXAM & CLASS LEVEL</span>
+                              <h3>{activeCol.label} Mock Series</h3>
+                            </div>
+                            <Link
+                              href={activeCol.targetUrl || `/exams`}
+                              className="mega-view-all"
+                              onClick={() => setActiveMenu(null)}
+                            >
+                              View All {activeCol.label} Tests →
+                            </Link>
                           </div>
-                          <div className="mega-sub-items">
-                            {col.items.map((sub: any) => {
-                              const target = sub.targetUrl ?? `/tracks/${col.slug}/${sub.slug}`;
+
+                          <div className="mega-category-grid">
+                            {activeCol.items.map((sub: any) => {
+                              const target = sub.targetUrl ?? `/tracks/${activeCol.slug}/${sub.slug}`;
                               const isClickable = sub.isConfigured !== false && Boolean(target.trim());
 
                               if (!isClickable) {
                                 return (
                                   <div
                                     key={sub.id || sub.slug}
-                                    className="mega-sub-link disabled-unlinked"
+                                    className="mega-sub-card disabled-unlinked"
                                     title="Not configured yet"
                                   >
-                                    <strong>{sub.name}</strong>
-                                    {sub.audience && <small>{sub.audience} (Unlinked)</small>}
+                                    <b>{sub.name}</b>
+                                    <span>{sub.audience || "Full Mock & Practice Track"} (Coming soon)</span>
                                   </div>
                                 );
                               }
@@ -243,19 +403,50 @@ export default function MegaMenu() {
                                 <Link
                                   key={sub.id || sub.slug}
                                   href={target}
-                                  className="mega-sub-link"
+                                  className="mega-sub-card"
                                   onClick={() => setActiveMenu(null)}
                                 >
-                                  <strong>{sub.name}</strong>
-                                  {sub.audience && <small>{sub.audience}</small>}
+                                  <b>{sub.name}</b>
+                                  <span>{sub.audience || "Official CBT Format Practice"}</span>
                                 </Link>
                               );
                             })}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+
+                        {/* Bottom Bar: Subject Filters + Live Mock CTA */}
+                        <div className="mega-bottom-bar">
+                          <div className="mega-subject-chips">
+                            <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#64748b" }}>
+                              By Subject:
+                            </span>
+                            {["General Studies", "Pedagogy", "Maths", "Hindi", "Science", "Computer Science"].map((subj) => (
+                              <Link
+                                key={subj}
+                                href={`/exams?subj=${encodeURIComponent(subj)}`}
+                                className="mega-chip"
+                                onClick={() => setActiveMenu(null)}
+                              >
+                                {subj}
+                              </Link>
+                            ))}
+                          </div>
+
+                          <Link
+                            href={`/attempt/bpsc-tre4-full-mock-1`}
+                            className="mega-highlight-card"
+                            onClick={() => setActiveMenu(null)}
+                          >
+                            <span style={{ background: "#10b981", color: "#fff", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 800 }}>
+                              LIVE
+                            </span>
+                            <span>{activeCol.label} Free Mock 1</span>
+                            <span>→</span>
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
@@ -328,13 +519,66 @@ export default function MegaMenu() {
               )}
             </div>
 
-            <Link href="/about" className="nav-item-link">
-              About
+            {/* PYQ Previous Year Papers */}
+            <Link href="/pyq" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <span>PYQ Papers</span>
+              <span style={{ fontSize: "10px", fontWeight: 800, background: "linear-gradient(135deg, #10b981, #059669)", color: "#fff", padding: "1px 6px", borderRadius: "999px", letterSpacing: "0.5px" }}>NEW</span>
             </Link>
 
-            <Link href="/contact" className="nav-item-link">
-              Contact Us
+            <Link href="/pricing" className="nav-item-link">
+              Plans & Pricing
             </Link>
+
+            {/* Custom Navigation Menu Items (Shopify-Style Navigation Customizer) */}
+            {(customNav || []).map((navItem) => {
+              if (navItem.subItems && navItem.subItems.length > 0) {
+                return (
+                  <div
+                    key={navItem.id}
+                    className="nav-item-dropdown"
+                  >
+                    <button type="button" className="nav-dropdown-btn">
+                      {navItem.label}
+                      {navItem.badgeText && (
+                        <span style={{ fontSize: "9px", background: "#10b981", color: "#fff", padding: "1px 6px", borderRadius: "999px", marginLeft: "4px" }}>
+                          {navItem.badgeText}
+                        </span>
+                      )}
+                      <span className="chevron-icon">▾</span>
+                    </button>
+                    <div className="custom-sub-dropdown" style={{ minWidth: "200px", padding: "8px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: "10px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}>
+                      {navItem.subItems.map((sub: any) => (
+                        <Link
+                          key={sub.id}
+                          href={sub.targetUrl}
+                          className="mega-sub-link"
+                          onClick={() => setActiveMenu(null)}
+                          style={{ padding: "8px 10px", borderRadius: "6px", display: "block" }}
+                        >
+                          <strong>{sub.label}</strong>
+                          {sub.audience && <small style={{ display: "block", color: "#64748b" }}>{sub.audience}</small>}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <Link
+                  key={navItem.id}
+                  href={navItem.targetUrl}
+                  className="nav-item-link"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <span>{navItem.label}</span>
+                  {navItem.badgeText && (
+                    <span style={{ fontSize: "10px", fontWeight: 800, background: "linear-gradient(135deg, #10b981, #059669)", color: "#fff", padding: "1px 6px", borderRadius: "999px" }}>
+                      {navItem.badgeText}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </div>
 
           {/* Nav Actions */}
@@ -351,6 +595,32 @@ export default function MegaMenu() {
 
             {user ? (
               <div className="logged-in-nav-group">
+                {/* Wallet Balance Badge */}
+                <button
+                  type="button"
+                  onClick={() => setWalletModalOpen(true)}
+                  className="nav-wallet-badge-btn"
+                  title="Student Wallet - Click to Add Money"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "6px 12px",
+                    background: "rgba(16, 185, 129, 0.12)",
+                    border: "1px solid rgba(16, 185, 129, 0.35)",
+                    borderRadius: "999px",
+                    color: "#059669",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <span style={{ fontSize: "15px" }}>👛</span>
+                  <span>₹{walletBalance !== null ? walletBalance.toFixed(0) : "0"}</span>
+                  <span style={{ fontSize: "10px", background: "#10b981", color: "#fff", borderRadius: "50%", width: "16px", height: "16px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>+</span>
+                </button>
+
                 <Link className="btn-dashboard-nav" href="/dashboard">
                   📊 Dashboard
                 </Link>
@@ -379,8 +649,48 @@ export default function MegaMenu() {
                       </div>
 
                       <div className="header-dropdown-links">
+                        <div
+                          style={{
+                            padding: "10px 14px",
+                            background: "rgba(16, 185, 129, 0.08)",
+                            borderRadius: "8px",
+                            margin: "4px 8px 8px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <div>
+                            <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>Wallet Balance</span>
+                            <strong style={{ fontSize: "15px", color: "#0f766e" }}>₹{walletBalance !== null ? walletBalance.toFixed(2) : "0.00"}</strong>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProfileDropdownOpen(false);
+                              setWalletModalOpen(true);
+                            }}
+                            style={{
+                              padding: "4px 10px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              background: "#059669",
+                              color: "#fff",
+                              borderRadius: "6px",
+                              border: "none",
+                              cursor: "pointer",
+                            }}
+                          >
+                            + Top Up
+                          </button>
+                        </div>
+
                         <Link href="/dashboard" className="header-dropdown-item">
                           📊 Student Dashboard
+                        </Link>
+                        <Link href="/pyq" className="header-dropdown-item">
+                          📑 Previous Year Papers (PYQ)
                         </Link>
                         <Link href="/dashboard#tests" className="header-dropdown-item">
                           📝 My Mock Tests
@@ -488,6 +798,9 @@ export default function MegaMenu() {
               <Link href="/" className="mobile-pill-link" onClick={() => setMobileOpen(false)}>
                 🏠 Home
               </Link>
+              <Link href="/pyq" className="mobile-pill-link" onClick={() => setMobileOpen(false)} style={{ background: "rgba(16, 185, 129, 0.12)", color: "#059669", fontWeight: 700 }}>
+                📑 PYQ Papers
+              </Link>
               <Link href="/exams" className="mobile-pill-link" onClick={() => setMobileOpen(false)}>
                 📚 All Exams
               </Link>
@@ -495,6 +808,47 @@ export default function MegaMenu() {
                 ⭐ Plans & VIP
               </Link>
             </div>
+
+            {user && (
+              <div
+                style={{
+                  margin: "8px 16px 12px",
+                  padding: "12px 14px",
+                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.1))",
+                  border: "1px solid rgba(16, 185, 129, 0.25)",
+                  borderRadius: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 600, color: "#64748b" }}>👛 Student Wallet</div>
+                  <div style={{ fontSize: "18px", fontWeight: 800, color: "#065f46" }}>
+                    ₹{walletBalance !== null ? walletBalance.toFixed(2) : "0.00"}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    setWalletModalOpen(true);
+                  }}
+                  style={{
+                    padding: "6px 14px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    background: "#059669",
+                    color: "#fff",
+                    borderRadius: "8px",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  + Add Money
+                </button>
+              </div>
+            )}
 
             {/* Section Switcher Tabs */}
             <div className="mobile-nav-tabs">
@@ -702,6 +1056,146 @@ export default function MegaMenu() {
               <button type="button" className="quick-tag" onClick={() => { setSearchQuery("General Studies"); router.push("/exams?q=General+Studies"); setSearchOpen(false); }}>
                 General Studies
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet Top-Up Modal */}
+      {walletModalOpen && (
+        <div className="search-modal-overlay" onClick={() => setWalletModalOpen(false)}>
+          <div
+            className="search-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "480px", padding: "28px" }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "28px" }}>👛</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Student Wallet Recharge</h3>
+                  <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>Instant checkout for mock tests & VIP passes</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="search-close-btn"
+                onClick={() => setWalletModalOpen(false)}
+                style={{ position: "static" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Current Balance Card */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #0f766e, #065f46)",
+                borderRadius: "14px",
+                padding: "18px 20px",
+                color: "#fff",
+                marginBottom: "20px",
+                boxShadow: "0 10px 25px -5px rgba(15, 118, 110, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "12px", opacity: 0.85, fontWeight: 600 }}>AVAILABLE BALANCE</div>
+              <div style={{ fontSize: "30px", fontWeight: 900, marginTop: "4px" }}>
+                ₹{walletBalance !== null ? walletBalance.toFixed(2) : "0.00"}
+              </div>
+              <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>
+                Active for: {user?.displayName || "Student"}
+              </div>
+            </div>
+
+            {/* Amount Selection */}
+            <div style={{ marginBottom: "18px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#334155", marginBottom: "8px" }}>
+                Select Top-up Amount:
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px", marginBottom: "12px" }}>
+                {[100, 250, 499, 999].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setTopupAmount(amt)}
+                    style={{
+                      padding: "10px 4px",
+                      borderRadius: "10px",
+                      border: topupAmount === amt ? "2px solid #059669" : "1px solid #e2e8f0",
+                      background: topupAmount === amt ? "rgba(16, 185, 129, 0.12)" : "#f8fafc",
+                      color: topupAmount === amt ? "#047857" : "#334155",
+                      fontWeight: 800,
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    ₹{amt}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom amount input */}
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontWeight: 800, color: "#64748b" }}>₹</span>
+                <input
+                  type="number"
+                  min="10"
+                  max="50000"
+                  value={topupAmount}
+                  onChange={(e) => setTopupAmount(Number(e.target.value))}
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px 12px 32px",
+                    borderRadius: "10px",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "16px",
+                    fontWeight: 700,
+                  }}
+                  placeholder="Or enter custom amount..."
+                />
+              </div>
+            </div>
+
+            {topupMsg && (
+              <div
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  marginBottom: "14px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  background: topupMsg.type === "success" ? "#ecfdf5" : "#fef2f2",
+                  color: topupMsg.type === "success" ? "#065f46" : "#991b1b",
+                  border: `1px solid ${topupMsg.type === "success" ? "#a7f3d0" : "#fecaca"}`,
+                }}
+              >
+                {topupMsg.text}
+              </div>
+            )}
+
+            <button
+              type="button"
+              disabled={topupLoading || topupAmount < 10}
+              onClick={() => handleWalletTopup(topupAmount)}
+              style={{
+                width: "100%",
+                padding: "14px",
+                background: "linear-gradient(135deg, #059669, #047857)",
+                color: "#fff",
+                border: "none",
+                borderRadius: "10px",
+                fontSize: "15px",
+                fontWeight: 800,
+                cursor: topupLoading ? "not-allowed" : "pointer",
+                boxShadow: "0 4px 14px rgba(5, 150, 105, 0.35)",
+              }}
+            >
+              {topupLoading ? "Processing Payment..." : `Proceed to Add ₹${topupAmount} →`}
+            </button>
+
+            <div style={{ marginTop: "14px", textAlign: "center", fontSize: "11px", color: "#94a3b8" }}>
+              🔒 100% Secure Transaction · Instant Wallet Credit via Razorpay / UPI
             </div>
           </div>
         </div>

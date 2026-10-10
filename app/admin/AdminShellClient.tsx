@@ -12,6 +12,9 @@ import TestForm from "./TestForm";
 import UserManagement from "./UserManagement";
 import ExamTaxonomyManager from "./ExamTaxonomyManager";
 import CommerceManager from "./CommerceManager";
+import PYQManager from "./PYQManager";
+import CouponsManager from "./CouponsManager";
+import WalletManager from "./WalletManager";
 import NotificationsManager from "./NotificationsManager";
 import AuditLogsViewer from "./AuditLogsViewer";
 import MenuAndSiteConfigManager from "./MenuAndSiteConfigManager";
@@ -50,6 +53,7 @@ const VALID_TABS: Record<string, AdminTab> = {
   "bulk-import": "bulk-import",
   tests: "tests",
   "mock-tests": "tests",
+  pyq: "pyq",
   rules: "rules",
   "scoring-rules": "rules",
   taxonomy: "taxonomy",
@@ -57,6 +61,10 @@ const VALID_TABS: Record<string, AdminTab> = {
   demands: "demands",
   commerce: "commerce",
   plans: "commerce",
+  coupons: "coupons",
+  coupon: "coupons",
+  wallets: "wallets",
+  wallet: "wallets",
   notifications: "notifications",
   "site-config": "site-config",
   audit: "audit",
@@ -457,6 +465,13 @@ export default function AdminShellClient({
             </div>
           )}
 
+          {/* 5B. PREVIOUS YEAR PAPERS (PYQ) */}
+          {activeTab === "pyq" && (
+            <div className="admin-module-view">
+              <PYQManager />
+            </div>
+          )}
+
           {/* 6. SCORING RULES */}
           {activeTab === "rules" && (
             <div className="admin-module-container">
@@ -573,10 +588,24 @@ export default function AdminShellClient({
             </div>
           )}
 
-          {/* 10. COMMERCE */}
+          {/* 10. COMMERCE & PRICING */}
           {activeTab === "commerce" && (
             <div className="admin-module-view">
-              <CommerceManager plans={plans} />
+              <CommerceManager />
+            </div>
+          )}
+
+          {/* 10B. COUPONS */}
+          {activeTab === "coupons" && (
+            <div className="admin-module-view">
+              <CouponsManager />
+            </div>
+          )}
+
+          {/* 10C. WALLETS */}
+          {activeTab === "wallets" && (
+            <div className="admin-module-view">
+              <WalletManager />
             </div>
           )}
 

@@ -459,3 +459,15 @@ export async function deleteUserByAdmin(userId: string): Promise<{ success: bool
     return { success: false, error: error instanceof Error ? error.message : "Failed to delete user." };
   }
 }
+
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  try {
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const token = cookieStore.get("northstar_session")?.value;
+    if (!token) return null;
+    return await getUserForToken(token);
+  } catch {
+    return null;
+  }
+}

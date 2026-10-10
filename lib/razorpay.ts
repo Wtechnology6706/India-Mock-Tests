@@ -14,11 +14,45 @@ export type RazorpayConfig = {
 
 export async function getRazorpayConfig(): Promise<RazorpayConfig> {
   const siteConfig = await getSiteConfiguration();
-  const keyId = process.env.RAZORPAY_KEY_ID?.trim() || siteConfig.razorpayKeyId?.trim() || "";
-  const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim() || siteConfig.razorpayKeySecret?.trim() || "";
+  const isTestMode = siteConfig.razorpayTestMode !== false; // Default to true (Test Mode)
+
+  let keyId = "";
+  let keySecret = "";
+
+  if (isTestMode) {
+    keyId =
+      siteConfig.razorpayTestKeyId?.trim() ||
+      process.env.RAZORPAY_TEST_KEY_ID?.trim() ||
+      (siteConfig.razorpayKeyId?.startsWith("rzp_test_") ? siteConfig.razorpayKeyId.trim() : "") ||
+      (process.env.RAZORPAY_KEY_ID?.startsWith("rzp_test_") ? process.env.RAZORPAY_KEY_ID.trim() : "") ||
+      siteConfig.razorpayKeyId?.trim() ||
+      process.env.RAZORPAY_KEY_ID?.trim() ||
+      "";
+    keySecret =
+      siteConfig.razorpayTestKeySecret?.trim() ||
+      process.env.RAZORPAY_TEST_KEY_SECRET?.trim() ||
+      siteConfig.razorpayKeySecret?.trim() ||
+      process.env.RAZORPAY_KEY_SECRET?.trim() ||
+      "";
+  } else {
+    keyId =
+      siteConfig.razorpayLiveKeyId?.trim() ||
+      process.env.RAZORPAY_LIVE_KEY_ID?.trim() ||
+      (siteConfig.razorpayKeyId?.startsWith("rzp_live_") ? siteConfig.razorpayKeyId.trim() : "") ||
+      (process.env.RAZORPAY_KEY_ID?.startsWith("rzp_live_") ? process.env.RAZORPAY_KEY_ID.trim() : "") ||
+      siteConfig.razorpayKeyId?.trim() ||
+      process.env.RAZORPAY_KEY_ID?.trim() ||
+      "";
+    keySecret =
+      siteConfig.razorpayLiveKeySecret?.trim() ||
+      process.env.RAZORPAY_LIVE_KEY_SECRET?.trim() ||
+      siteConfig.razorpayKeySecret?.trim() ||
+      process.env.RAZORPAY_KEY_SECRET?.trim() ||
+      "";
+  }
+
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim() || siteConfig.razorpayWebhookSecret?.trim() || "";
   const enabled = siteConfig.razorpayEnabled ?? true;
-  const isTestMode = keyId.startsWith("rzp_test_");
 
   return {
     keyId,
@@ -97,6 +131,71 @@ export async function createRazorpayOrder(params: {
     }
   } catch (err: any) {
     console.error("Razorpay API call failed:", err);
+    return {
+      success: false,
+      error: err.message || "Network error connecting to Razorpay API.",
+    };
+  }
+}
+
+export async function createGenericRazorpayOrder(params: {
+  userId: string;
+  amountInRupees: number;
+  purpose: string;
+  notes?: Record<string, any>;
+}): Promise<CreateRazorpayOrderResult> {
+  const config = await getRazorpayConfig();
+
+  if (!config.keyId || !config.keySecret) {
+    return {
+      success: false,
+      error: "Razorpay Key ID and Secret are not configured.",
+    };
+  }
+
+  const amountInPaise = Math.round(params.amountInRupees * 100);
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  const receipt = `wal_${Date.now().toString().slice(-6)}_${randomSuffix}`;
+
+  try {
+    const authHeader = Buffer.from(`${config.keyId}:${config.keySecret}`).toString("base64");
+    const response = await fetch("https://api.razorpay.com/v1/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${authHeader}`,
+      },
+      body: JSON.stringify({
+        amount: amountInPaise,
+        currency: "INR",
+        receipt,
+        notes: {
+          userId: params.userId,
+          purpose: params.purpose,
+          ...(params.notes || {}),
+        },
+      }),
+    });
+
+    const data = await response.json();
+    if (response.ok && data.id) {
+      return {
+        success: true,
+        orderId: data.id,
+        amount: data.amount,
+        currency: data.currency || "INR",
+        keyId: config.keyId,
+        receipt,
+      };
+    } else {
+      const errorMsg = data.error?.description || data.message || "Failed to create Razorpay order.";
+      return {
+        success: false,
+        error: errorMsg,
+      };
+    }
+  } catch (err: any) {
+    console.error("Razorpay generic order creation failed:", err);
     return {
       success: false,
       error: err.message || "Network error connecting to Razorpay API.",

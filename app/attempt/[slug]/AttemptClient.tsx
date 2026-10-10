@@ -31,6 +31,8 @@ export default function AttemptClient({
   const [paletteDrawerOpen, setPaletteDrawerOpen] = useState(false);
   const [premiumLock, setPremiumLock] = useState<{ isLocked: boolean; message?: string } | null>(null);
   const [selectedSection, setSelectedSection] = useState<string>("All");
+  const [showInstructions, setShowInstructions] = useState(true);
+  const [declarationAccepted, setDeclarationAccepted] = useState(false);
 
   const answersRef = useRef<Record<number, number>>({});
   const reviewedRef = useRef<number[]>([]);
@@ -127,20 +129,20 @@ export default function AttemptClient({
 
   // Countdown timer
   useEffect(() => {
-    if (submitted || remainingSeconds <= 0 || premiumLock?.isLocked) return;
+    if (showInstructions || submitted || remainingSeconds <= 0 || premiumLock?.isLocked) return;
     const timer = window.setInterval(
       () => setRemainingSeconds((value) => Math.max(0, value - 1)),
       1000
     );
     return () => window.clearInterval(timer);
-  }, [remainingSeconds, submitted, premiumLock]);
+  }, [remainingSeconds, submitted, premiumLock, showInstructions]);
 
   // Auto submit when time runs out
   useEffect(() => {
-    if (remainingSeconds === 0 && !submitted && !premiumLock?.isLocked) {
+    if (!showInstructions && remainingSeconds === 0 && !submitted && !premiumLock?.isLocked) {
       void submitToServer();
     }
-  }, [remainingSeconds, submitted, premiumLock]);
+  }, [remainingSeconds, submitted, premiumLock, showInstructions]);
 
   const saveResponseToServer = (
     qId: number,
@@ -270,6 +272,219 @@ export default function AttemptClient({
               <Link href="/exams" className="btn-explore-free">
                 ← Explore Free Available Mocks
               </Link>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Pre-Exam Instructions Screen
+  if (showInstructions) {
+    return (
+      <main className="attempt-page" style={{ minHeight: "100vh", background: "#f8fafc", paddingBottom: "60px" }}>
+        {/* Top bar */}
+        <nav className="cbt-topbar" style={{ background: "#0f172a", color: "#fff", padding: "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <span style={{ fontSize: "20px" }}>🇮🇳</span>
+            <div>
+              <strong style={{ fontSize: "16px", display: "block" }}>{title}</strong>
+              <small style={{ color: "#94a3b8" }}>{exam} · Computer Based Test (CBT) Mode</small>
+            </div>
+          </div>
+          <Link
+            href="/exams"
+            style={{
+              padding: "6px 14px",
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              borderRadius: "8px",
+              color: "#cbd5e1",
+              fontSize: "13px",
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            ✕ Exit Test
+          </Link>
+        </nav>
+
+        {/* Instructions Content Container */}
+        <div style={{ maxWidth: "1000px", margin: "30px auto 0", padding: "0 20px" }}>
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "16px",
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.05)",
+              overflow: "hidden",
+            }}
+          >
+            {/* Header Info */}
+            <div style={{ padding: "24px 30px", borderBottom: "1px solid #e2e8f0", background: "linear-gradient(135deg, #f8fafc, #f1f5f9)" }}>
+              <div style={{ display: "inline-block", background: "rgba(37, 99, 235, 0.1)", color: "#1d4ed8", padding: "3px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: 800, marginBottom: "8px" }}>
+                OFFICIAL CBT EXAMINATION GUIDELINES
+              </div>
+              <h1 style={{ fontSize: "22px", fontWeight: 900, color: "#0f172a", margin: "0 0 12px" }}>
+                Candidate Instructions & Examination Rules
+              </h1>
+
+              {/* Quick Specs Grid */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: "12px",
+                  marginTop: "16px",
+                }}
+              >
+                <div style={{ background: "#fff", padding: "12px 16px", borderRadius: "10px", border: "1px solid #cbd5e1" }}>
+                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 700, display: "block" }}>TOTAL TIME</span>
+                  <strong style={{ fontSize: "16px", color: "#0f172a" }}>{Math.round(durationSeconds / 60)} Minutes</strong>
+                </div>
+                <div style={{ background: "#fff", padding: "12px 16px", borderRadius: "10px", border: "1px solid #cbd5e1" }}>
+                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 700, display: "block" }}>TOTAL QUESTIONS</span>
+                  <strong style={{ fontSize: "16px", color: "#0f172a" }}>{questions.length} Questions</strong>
+                </div>
+                <div style={{ background: "#fff", padding: "12px 16px", borderRadius: "10px", border: "1px solid #cbd5e1" }}>
+                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 700, display: "block" }}>MARKING SCHEME</span>
+                  <strong style={{ fontSize: "16px", color: "#059669" }}>+1.00 / -0.25 Mark</strong>
+                </div>
+                <div style={{ background: "#fff", padding: "12px 16px", borderRadius: "10px", border: "1px solid #cbd5e1" }}>
+                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 700, display: "block" }}>MEDIUM</span>
+                  <strong style={{ fontSize: "16px", color: "#0f172a" }}>Bilingual (Hindi / Eng)</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Instruction Details */}
+            <div style={{ padding: "30px", fontSize: "14px", lineHeight: 1.7, color: "#334155" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", marginBottom: "12px" }}>
+                1. General Instructions / सामान्य निर्देश:
+              </h3>
+              <ol style={{ paddingLeft: "20px", margin: "0 0 24px" }}>
+                <li>The clock will be set at the server. The countdown timer in the top right corner will display the remaining time available for you to complete the examination.</li>
+                <li>When the timer reaches zero, the examination will end by itself and your attempt will automatically be submitted.</li>
+                <li>Ensure a stable internet connection. In case of unexpected disconnection, your saved responses remain safely stored on the server.</li>
+              </ol>
+
+              <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", marginBottom: "12px" }}>
+                2. Question Palette Legend / प्रश्न स्थिति संकेत:
+              </h3>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "12px",
+                  marginBottom: "24px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#10b981", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800 }}>✓</div>
+                  <div>
+                    <strong style={{ fontSize: "13px", color: "#0f172a", display: "block" }}>Answered (उत्तर दिया)</strong>
+                    <span style={{ fontSize: "11px", color: "#64748b" }}>You have answered the question.</span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#ef4444", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800 }}>!</div>
+                  <div>
+                    <strong style={{ fontSize: "13px", color: "#0f172a", display: "block" }}>Not Answered (उत्तर नहीं दिया)</strong>
+                    <span style={{ fontSize: "11px", color: "#64748b" }}>Visited but unanswered.</span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#8b5cf6", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800 }}>⚑</div>
+                  <div>
+                    <strong style={{ fontSize: "13px", color: "#0f172a", display: "block" }}>Marked for Review</strong>
+                    <span style={{ fontSize: "11px", color: "#64748b" }}>Marked for later evaluation.</span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#cbd5e1", color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800 }}>-</div>
+                  <div>
+                    <strong style={{ fontSize: "13px", color: "#0f172a", display: "block" }}>Not Visited (देखा नहीं)</strong>
+                    <span style={{ fontSize: "11px", color: "#64748b" }}>Question not yet opened.</span>
+                  </div>
+                </div>
+              </div>
+
+              <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", marginBottom: "12px" }}>
+                3. Answering & Navigation / उत्तर देने की प्रक्रिया:
+              </h3>
+              <ul style={{ paddingLeft: "20px", margin: "0 0 24px" }}>
+                <li>To select your answer, click on the option button (A, B, C, or D).</li>
+                <li>To deselect your chosen answer, click on the <strong>Clear Response</strong> button.</li>
+                <li>To save your answer, you MUST click on the <strong>Save & Next</strong> button.</li>
+                <li>To mark the question for review, click on the <strong>Mark for Review</strong> button.</li>
+              </ul>
+
+              {/* Declaration Checkbox */}
+              <div
+                style={{
+                  marginTop: "24px",
+                  padding: "18px 20px",
+                  background: declarationAccepted ? "rgba(16, 185, 129, 0.08)" : "#f8fafc",
+                  border: declarationAccepted ? "1px solid #10b981" : "1px solid #cbd5e1",
+                  borderRadius: "12px",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <label style={{ display: "flex", alignItems: "flex-start", gap: "12px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={declarationAccepted}
+                    onChange={(e) => setDeclarationAccepted(e.target.checked)}
+                    style={{ marginTop: "4px", width: "18px", height: "18px", cursor: "pointer", accentColor: "#059669" }}
+                  />
+                  <span style={{ fontSize: "13px", color: "#0f172a", fontWeight: 600, lineHeight: 1.5 }}>
+                    I have read and understood all the instructions given above. All computer hardware, screen, and internet access allotted to me are in proper working condition. I agree that in case of not adhering to the exam instructions, my result may be withheld.
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Bottom Proceed Action */}
+            <div
+              style={{
+                padding: "20px 30px",
+                background: "#f8fafc",
+                borderTop: "1px solid #e2e8f0",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "14px",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: declarationAccepted ? "#059669" : "#64748b", fontWeight: 700 }}>
+                {declarationAccepted ? "✓ Ready to begin" : "⚠️ Please check the declaration checkbox to enable Start button"}
+              </div>
+
+              <button
+                type="button"
+                disabled={!declarationAccepted}
+                onClick={() => setShowInstructions(false)}
+                style={{
+                  padding: "14px 32px",
+                  background: declarationAccepted
+                    ? "linear-gradient(135deg, #059669, #047857)"
+                    : "#cbd5e1",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontSize: "15px",
+                  fontWeight: 800,
+                  cursor: declarationAccepted ? "pointer" : "not-allowed",
+                  boxShadow: declarationAccepted ? "0 4px 14px rgba(5, 150, 105, 0.3)" : "none",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                I am ready to begin / Start Test →
+              </button>
             </div>
           </div>
         </div>
