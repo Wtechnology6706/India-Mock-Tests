@@ -4,6 +4,7 @@ import Footer from "../../components/Footer";
 import { fallbackExamDetails } from "../../../lib/catalog";
 import { syllabusTracks } from "../../../lib/syllabus";
 import { listMockTests, listSubjectRequests } from "../../../lib/admin-content";
+import { getCurrentUser } from "../../../lib/auth-store";
 import ExamTrackExplorer from "./ExamTrackExplorer";
 
 export const dynamic = "force-dynamic";
@@ -31,8 +32,9 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
     );
   }
 
-  // Load published tests and learner demands for this exam
-  const [initialTests, initialRequests] = await Promise.all([
+  // Load published tests, demands, and user
+  const [currentUser, initialTests, initialRequests] = await Promise.all([
+    getCurrentUser(),
     listMockTests({ examSlug: slug, status: "Published" }),
     listSubjectRequests(slug),
   ]);
@@ -151,6 +153,7 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
             tracks={tracks}
             initialTests={initialTests}
             initialRequests={initialRequests}
+            currentUser={currentUser}
             examSlug={slug}
             examTitle={exam.title}
             examTone={exam.tone}

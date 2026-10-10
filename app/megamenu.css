@@ -4695,6 +4695,204 @@
   font-weight: 600;
 }
 
+/* ==========================================================================
+   CHECKOUT SUCCESS / THANK YOU CONFIRMATION SCREEN
+   ========================================================================== */
+
+.checkout-success-wrap {
+  max-width: 660px;
+  margin: 48px auto 80px;
+  padding: 0 20px;
+}
+
+.checkout-success-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-top: 5px solid #059669;
+  border-radius: 20px;
+  padding: 44px 36px 36px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+
+.success-badge-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #ecfdf5;
+  border: 3px solid #10b981;
+  color: #059669;
+  font-size: 34px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  box-shadow: 0 0 0 10px rgba(16, 185, 129, 0.12);
+}
+
+.success-kicker {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #065f46;
+  background: #d1fae5;
+  padding: 5px 16px;
+  border-radius: 20px;
+  margin-bottom: 14px;
+}
+
+.checkout-success-card h2 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 10px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.success-sub {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0 auto 28px;
+  max-width: 520px;
+  line-height: 1.5;
+}
+
+.success-receipt-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  text-align: left;
+}
+
+.receipt-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.receipt-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.receipt-status-pill {
+  font-size: 10px;
+  font-weight: 800;
+  color: #065f46;
+  background: #a7f3d0;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px dashed #e2e8f0;
+  font-size: 13.5px;
+}
+
+.receipt-row:last-child {
+  border-bottom: none;
+}
+
+.receipt-row span {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.receipt-row strong {
+  color: #0f172a;
+  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.receipt-row.total-paid-row {
+  padding-top: 14px;
+  margin-top: 6px;
+  border-top: 1.5px solid #cbd5e1;
+  border-bottom: none;
+}
+
+.receipt-row.total-paid-row span {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.receipt-price {
+  font-size: 22px !important;
+  font-weight: 900 !important;
+  color: #059669 !important;
+}
+
+.success-actions-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.btn-primary-success {
+  padding: 14px 28px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border-radius: 12px;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.3);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-primary-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(5, 150, 105, 0.42);
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+}
+
+.btn-secondary-success {
+  padding: 14px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155 !important;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-secondary-success:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  color: #0f172a !important;
+}
+
+.success-footer-note {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
 .toggle-header strong {
   font: 700 15px 'Space Grotesk', sans-serif;
   color: var(--ink);

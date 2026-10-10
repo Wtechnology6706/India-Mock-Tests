@@ -35,6 +35,8 @@ export type OrderRecord = {
   paymentMethod: string;
   taxAmount: number;
   invoiceNumber: string;
+  targetExamSlug?: string | null;
+  targetExamName?: string | null;
   createdAt: string;
   paidAt: string | null;
 };
@@ -241,6 +243,8 @@ export async function createSimulatedOrder(params: {
   provider?: string;
   providerOrderId?: string;
   providerPaymentId?: string;
+  targetExamSlug?: string | null;
+  targetExamName?: string | null;
 }): Promise<{ success: boolean; order?: OrderRecord; error?: string }> {
   try {
     await ensureCommercePlans();
@@ -264,6 +268,8 @@ export async function createSimulatedOrder(params: {
       totalAmount: params.amount,
       durationDays: params.durationDays,
       couponCode: params.couponCode || null,
+      targetExamSlug: params.targetExamSlug || null,
+      targetExamName: params.targetExamName || null,
     });
 
     try {
@@ -286,7 +292,13 @@ export async function createSimulatedOrder(params: {
     }
 
     // Update user's subscription
-    await updateUserSubscription(params.userId, params.tier, params.durationDays);
+    await updateUserSubscription(
+      params.userId,
+      params.tier,
+      params.durationDays,
+      params.targetExamSlug,
+      params.targetExamName
+    );
 
     if (params.couponCode) {
       await incrementCouponUsage(params.couponCode);
@@ -307,6 +319,8 @@ export async function createSimulatedOrder(params: {
       paymentMethod: params.paymentMethod,
       taxAmount,
       invoiceNumber,
+      targetExamSlug: params.targetExamSlug || null,
+      targetExamName: params.targetExamName || null,
       createdAt: now,
       paidAt: now,
     };
@@ -322,6 +336,8 @@ export async function processWalletPlanPurchase(params: {
   userId: string;
   planSlug: string;
   couponCode?: string;
+  targetExamSlug?: string | null;
+  targetExamName?: string | null;
 }): Promise<{ success: boolean; order?: OrderRecord; error?: string }> {
   const plan = await getCommercePlanBySlug(params.planSlug);
   if (!plan) {
@@ -341,7 +357,7 @@ export async function processWalletPlanPurchase(params: {
   const debitRes = await debitWallet({
     userId: params.userId,
     amount: finalAmount,
-    description: `Subscription to ${plan.name} (${plan.validityDays} Days)`,
+    description: `Subscription to ${plan.name} (${plan.validityDays} Days)${params.targetExamName ? ` - ${params.targetExamName}` : ""}`,
     referenceType: "purchase",
     referenceId: plan.id,
   });
@@ -358,6 +374,8 @@ export async function processWalletPlanPurchase(params: {
     paymentMethod: "Student Wallet Balance",
     durationDays: plan.validityDays,
     couponCode: params.couponCode,
+    targetExamSlug: params.targetExamSlug,
+    targetExamName: params.targetExamName,
     provider: "wallet",
     providerOrderId: `WAL-ORD-${randomUUID().slice(0, 8)}`,
     providerPaymentId: debitRes.transactionId || `WAL-PAY-${randomUUID().slice(0, 8)}`,
@@ -410,6 +428,8 @@ export async function getUserOrders(userId: string): Promise<OrderRecord[]> {
         paymentMethod: taxObj.paymentMethod || "UPI / QR Code",
         taxAmount: taxObj.cgst && taxObj.sgst ? taxObj.cgst + taxObj.sgst : 0,
         invoiceNumber: taxObj.invoiceNumber || `INV-${r.id.slice(0, 8)}`,
+        targetExamSlug: taxObj.targetExamSlug || null,
+        targetExamName: taxObj.targetExamName || null,
         createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
         paidAt: r.paid_at ? new Date(r.paid_at).toISOString() : null,
       };

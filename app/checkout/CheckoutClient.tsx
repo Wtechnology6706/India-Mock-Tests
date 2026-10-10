@@ -229,12 +229,18 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     setProcessingStep("Processing payment from your Student Wallet...");
 
     try {
+      const selectedExamObj = EXAM_OPTIONS.find((e) => e.slug === targetExamSlug);
+      const chosenExamName = selectedPlan === "sprint" ? (selectedExamObj?.name || "Target Exam Series") : undefined;
+      const chosenExamSlug = selectedPlan === "sprint" ? targetExamSlug : undefined;
+
       const res = await fetch("/api/checkout/wallet-pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           planSlug: selectedPlan,
           couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+          targetExamSlug: chosenExamSlug,
+          targetExamName: chosenExamName,
         }),
       });
 
@@ -392,10 +398,14 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
             <span className="success-kicker">PAYMENT CONFIRMED & ACTIVATED</span>
             <h2>Thank You! Your VIP Pass is Live</h2>
             <p className="success-sub">
-              Your mock tests and performance dashboard have been unlocked immediately. A digital tax invoice has been generated for your records.
+              Your test series, performance tracker, and premium question bank have been unlocked immediately. A digital tax invoice has been generated.
             </p>
 
             <div className="success-receipt-box">
+              <div className="receipt-header-row">
+                <span className="receipt-title">🧾 Transaction & Tax Invoice Summary</span>
+                <span className="receipt-status-pill">STATUS: PAID</span>
+              </div>
               <div className="receipt-row">
                 <span>Order Reference:</span>
                 <strong>{successOrder.orderNumber || "ORD-SUCCESS"}</strong>
@@ -406,19 +416,24 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
               </div>
               <div className="receipt-row">
                 <span>Plan Subscribed:</span>
-                <strong>{successOrder.planName || activePlan.name}</strong>
-              </div>
-              <div className="receipt-row">
-                <span>Amount Paid:</span>
-                <strong className="receipt-price">₹{finalPrice.toFixed(2)}</strong>
-              </div>
-              <div className="receipt-row">
-                <span>Payment Method:</span>
-                <strong>{paymentMethod === "wallet" ? "Student Wallet Balance" : "Razorpay (UPI / Card / NetBanking)"}</strong>
+                <strong>
+                  {successOrder.planName || activePlan.name}
+                  {(successOrder.targetExamName || (selectedPlan === "sprint" && EXAM_OPTIONS.find((e) => e.slug === targetExamSlug)?.name))
+                    ? ` (${successOrder.targetExamName || EXAM_OPTIONS.find((e) => e.slug === targetExamSlug)?.name})`
+                    : ""}
+                </strong>
               </div>
               <div className="receipt-row">
                 <span>Validity Duration:</span>
                 <strong>{activePlan.validityDays} Days Full Access</strong>
+              </div>
+              <div className="receipt-row">
+                <span>Payment Method:</span>
+                <strong>{paymentMethod === "wallet" ? "👛 Student Wallet Balance" : "💳 Razorpay / UPI"}</strong>
+              </div>
+              <div className="receipt-row total-paid-row">
+                <span>Total Amount Paid:</span>
+                <strong className="receipt-price">₹{finalPrice.toFixed(2)}</strong>
               </div>
             </div>
 
@@ -430,6 +445,10 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
                 Explore PYQ Question Papers
               </Link>
             </div>
+
+            <p className="success-footer-note">
+              🔒 Instant activation applied to your account. You can view or download this invoice anytime from your Dashboard.
+            </p>
           </div>
         </main>
         <Footer />
