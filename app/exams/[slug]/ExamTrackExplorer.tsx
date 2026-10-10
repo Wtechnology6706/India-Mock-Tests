@@ -4,11 +4,13 @@ import { useState, useRef, useMemo, useEffect } from "react";
 import Link from "next/link";
 import type { ExamTrack, SubjectGroup } from "../../../lib/syllabus";
 import type { MockTest, SubjectDemandRequest } from "../../../lib/admin-content";
+import type { AuthUser } from "../../../lib/auth-store";
 
 interface ExamTrackExplorerProps {
   tracks: ExamTrack[];
   initialTests: MockTest[];
   initialRequests: SubjectDemandRequest[];
+  currentUser?: AuthUser | null;
   examSlug: string;
   examTitle: string;
   examTone: string;
@@ -43,11 +45,46 @@ export default function ExamTrackExplorer({
   tracks,
   initialTests,
   initialRequests,
+  currentUser,
   examSlug,
   examTitle,
   examTone,
   examMeta,
 }: ExamTrackExplorerProps) {
+  // Check subscription access for individual test series
+  function checkTestAccess(test: MockTest) {
+    if (test.access === "Free") {
+      return { hasAccess: true, isFree: true };
+    }
+    if (!currentUser) {
+      return { hasAccess: false, isFree: false };
+    }
+    if (currentUser.role === "admin" || currentUser.role === "editor") {
+      return { hasAccess: true, isFree: false };
+    }
+    const isSubActive = currentUser.subscriptionStatus === "active" || (currentUser.subscriptionExpiresAt && new Date(currentUser.subscriptionExpiresAt).getTime() > Date.now());
+    if (!isSubActive) {
+      return { hasAccess: false, isFree: false };
+    }
+    if (currentUser.subscriptionTier === "ultimate") {
+      return { hasAccess: true, isFree: false };
+    }
+    if (currentUser.subscriptionTier === "sprint") {
+      const userSlug = (currentUser.targetExamSlug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const currentExamSlug = (examSlug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const userExamName = (currentUser.targetExamName || "").toLowerCase();
+      const currentExamTitle = (examTitle || "").toLowerCase();
+
+      const matchesSlug = (userSlug && currentExamSlug) && (userSlug.includes(currentExamSlug) || currentExamSlug.includes(userSlug));
+      const matchesName = (userExamName && currentExamTitle) && (userExamName.includes(currentExamTitle) || currentExamTitle.includes(userExamName));
+
+      if (matchesSlug || matchesName) {
+        return { hasAccess: true, isFree: false };
+      }
+    }
+    return { hasAccess: false, isFree: false };
+  }
+
   // Practice tests catalog state
   const [catalogFilter, setCatalogFilter] = useState<"all" | "free" | "vip">("all");
   const [testSearchQuery, setTestSearchQuery] = useState("");
@@ -386,46 +423,67 @@ export default function ExamTrackExplorer({
               {activeTests.length > 0 ? (
                 <div className="studio-tests-container">
                   <div className="studio-tests-grid">
-                    {activeTests.map((test) => (
-                      <article className="studio-test-card" key={test.slug}>
-                        {test.bannerImageUrl ? (
-                          <div className="test-card-custom-banner-wrap" style={{ margin: "-20px -20px 14px -20px" }}>
-                            <img src={test.bannerImageUrl} alt={test.name} className="test-card-custom-banner-img" />
-                            <div className="test-card-custom-banner-overlay">
-                              <span className="test-type-pill-overlay">{test.testType.toUpperCase()}</span>
-                              <span className={test.access === "Free" ? "test-free-tag-overlay" : "test-vip-tag-overlay"}>
-                                {test.access === "Free" ? "✓ FREE" : "👑 VIP PASS"}
+                    {activeTests.map((test) => {
+                      const accessInfo = checkTestAccess(test);
+                      return (
+                        <article className="studio-test-card" key={test.slug}>
+                          {test.bannerImageUrl ? (
+                            <div className="test-card-custom-banner-wrap" style={{ margin: "-20px -20px 14px -20px" }}>
+                              <img src={test.bannerImageUrl} alt={test.name} className="test-card-custom-banner-img" />
+                              <div className="test-card-custom-banner-overlay">
+                                <span className="test-type-pill-overlay">{test.testType.toUpperCase()}</span>
+                                <span
+                                  className={test.access === "Free" ? "test-free-tag-overlay" : "test-vip-tag-overlay"}
+                                  title={test.access === "Free" ? "Free Mock Test" : "VIP Pass"}
+                                >
+                                  {test.access === "Free" ? "Free" : "👑"}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="test-card-type-row">
+                              <span className="test-type-pill">{test.testType.toUpperCase()}</span>
+                              <span
+                                className={test.access === "Free" ? "test-free-tag" : "test-vip-tag"}
+                                title={test.access === "Free" ? "Free Mock Test" : "VIP Pass"}
+                              >
+                                {test.access === "Free" ? "Free" : "👑"}
                               </span>
                             </div>
+                          )}
+
+                          <h5 className="test-card-heading">{test.name}</h5>
+                          {test.description && <p className="test-card-info">{test.description}</p>}
+
+                          <div className="test-card-stats-row">
+                            <span>⏱️ {test.durationMinutes} Mins</span>
+                            <span>📝 {test.questionCount} Questions</span>
+                            <span>🎯 {test.totalMarks} Marks</span>
                           </div>
-                        ) : (
-                          <div className="test-card-type-row">
-                            <span className="test-type-pill">{test.testType.toUpperCase()}</span>
-                            <span className={test.access === "Free" ? "test-free-tag" : "test-vip-tag"}>
-                              {test.access === "Free" ? "✓ FREE ACCESS" : "👑 VIP PASS"}
-                            </span>
+
+                          <div className="test-card-actions-row">
+                            <Link className="btn-test-instructions" href={`/tests/${test.slug}`}>
+                              Instructions →
+                            </Link>
+                            {accessInfo.hasAccess ? (
+                              <Link
+                                className={`btn-test-start-direct ${!accessInfo.isFree ? "btn-test-unlocked" : ""}`}
+                                href={`/attempt/${test.slug}`}
+                              >
+                                {!accessInfo.isFree ? "🔓 Start Practice →" : "Start Test ⚡"}
+                              </Link>
+                            ) : (
+                              <Link
+                                className="btn-test-start-direct btn-test-locked"
+                                href={`/checkout?plan=sprint&exam=${examSlug}`}
+                              >
+                                🔒 Unlock Test
+                              </Link>
+                            )}
                           </div>
-                        )}
-
-                        <h5 className="test-card-heading">{test.name}</h5>
-                        {test.description && <p className="test-card-info">{test.description}</p>}
-
-                        <div className="test-card-stats-row">
-                          <span>⏱️ {test.durationMinutes} Mins</span>
-                          <span>📝 {test.questionCount} Questions</span>
-                          <span>🎯 {test.totalMarks} Marks</span>
-                        </div>
-
-                        <div className="test-card-actions-row">
-                          <Link className="btn-test-instructions" href={`/tests/${test.slug}`}>
-                            Instructions →
-                          </Link>
-                          <Link className="btn-test-start-direct" href={`/attempt/${test.slug}`}>
-                            Start Test ⚡
-                          </Link>
-                        </div>
-                      </article>
-                    ))}
+                        </article>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
@@ -590,54 +648,75 @@ export default function ExamTrackExplorer({
           </div>
         ) : (
           <div className="catalog-tests-grid">
-            {filteredPublishedTests.map((test) => (
-              <article className="catalog-test-card" key={test.slug}>
-                {test.bannerImageUrl ? (
-                  <div className="test-card-custom-banner-wrap">
-                    <img src={test.bannerImageUrl} alt={test.name} className="test-card-custom-banner-img" />
-                    <div className="test-card-custom-banner-overlay">
-                      <span className="catalog-subject-tag-overlay">{test.subjectName}</span>
-                      <span className={test.access === "Free" ? "test-free-tag-overlay" : "test-vip-tag-overlay"}>
-                        {test.access === "Free" ? "FREE" : "👑 VIP PASS"}
+            {filteredPublishedTests.map((test) => {
+              const accessInfo = checkTestAccess(test);
+              return (
+                <article className="catalog-test-card" key={test.slug}>
+                  {test.bannerImageUrl ? (
+                    <div className="test-card-custom-banner-wrap">
+                      <img src={test.bannerImageUrl} alt={test.name} className="test-card-custom-banner-img" />
+                      <div className="test-card-custom-banner-overlay">
+                        <span className="catalog-subject-tag-overlay">{test.subjectName}</span>
+                        <span
+                          className={test.access === "Free" ? "test-free-tag-overlay" : "test-vip-tag-overlay"}
+                          title={test.access === "Free" ? "Free Mock Test" : "VIP Pass"}
+                        >
+                          {test.access === "Free" ? "Free" : "👑"}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="catalog-card-top default-css-banner">
+                      <span className="catalog-subject-tag">{test.subjectName}</span>
+                      <span
+                        className={test.access === "Free" ? "test-free-tag" : "test-vip-tag"}
+                        title={test.access === "Free" ? "Free Mock Test" : "VIP Pass"}
+                      >
+                        {test.access === "Free" ? "Free" : "👑"}
                       </span>
                     </div>
-                  </div>
-                ) : (
-                  <div className="catalog-card-top default-css-banner">
-                    <span className="catalog-subject-tag">{test.subjectName}</span>
-                    <span className={test.access === "Free" ? "test-free-tag" : "test-vip-tag"}>
-                      {test.access === "Free" ? "FREE" : "👑 VIP PASS"}
-                    </span>
-                  </div>
-                )}
-
-                <div className="catalog-card-body-content">
-                  <h4 className="catalog-test-title">{test.name}</h4>
-                  <p className="catalog-test-track">
-                    Track: <strong>{test.trackSlug.replace(/-/g, " ").toUpperCase()}</strong>
-                  </p>
-
-                  {test.description && (
-                    <p className="catalog-test-desc">{test.description}</p>
                   )}
 
-                  <div className="catalog-metrics-row">
-                    <span>⏱️ {test.durationMinutes} min</span>
-                    <span>📝 {test.questionCount} Qs</span>
-                    <span>🎯 {test.totalMarks} Marks</span>
-                  </div>
+                  <div className="catalog-card-body-content">
+                    <h4 className="catalog-test-title">{test.name}</h4>
+                    <p className="catalog-test-track">
+                      Track: <strong>{test.trackSlug.replace(/-/g, " ").toUpperCase()}</strong>
+                    </p>
 
-                  <div className="catalog-btn-row">
-                    <Link className="btn-catalog-secondary" href={`/tests/${test.slug}`}>
-                      Instructions
-                    </Link>
-                    <Link className="btn-catalog-primary" href={`/attempt/${test.slug}`}>
-                      Start Test ⚡
-                    </Link>
+                    {test.description && (
+                      <p className="catalog-test-desc">{test.description}</p>
+                    )}
+
+                    <div className="catalog-metrics-row">
+                      <span>⏱️ {test.durationMinutes} min</span>
+                      <span>📝 {test.questionCount} Qs</span>
+                      <span>🎯 {test.totalMarks} Marks</span>
+                    </div>
+
+                    <div className="catalog-btn-row">
+                      <Link className="btn-catalog-secondary" href={`/tests/${test.slug}`}>
+                        Instructions
+                      </Link>
+                      {accessInfo.hasAccess ? (
+                        <Link
+                          className={`btn-catalog-primary ${!accessInfo.isFree ? "btn-catalog-unlocked" : ""}`}
+                          href={`/attempt/${test.slug}`}
+                        >
+                          {!accessInfo.isFree ? "🔓 Start Practice →" : "Start Test ⚡"}
+                        </Link>
+                      ) : (
+                        <Link
+                          className="btn-catalog-primary btn-catalog-locked"
+                          href={`/checkout?plan=sprint&exam=${examSlug}`}
+                        >
+                          🔒 Unlock Test
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

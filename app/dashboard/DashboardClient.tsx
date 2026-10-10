@@ -88,6 +88,41 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
     }
   }
 
+  // Subscription & Exam access checker
+  function checkTestAccess(test: { access?: string; exam?: string; examSlug?: string; slug?: string }) {
+    const isFree = test.access === "Free" || test.access === "free";
+    if (isFree) return { hasAccess: true, isFree: true };
+
+    if (user.role === "admin" || user.role === "editor") {
+      return { hasAccess: true, isFree: false };
+    }
+
+    const isSubActive = user.subscriptionStatus === "active" || (user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt).getTime() > Date.now());
+    if (!isSubActive) {
+      return { hasAccess: false, isFree: false };
+    }
+
+    if (user.subscriptionTier === "ultimate") {
+      return { hasAccess: true, isFree: false };
+    }
+
+    if (user.subscriptionTier === "sprint") {
+      const userSlug = (user.targetExamSlug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const testExamSlug = (test.examSlug || (test.exam || "").toLowerCase().replace(/[^a-z0-9]/g, "")).toLowerCase();
+      const userExamName = (user.targetExamName || "").toLowerCase();
+      const testExamName = (test.exam || "").toLowerCase();
+
+      const matchesSlug = (userSlug && testExamSlug) && (userSlug.includes(testExamSlug) || testExamSlug.includes(userSlug));
+      const matchesName = (userExamName && testExamName) && (userExamName.includes(testExamName) || testExamName.includes(userExamName));
+
+      if (matchesSlug || matchesName) {
+        return { hasAccess: true, isFree: false };
+      }
+    }
+
+    return { hasAccess: false, isFree: false };
+  }
+
   // Available tests with database banners
   const availableTests = useMemo(() => {
     if (initialMockTests && initialMockTests.length > 0) {
@@ -95,6 +130,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
         slug: t.slug,
         name: t.name,
         exam: t.examName,
+        examSlug: t.examSlug,
         subject: t.subjectName,
         track: t.trackSlug.replace(/-/g, " ").toUpperCase(),
         questions: t.questionCount,
@@ -103,7 +139,10 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
         bannerImageUrl: t.bannerImageUrl,
       }));
     }
-    return mockTests;
+    return mockTests.map((t) => ({
+      ...t,
+      examSlug: t.slug.includes("bpsc") ? "bpsc-tre-4" : t.slug.includes("stet") ? "bihar-stet" : "ctet",
+    }));
   }, [initialMockTests]);
 
   // Filtered mock tests for the "tests" tab
@@ -680,39 +719,71 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
             </div>
 
             <div className="tests-grid-layout">
-              {filteredTests.map((test: any) => (
-                <div className="test-card-item" key={test.slug}>
-                  {test.bannerImageUrl ? (
-                    <div className="test-card-custom-banner-wrap" style={{ height: "100px", margin: "-18px -18px 12px -18px" }}>
-                      <img src={test.bannerImageUrl} alt={test.name} className="test-card-custom-banner-img" />
-                      <div className="test-card-custom-banner-overlay">
-                        <span className="catalog-subject-tag-overlay">{test.exam || "Official Exam"}</span>
-                        <span className={test.access === "Premium" ? "test-vip-tag-overlay" : "test-free-tag-overlay"}>
-                          {test.access === "Premium" ? "★ VIP Pass" : "Free"}
+              {filteredTests.map((test: any) => {
+                const accessInfo = checkTestAccess(test);
+                const testExamSlug = test.examSlug || (test.slug.includes("bpsc") ? "bpsc-tre-4" : test.slug.includes("stet") ? "bihar-stet" : "ctet");
+                return (
+                  <div className="test-card-item" key={test.slug}>
+                    {test.bannerImageUrl ? (
+                      <div className="test-card-custom-banner-wrap" style={{ height: "100px", margin: "-18px -18px 12px -18px" }}>
+                        <img src={test.bannerImageUrl} alt={test.name} className="test-card-custom-banner-img" />
+                        <div className="test-card-custom-banner-overlay">
+                          <span className="catalog-subject-tag-overlay">{test.exam || "Official Exam"}</span>
+                          <span
+                            className={test.access === "Premium" ? "test-vip-tag-overlay" : "test-free-tag-overlay"}
+                            title={test.access === "Premium" ? "VIP Pass Required" : "Free Mock Test"}
+                          >
+                            {test.access === "Premium" ? "👑" : "Free"}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="test-card-badge-row">
+                        <span className="test-exam-tag">{test.exam}</span>
+                        <span
+                          className={`test-tier-tag ${test.access === "Premium" ? "premium" : "free"}`}
+                          title={test.access === "Premium" ? "VIP Pass Required" : "Free Mock Test"}
+                        >
+                          {test.access === "Premium" ? "👑" : "Free"}
                         </span>
                       </div>
+                    )}
+                    <h3>{test.name}</h3>
+                    <p className="test-desc">{test.subject} · {test.track}</p>
+                    <div className="test-card-meta">
+                      <span>⏱ {test.duration}</span>
+                      <span>📝 {test.questions} Questions</span>
                     </div>
-                  ) : (
-                    <div className="test-card-badge-row">
-                      <span className="test-exam-tag">{test.exam}</span>
-                      <span className={`test-tier-tag ${test.access === "Premium" ? "premium" : "free"}`}>
-                        {test.access === "Premium" ? "★ VIP Pass" : "Free"}
-                      </span>
+                    <div className="test-card-actions">
+                      {accessInfo.hasAccess ? (
+                        <Link
+                          href={`/attempt/${test.slug}`}
+                          className="btn-start-test"
+                          style={!accessInfo.isFree ? { background: "linear-gradient(135deg, #15803d 0%, #166534 100%)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" } : undefined}
+                        >
+                          {!accessInfo.isFree ? "🔓 " : ""}Start Test →
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/checkout?plan=sprint&exam=${testExamSlug}`}
+                          className="btn-start-test"
+                          style={{
+                            background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                            color: "#fff",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            fontWeight: 700,
+                          }}
+                        >
+                          🔒 Unlock Test
+                        </Link>
+                      )}
                     </div>
-                  )}
-                  <h3>{test.name}</h3>
-                  <p className="test-desc">{test.subject} · {test.track}</p>
-                  <div className="test-card-meta">
-                    <span>⏱ {test.duration}</span>
-                    <span>📝 {test.questions} Questions</span>
                   </div>
-                  <div className="test-card-actions">
-                    <Link href={`/attempt/${test.slug}`} className="btn-start-test">
-                      Start Test →
-                    </Link>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -883,14 +954,14 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                     {isUltimate
                       ? "All-Exam Ultimate VIP Pass"
                       : isVip
-                        ? "Single Exam Sprint Pass"
+                        ? (user.targetExamName ? `Single Exam Sprint Pass (${user.targetExamName})` : "Single Exam Sprint Pass")
                         : "Free Aspirant Account"}
                   </h2>
                   <p style={{ margin: 0, color: "#64748b", fontSize: "0.9rem" }}>
                     {isUltimate
                       ? "Full unrestricted access to 500+ mock tests across BPSC TRE, Bihar STET, CTET & State TETs."
                       : isVip
-                        ? "Targeted access for 1 selected exam test series with bilingual answer explanations."
+                        ? `Targeted full access to ${user.targetExamName || "selected examination"} mock tests, detailed AI analytics & bilingual explanations.`
                         : "Basic access to free diagnostic tests."}
                   </p>
                 </div>
@@ -955,7 +1026,15 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                         <td>
                           <strong>{order.orderNumber}</strong>
                         </td>
-                        <td>{order.planName} ({order.durationMonths} Months)</td>
+                        <td>
+                          <strong>{order.planName}</strong>
+                          {order.targetExamName && (
+                            <span style={{ display: "block", fontSize: "0.8rem", color: "#166534", fontWeight: 600 }}>
+                              Target: {order.targetExamName}
+                            </span>
+                          )}
+                          <small style={{ display: "block", color: "#64748b" }}>{order.durationMonths} Months Validity</small>
+                        </td>
                         <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                         <td>
                           <strong style={{ color: "#1e3a34" }}>₹{order.amount}</strong>
@@ -1052,10 +1131,20 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                       <small style={{ color: "#64748b" }}>Payment Method:</small>
                       <span>{selectedInvoice.paymentMethod}</span>
                     </div>
+                    {selectedInvoice.targetExamName && (
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                        <small style={{ color: "#64748b" }}>Subscribed Subject/Exam:</small>
+                        <strong style={{ color: "#166534" }}>{selectedInvoice.targetExamName}</strong>
+                      </div>
+                    )}
 
                     <div style={{ borderTop: "1px dashed #cbd5e1", margin: "14px 0", paddingTop: "14px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                        <span>{selectedInvoice.planName} ({selectedInvoice.durationMonths} Mo)</span>
+                        <span>
+                          {selectedInvoice.planName}
+                          {selectedInvoice.targetExamName ? ` (${selectedInvoice.targetExamName})` : ""}
+                          {` (${selectedInvoice.durationMonths} Mo)`}
+                        </span>
                         <strong>₹{selectedInvoice.amount}</strong>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", color: "#64748b" }}>

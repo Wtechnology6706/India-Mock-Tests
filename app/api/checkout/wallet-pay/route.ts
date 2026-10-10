@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { planSlug, couponCode } = body;
+    const { planSlug, couponCode, targetExamSlug, targetExamName } = body;
 
     if (!planSlug) {
       return NextResponse.json({ success: false, error: "Plan is required." }, { status: 400 });
@@ -20,6 +20,8 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       planSlug,
       couponCode,
+      targetExamSlug: planSlug === "sprint" ? targetExamSlug : undefined,
+      targetExamName: planSlug === "sprint" ? targetExamName : undefined,
     });
 
     if (!result.success) {
