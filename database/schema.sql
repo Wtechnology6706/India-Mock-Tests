@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS exams (
   badge VARCHAR(40) NULL,
   visual_tone VARCHAR(30) NOT NULL DEFAULT 'saffron',
   visual_symbol VARCHAR(8) NOT NULL DEFAULT '✦',
+  image_url VARCHAR(500) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (country_id) REFERENCES countries(id),
@@ -122,12 +123,13 @@ CREATE TABLE IF NOT EXISTS tests (
   track_slug VARCHAR(100) NULL,
   name VARCHAR(180) NOT NULL,
   slug VARCHAR(200) UNIQUE NULL,
-  test_type ENUM('full', 'section', 'subject', 'topic', 'mini', 'pyq', 'live') NOT NULL DEFAULT 'full',
+  test_type VARCHAR(50) NOT NULL DEFAULT 'full',
   question_count INT UNSIGNED NOT NULL DEFAULT 0,
   duration_minutes INT UNSIGNED NOT NULL DEFAULT 0,
   total_marks DECIMAL(8,3) NOT NULL DEFAULT 0,
   access_type ENUM('free', 'premium') NOT NULL DEFAULT 'free',
   description TEXT NULL,
+  banner_image_url VARCHAR(500) NULL,
   status ENUM('draft', 'published', 'archived') NOT NULL DEFAULT 'draft',
   FOREIGN KEY (test_series_id) REFERENCES test_series(id),
   FOREIGN KEY (rule_profile_id) REFERENCES rule_profiles(id),
@@ -179,6 +181,11 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   display_name VARCHAR(120) NOT NULL,
   role ENUM('student', 'editor', 'reviewer', 'admin') NOT NULL DEFAULT 'student',
+  subscription_tier VARCHAR(20) DEFAULT 'free',
+  subscription_expires_at TIMESTAMP NULL,
+  target_exam_slug VARCHAR(100) NULL,
+  target_exam_name VARCHAR(150) NULL,
+  wallet_balance_minor BIGINT DEFAULT 0,
   status ENUM('active', 'disabled') NOT NULL DEFAULT 'active',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -316,48 +323,105 @@ CREATE TABLE IF NOT EXISTS exam_notifications (
 );
 
 CREATE TABLE IF NOT EXISTS commerce_plans (
-  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-  slug VARCHAR(120) NOT NULL UNIQUE,
-  name VARCHAR(160) NOT NULL,
-  description TEXT NOT NULL,
-  amount_minor INT UNSIGNED NOT NULL,
-  currency CHAR(3) NOT NULL DEFAULT 'INR',
-  validity_days INT UNSIGNED NULL,
-  included_series JSON NULL,
+  id VARCHAR(64) PRIMARY KEY,
+  slug VARCHAR(64) NOT NULL UNIQUE,
+  name VARCHAR(128) NOT NULL,
+  description TEXT NULL,
+  amount_minor INT NOT NULL DEFAULT 0,
+  currency VARCHAR(8) NOT NULL DEFAULT 'INR',
+  validity_days INT NOT NULL DEFAULT 90,
+  features TEXT NULL,
   active TINYINT(1) NOT NULL DEFAULT 1,
-  sale_starts_at DATETIME NULL,
-  sale_ends_at DATETIME NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS coupons (
-  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-  code VARCHAR(50) NOT NULL UNIQUE,
-  discount_type ENUM('fixed', 'percentage') NOT NULL,
-  discount_value DECIMAL(10,2) NOT NULL,
+  id VARCHAR(64) PRIMARY KEY,
+  code VARCHAR(64) NOT NULL UNIQUE,
+  discount_type ENUM('percentage', 'fixed') NOT NULL DEFAULT 'percentage',
+  discount_value INT NOT NULL DEFAULT 10,
+  min_order_minor INT NOT NULL DEFAULT 0,
+  max_discount_minor INT NOT NULL DEFAULT 0,
+  description VARCHAR(255) DEFAULT '',
+  active TINYINT(1) NOT NULL DEFAULT 1,
   starts_at DATETIME NULL,
-  ends_at DATETIME NULL,
-  max_uses INT UNSIGNED NULL,
-  uses INT UNSIGNED NOT NULL DEFAULT 0,
-  active TINYINT(1) NOT NULL DEFAULT 1
-);
+  expires_at DATETIME NULL,
+  usage_limit INT NOT NULL DEFAULT 0,
+  usage_count INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_coupons_code (code),
+  INDEX idx_coupons_active (active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS orders (
-  id CHAR(36) PRIMARY KEY,
-  user_id BIGINT UNSIGNED NOT NULL,
-  plan_id BIGINT UNSIGNED NOT NULL,
-  coupon_id BIGINT UNSIGNED NULL,
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL,
+  plan_id VARCHAR(64) NOT NULL,
+  coupon_id VARCHAR(64) NULL,
   amount_minor INT UNSIGNED NOT NULL,
-  currency CHAR(3) NOT NULL,
+  currency CHAR(3) NOT NULL DEFAULT 'INR',
   status ENUM('created', 'pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'created',
-  provider VARCHAR(40) NOT NULL,
-  provider_order_id VARCHAR(180) NULL UNIQUE,
-  provider_payment_id VARCHAR(180) NULL UNIQUE,
+  provider VARCHAR(40) NOT NULL DEFAULT 'gateway',
+  provider_order_id VARCHAR(180) NULL,
+  provider_payment_id VARCHAR(180) NULL,
   tax_details JSON NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   paid_at DATETIME NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (plan_id) REFERENCES commerce_plans(id),
-  FOREIGN KEY (coupon_id) REFERENCES coupons(id),
   INDEX idx_orders_user_status (user_id, status, created_at)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS wallets (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL UNIQUE,
+  balance_minor BIGINT NOT NULL DEFAULT 0,
+  currency VARCHAR(8) NOT NULL DEFAULT 'INR',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_wallets_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL,
+  type ENUM('credit', 'debit') NOT NULL,
+  amount_minor INT NOT NULL,
+  balance_after_minor INT NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  reference_type ENUM('topup', 'purchase', 'refund', 'admin_adjustment') NOT NULL DEFAULT 'topup',
+  reference_id VARCHAR(128) DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_wt_user (user_id),
+  INDEX idx_wt_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pyq_documents (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  slug VARCHAR(191) NOT NULL UNIQUE,
+  exam_slug VARCHAR(100) NOT NULL,
+  exam_name VARCHAR(180) NOT NULL,
+  track_slug VARCHAR(100) NOT NULL DEFAULT 'all',
+  subject_name VARCHAR(180) NOT NULL,
+  year INT UNSIGNED NOT NULL,
+  paper_name VARCHAR(200) NOT NULL,
+  title VARCHAR(250) NOT NULL,
+  description TEXT NULL,
+  file_url VARCHAR(1000) NOT NULL,
+  file_size VARCHAR(50) NULL,
+  page_count INT UNSIGNED NULL,
+  download_count INT UNSIGNED NOT NULL DEFAULT 0,
+  access_tier ENUM('free', 'premium') NOT NULL DEFAULT 'free',
+  status ENUM('published', 'draft') NOT NULL DEFAULT 'published',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_pyq_exam_year (exam_slug, year, status),
+  INDEX idx_pyq_subject (subject_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS site_configurations (
+  config_key VARCHAR(100) PRIMARY KEY,
+  config_value LONGTEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

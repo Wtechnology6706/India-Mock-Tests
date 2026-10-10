@@ -55,6 +55,29 @@ export async function ensureCouponsTable(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    // Ensure missing columns exist in case the table was created by an older schema
+    const alterStatements = [
+      "ALTER TABLE coupons MODIFY COLUMN id VARCHAR(64) NOT NULL",
+      "ALTER TABLE coupons MODIFY COLUMN discount_value INT NOT NULL DEFAULT 10",
+      "ALTER TABLE coupons MODIFY COLUMN discount_type ENUM('percentage', 'fixed') NOT NULL DEFAULT 'percentage'",
+      "ALTER TABLE coupons ADD COLUMN min_order_minor INT NOT NULL DEFAULT 0",
+      "ALTER TABLE coupons ADD COLUMN max_discount_minor INT NOT NULL DEFAULT 0",
+      "ALTER TABLE coupons ADD COLUMN description VARCHAR(255) DEFAULT ''",
+      "ALTER TABLE coupons ADD COLUMN expires_at DATETIME NULL",
+      "ALTER TABLE coupons ADD COLUMN usage_limit INT NOT NULL DEFAULT 0",
+      "ALTER TABLE coupons ADD COLUMN usage_count INT NOT NULL DEFAULT 0",
+      "ALTER TABLE coupons ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+      "ALTER TABLE coupons ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    ];
+
+    for (const stmt of alterStatements) {
+      try {
+        await db.execute(stmt);
+      } catch {
+        // Ignore column exists or constraint errors
+      }
+    }
+
     // Seed default coupons if table is empty
     const [rows] = await db.query<RowDataPacket[]>("SELECT COUNT(*) as count FROM coupons");
     if (rows[0]?.count === 0) {
