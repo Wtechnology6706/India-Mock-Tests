@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -47,6 +48,18 @@ export default function AdminSidebar({
   onCloseMobile,
 }: AdminSidebarProps) {
   const router = useRouter();
+  const [logoImageUrl, setLogoImageUrl] = useState("");
+  const [portalName, setPortalName] = useState("India Mock Tests");
+
+  useEffect(() => {
+    fetch("/api/admin/config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.config?.logoImageUrl) setLogoImageUrl(data.config.logoImageUrl);
+        if (data?.config?.portalName) setPortalName(data.config.portalName);
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -66,9 +79,20 @@ export default function AdminSidebar({
       <aside className={`admin-sidebar ${isMobileOpen ? "sidebar-mobile-open" : ""}`}>
         {/* Brand Header */}
         <div className="sidebar-brand-header">
-          <Link className="logo" href="/" onClick={onCloseMobile}>
-            <span className="logo-mark">I</span>
-            <span>India Mock Tests<span className="logo-dot">.</span></span>
+          <Link className="logo admin-logo-link" href="/" onClick={onCloseMobile} style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+            {logoImageUrl ? (
+              <img
+                src={logoImageUrl}
+                alt={portalName}
+                style={{ height: "36px", maxHeight: "40px", maxWidth: "150px", width: "auto", objectFit: "contain", display: "block" }}
+                onError={() => setLogoImageUrl("")}
+              />
+            ) : (
+              <>
+                <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>
+                <span>{portalName}<span className="logo-dot">.</span></span>
+              </>
+            )}
           </Link>
           <span className="admin-badge-tag">ADMIN</span>
           <button type="button" className="sidebar-close-btn" onClick={onCloseMobile}>
