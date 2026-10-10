@@ -4,6 +4,7 @@ import { getSiteConfiguration } from "../lib/site-config";
 import MegaMenu from "./components/MegaMenu";
 import HeroSearch from "./components/HeroSearch";
 import TestimonialsSection from "./components/TestimonialsSection";
+import ConditionalCTA from "./components/ConditionalCTA";
 import Footer from "./components/Footer";
 
 const exams = featuredExams;
@@ -283,9 +284,13 @@ export default async function Home() {
           <em>your attempt count?</em>
         </h2>
         <p>Join thousands of learners building their confidence one test at a time.</p>
-        <Link className="light-button" href="/register">
-          Create your free account <span>→</span>
-        </Link>
+        <ConditionalCTA
+          loggedOutText="Create your free account"
+          loggedOutHref="/register"
+          loggedInText="Continue to Student Dashboard"
+          loggedInHref="/dashboard"
+          className="light-button"
+        />
       </section>
 
       {/* Footer */}

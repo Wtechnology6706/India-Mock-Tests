@@ -29,6 +29,25 @@ export type TestimonialItem = {
   date?: string;
 };
 
+export type CustomNavSubItem = {
+  id: string;
+  label: string;
+  targetUrl: string;
+  audience?: string;
+  badgeText?: string;
+};
+
+export type CustomNavItem = {
+  id: string;
+  label: string;
+  linkType: "page" | "exam" | "mock-test" | "pyq" | "custom";
+  targetUrl: string;
+  badgeText?: string;
+  isExternal?: boolean;
+  order?: number;
+  subItems?: CustomNavSubItem[];
+};
+
 export type SiteConfiguration = {
   portalName: string;
   portalTagline: string;
@@ -41,9 +60,15 @@ export type SiteConfiguration = {
   razorpayKeySecret?: string;
   razorpayWebhookSecret?: string;
   razorpayEnabled?: boolean;
+  razorpayTestMode?: boolean; // Toggle between test and live mode
+  razorpayTestKeyId?: string;
+  razorpayTestKeySecret?: string;
+  razorpayLiveKeyId?: string;
+  razorpayLiveKeySecret?: string;
   mockTestMenu: SubMenuLayer2[];
   tutorialMenu: SubMenuLayer2[];
   testimonials: TestimonialItem[];
+  customNavMenu?: CustomNavItem[];
 };
 
 export const defaultMockTestMenu: SubMenuLayer2[] = [
@@ -219,7 +244,14 @@ export const defaultSiteConfig: SiteConfiguration = {
   contactEmail: "support@indiamocktests.com",
   supportPhone: "+91 98765 43210",
   adsenseClientId: "",
+  razorpayEnabled: true,
+  razorpayTestMode: true,
+  razorpayTestKeyId: "",
+  razorpayTestKeySecret: "",
+  razorpayLiveKeyId: "",
+  razorpayLiveKeySecret: "",
   mockTestMenu: defaultMockTestMenu,
   tutorialMenu: defaultTutorialMenu,
   testimonials: defaultTestimonials,
+  customNavMenu: [],
 };

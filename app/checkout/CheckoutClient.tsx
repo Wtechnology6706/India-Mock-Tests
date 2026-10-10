@@ -10,28 +10,87 @@ type CheckoutClientProps = {
   user: AuthUser | null;
 };
 
+type ActiveCoupon = {
+  id: string;
+  code: string;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  minOrderAmount: number;
+  description: string;
+};
+
+type PlanData = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  amount: number;
+  validityDays: number;
+  features: string[];
+};
+
 export default function CheckoutClient({ user }: CheckoutClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialPlan = searchParams.get("plan") === "sprint" ? "sprint" : "ultimate";
+  const initialPlanSlug = searchParams.get("plan") === "sprint" ? "sprint" : "ultimate";
   const initialExam = searchParams.get("exam") || "bpsc-tre-4";
 
   const EXAM_OPTIONS = [
     { slug: "bpsc-tre-4", name: "BPSC TRE 4.0 (Teaching Recruitment Exam)" },
     { slug: "bihar-stet", name: "Bihar STET 2026 (Secondary Teacher Eligibility)" },
     { slug: "ctet", name: "CTET Paper I & II (Central Teacher Eligibility)" },
+    { slug: "btet", name: "Bihar Teacher Eligibility Test (BTET)" },
     { slug: "uppsc-ro-aro", name: "UPPSC Review Officer & ARO" },
     { slug: "mppsc", name: "MPPSC State Service Preliminary Exam" },
     { slug: "rajasthan-reet", name: "REET / Rajasthan Teacher Eligibility" },
   ];
 
-  const [selectedPlan, setSelectedPlan] = useState<"sprint" | "ultimate">(initialPlan);
+  const [plans, setPlans] = useState<Record<string, PlanData>>({
+    sprint: {
+      id: "1",
+      slug: "sprint",
+      name: "Single Exam Sprint Pass",
+      description: "Targeted practice pass for 1 focused examination series.",
+      amount: 499,
+      validityDays: 90,
+      features: [
+        "Full access to 1 targeted exam category (e.g. BPSC TRE 4.0)",
+        "30+ Full Length Mock Tests + Chapter-wise drills",
+        "Detailed AI performance analytics & rank prediction",
+        "Bilingual Hindi & English test modes",
+        "Unlimited test re-attempts & revision bookmarking",
+      ],
+    },
+    ultimate: {
+      id: "2",
+      slug: "ultimate",
+      name: "All-Exam Ultimate VIP Pass",
+      description: "All-inclusive pass for every state PSC, TET, and national exam.",
+      amount: 999,
+      validityDays: 180,
+      features: [
+        "All-Access Pass to EVERY Exam Category & PYQs",
+        "500+ Complete Mock Tests, Subject Quizzes & PYQs",
+        "Full PYQ PDF Hub with high-speed download & full-screen reader",
+        "Priority Doubt Solving & Video Solutions access",
+        "VIP Candidate Badge & 180-day extended validity",
+      ],
+    },
+  });
+
+  const [selectedPlan, setSelectedPlan] = useState<"sprint" | "ultimate">(initialPlanSlug);
   const [targetExamSlug, setTargetExamSlug] = useState<string>(initialExam);
+  const [activeCoupons, setActiveCoupons] = useState<ActiveCoupon[]>([]);
   const [couponCode, setCouponCode] = useState("");
-  const [couponApplied, setCouponApplied] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<ActiveCoupon | null>(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponError, setCouponError] = useState("");
+  const [couponSuccessMsg, setCouponSuccessMsg] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(true);
+
+  // Wallet
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<"razorpay" | "wallet">("razorpay");
 
   // Payment process states
   const [isProcessing, setIsProcessing] = useState(false);
@@ -39,87 +98,152 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [successOrder, setSuccessOrder] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
 
-  // Load official Razorpay Checkout SDK
+  // Fetch dynamic plans, active coupons, and wallet balance
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      if ((window as any).Razorpay) {
-        setRazorpayLoaded(true);
-        return;
-      }
+    // 1. Fetch DB plans
+    fetch("/api/plans")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.plans) && data.plans.length > 0) {
+          const map: Record<string, PlanData> = {};
+          data.plans.forEach((p: PlanData) => {
+            map[p.slug] = p;
+          });
+          setPlans((prev) => ({ ...prev, ...map }));
+        }
+      })
+      .catch(() => {});
+
+    // 2. Fetch active coupons
+    fetch("/api/coupons/active")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.coupons)) {
+          setActiveCoupons(data.coupons);
+        }
+      })
+      .catch(() => {});
+
+    // 3. Fetch user's wallet
+    if (user) {
+      fetch("/api/wallet")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.success && data.wallet) {
+            setWalletBalance(data.wallet.balance);
+          }
+        })
+        .catch(() => {});
+    }
+
+    // 4. Load Razorpay script
+    if (typeof window !== "undefined" && !(window as any).Razorpay) {
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.async = true;
-      script.onload = () => setRazorpayLoaded(true);
-      script.onerror = () => setErrorMessage("Failed to load Razorpay SDK. Please check your internet connection.");
       document.body.appendChild(script);
     }
-  }, []);
+  }, [user]);
 
-  const planDetails = {
-    sprint: {
-      name: "Single Exam Sprint Pass",
-      tier: "sprint" as const,
-      basePrice: 499,
-      durationDays: 90,
-      durationLabel: "3 Months (90 Days)",
-      badge: "Targeted Focus",
-      features: [
-        "Full access to 1 selected exam test series",
-        "Complete question bank & sectional drills",
-        "Standard answer explanations & key",
-        "Timed CBT mock test engine with review palette",
-        "Instant score & accuracy breakdown",
-      ],
-    },
-    ultimate: {
-      name: "All-Exam Ultimate VIP Pass",
-      tier: "ultimate" as const,
-      basePrice: 999,
-      durationDays: 180,
-      durationLabel: "6 Months (180 Days)",
-      badge: "Most Popular · Complete Access",
-      features: [
-        "Unlimited access to ALL exams (BPSC, STET, CTET & State PSCs)",
-        "Every full-length mock & upcoming edition automatically unlocked",
-        "In-depth bilingual solutions & pedagogy notes",
-        "Real-time All-India percentile & negative marking analytics",
-        "Priority exam request & ad-free preparation",
-        "Uncapped mock test retakes & performance comparisons",
-      ],
-    },
-  };
-
-  const activePlan = planDetails[selectedPlan];
-  const originalPrice = activePlan.basePrice;
-  const discount = couponApplied ? couponDiscount : 0;
+  const activePlan = plans[selectedPlan] || plans.ultimate;
+  const originalPrice = activePlan.amount;
+  const discount = appliedCoupon ? couponDiscount : 0;
   const finalPrice = Math.max(0, originalPrice - discount);
   const taxPortion = Math.round((finalPrice * 18) / 118);
 
-  function applyCoupon() {
+  async function handleApplyCoupon(codeToApply?: string) {
+    const code = (codeToApply || couponCode).trim().toUpperCase();
     setCouponError("");
-    const code = couponCode.trim().toUpperCase();
-    if (!code) return;
-    if (code === "INDIAMOCK100" || code === "FIRST100" || code === "VIP100") {
-      setCouponApplied(true);
-      setCouponDiscount(100);
-    } else if (code === "SAVEMORE" || code === "BPSC50") {
-      setCouponApplied(true);
-      setCouponDiscount(50);
-    } else {
-      setCouponError("Invalid coupon code. Try 'INDIAMOCK100' for ₹100 off.");
+    setCouponSuccessMsg("");
+
+    if (!code) {
+      setCouponError("Please enter a coupon code.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, amount: originalPrice }),
+      });
+      const data = await res.json();
+
+      if (data.valid && data.coupon) {
+        setAppliedCoupon(data.coupon);
+        setCouponDiscount(data.discountAmount || 0);
+        setCouponCode(data.coupon.code);
+        setCouponSuccessMsg(data.message || `Coupon ${data.coupon.code} applied!`);
+      } else {
+        setAppliedCoupon(null);
+        setCouponDiscount(0);
+        setCouponError(data.message || `Coupon '${code}' is invalid or expired.`);
+      }
+    } catch {
+      setCouponError("Failed to validate coupon code. Please try again.");
     }
   }
 
   function removeCoupon() {
-    setCouponApplied(false);
+    setAppliedCoupon(null);
     setCouponDiscount(0);
     setCouponCode("");
     setCouponError("");
+    setCouponSuccessMsg("");
   }
 
-  // Official Razorpay Checkout Launcher
+  // Wallet Checkout Direct Action
+  async function handleWalletCheckout() {
+    setErrorMessage(null);
+
+    if (!agreedToTerms) {
+      setErrorMessage("Please accept the terms and conditions to proceed.");
+      return;
+    }
+
+    if (!user) {
+      router.push(`/login?redirect=/checkout?plan=${selectedPlan}`);
+      return;
+    }
+
+    if (walletBalance < finalPrice) {
+      setErrorMessage(
+        `Insufficient wallet balance (₹${walletBalance.toFixed(2)}). Need ₹${finalPrice.toFixed(2)}. Please recharge your wallet or select Razorpay.`
+      );
+      return;
+    }
+
+    setIsProcessing(true);
+    setProcessingStep("Processing payment from your Student Wallet...");
+
+    try {
+      const res = await fetch("/api/checkout/wallet-pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planSlug: selectedPlan,
+          couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Wallet payment transaction failed.");
+      }
+
+      setWalletBalance((prev) => Math.max(0, prev - finalPrice));
+      setSuccessOrder(data.order);
+      setPaymentSuccess(true);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to complete wallet checkout.");
+    } finally {
+      setIsProcessing(false);
+      setProcessingStep("");
+    }
+  }
+
+  // Razorpay Checkout Action
   async function handleRazorpayPayment() {
     setErrorMessage(null);
 
@@ -134,19 +258,18 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     }
 
     setIsProcessing(true);
-    setProcessingStep("Connecting to Razorpay...");
+    setProcessingStep("Connecting to payment gateway...");
 
     try {
       const selectedExamObj = EXAM_OPTIONS.find((e) => e.slug === targetExamSlug);
       const chosenExamName = selectedPlan === "sprint" ? (selectedExamObj?.name || "Target Exam Series") : undefined;
       const chosenExamSlug = selectedPlan === "sprint" ? targetExamSlug : undefined;
 
-      // Step 1: Create an authentic order on Razorpay backend
       const orderRes = await fetch("/api/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tier: activePlan.tier,
+          tier: selectedPlan,
           planName: activePlan.name,
           amount: finalPrice,
           targetExamSlug: chosenExamSlug,
@@ -156,29 +279,23 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
 
       const orderData = await orderRes.json();
       if (!orderRes.ok || !orderData.orderId) {
-        throw new Error(orderData.error || "Failed to initialize order with Razorpay.");
+        throw new Error(orderData.error || "Failed to initialize order with payment gateway.");
       }
 
-      if (!(window as any).Razorpay) {
-        throw new Error("Razorpay payment SDK is still loading. Please try again in a moment.");
-      }
+      setProcessingStep("Opening secure payment interface...");
 
-      setProcessingStep("Opening Razorpay payment window...");
-
-      // Step 2: Open official Razorpay modal
       const options = {
         key: orderData.keyId,
         amount: orderData.amount,
         currency: orderData.currency || "INR",
-        name: "India Mock Tests VIP",
-        description: `${activePlan.name} (${activePlan.durationLabel})${chosenExamName ? ` - ${chosenExamName}` : ""}`,
+        name: "India Mock Tests",
+        description: `${activePlan.name} (${activePlan.validityDays} Days)${chosenExamName ? ` - ${chosenExamName}` : ""}`,
         image: "https://cdn.razorpay.com/static/assets/logo/payment_gateway.png",
         order_id: orderData.orderId,
         handler: async function (response: any) {
           setIsProcessing(true);
-          setProcessingStep("Verifying payment signature with Razorpay...");
+          setProcessingStep("Verifying payment security signature...");
 
-          // Step 3: Server-side cryptographic HMAC-SHA256 signature verification
           const verifyRes = await fetch("/api/razorpay/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -186,11 +303,11 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
               razorpay_order_id: response.razorpay_order_id || orderData.orderId,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              tier: activePlan.tier,
+              tier: selectedPlan,
               planName: activePlan.name,
               amount: finalPrice,
-              durationDays: activePlan.durationDays,
-              couponCode: couponApplied ? couponCode.trim().toUpperCase() : undefined,
+              durationDays: activePlan.validityDays,
+              couponCode: appliedCoupon ? appliedCoupon.code : undefined,
               targetExamSlug: chosenExamSlug,
               targetExamName: chosenExamName,
             }),
@@ -210,7 +327,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
           email: user.email || "",
         },
         theme: {
-          color: "#1e3a34",
+          color: "#0f766e",
         },
         modal: {
           ondismiss: function () {
@@ -228,454 +345,370 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
       rzp.open();
     } catch (err: any) {
       console.error(err);
-      setErrorMessage(err.message || "An unexpected error occurred connecting to Razorpay.");
+      setErrorMessage(err.message || "An unexpected error occurred connecting to gateway.");
       setIsProcessing(false);
     }
   }
 
+  // ---------------- SUCCESS SCREEN ----------------
+  if (paymentSuccess && successOrder) {
+    return (
+      <div className="checkout-page-container">
+        <header className="checkout-topbar">
+          <Link href="/" className="checkout-logo">
+            <span className="logo-mark">I</span>
+            <span>India Mock Tests<span className="logo-dot">.</span></span>
+          </Link>
+          <div className="checkout-security-tag">
+            <span>✓ Verified Secure Payment</span>
+          </div>
+        </header>
+
+        <main className="checkout-success-wrap">
+          <div className="checkout-success-card">
+            <div className="success-badge-icon">✓</div>
+            <span className="success-kicker">PAYMENT CONFIRMED & ACTIVATED</span>
+            <h2>Thank You! Your VIP Pass is Live</h2>
+            <p className="success-sub">
+              Your mock tests and performance dashboard have been unlocked immediately. A digital tax invoice has been generated for your records.
+            </p>
+
+            <div className="success-receipt-box">
+              <div className="receipt-row">
+                <span>Order Reference:</span>
+                <strong>{successOrder.orderNumber || "ORD-SUCCESS"}</strong>
+              </div>
+              <div className="receipt-row">
+                <span>Invoice Number:</span>
+                <strong>{successOrder.invoiceNumber || "INV-SUCCESS"}</strong>
+              </div>
+              <div className="receipt-row">
+                <span>Plan Subscribed:</span>
+                <strong>{successOrder.planName || activePlan.name}</strong>
+              </div>
+              <div className="receipt-row">
+                <span>Amount Paid:</span>
+                <strong className="receipt-price">₹{finalPrice.toFixed(2)}</strong>
+              </div>
+              <div className="receipt-row">
+                <span>Payment Method:</span>
+                <strong>{paymentMethod === "wallet" ? "Student Wallet Balance" : "Razorpay (UPI / Card / NetBanking)"}</strong>
+              </div>
+              <div className="receipt-row">
+                <span>Validity Duration:</span>
+                <strong>{activePlan.validityDays} Days Full Access</strong>
+              </div>
+            </div>
+
+            <div className="success-actions-row">
+              <Link href="/dashboard" className="btn-primary-success">
+                Go to Practice Dashboard →
+              </Link>
+              <Link href="/pyq" className="btn-secondary-success">
+                Explore PYQ Question Papers
+              </Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // ---------------- MAIN CHECKOUT VIEW ----------------
   return (
     <div className="checkout-page-container">
       {/* Top Header */}
       <header className="checkout-topbar">
         <Link href="/" className="checkout-logo">
           <span className="logo-mark">I</span>
-          <span>
-            India Mock Tests<span className="logo-dot">.</span>
-          </span>
+          <span>India Mock Tests<span className="logo-dot">.</span></span>
         </Link>
         <div className="checkout-security-tag">
-          <span>🔒 Official Razorpay 256-Bit SSL Encrypted Checkout</span>
+          <span>🔒 256-Bit SSL Encrypted Checkout</span>
         </div>
         <Link href="/pricing" className="checkout-cancel-link">
           ✕ Cancel & Return
         </Link>
       </header>
 
-      {paymentSuccess ? (
-        /* Success Screen */
-        <div className="checkout-success-view">
-          <div className="success-card">
-            <div className="success-icon-wrap">
-              <span className="success-check">✓</span>
-            </div>
-            <span className="kicker" style={{ color: "#166534" }}>
-              PAYMENT VERIFIED · VIP PASS ACTIVE
-            </span>
-            <h1>Payment Successful!</h1>
-            <p className="success-desc">
-              Your payment of <strong>₹{finalPrice}</strong> via Razorpay was successfully verified.
-              Your account now has instant full access to all mock tests.
-            </p>
+      <main className="checkout-main-grid">
+        {/* Left Column: Plan Selection & Details */}
+        <section className="checkout-left-col">
+          <div className="checkout-section-header">
+            <span className="kicker">STEP 1 OF 2</span>
+            <h1>Select Your VIP Subscription Plan</h1>
+            <p>Admin-verified pricing with instant test activation and full revision analytics.</p>
+          </div>
 
-            <div className="receipt-box">
-              <div className="receipt-row">
-                <span>Order Reference</span>
-                <strong>{successOrder?.orderNumber || "ORD-RZP"}</strong>
-              </div>
-              <div className="receipt-row">
-                <span>Invoice ID</span>
-                <strong>{successOrder?.invoiceNumber || "INV-RZP"}</strong>
-              </div>
-              <div className="receipt-row">
-                <span>Subscription Plan</span>
-                <strong style={{ color: "#b94a2b" }}>{activePlan.name}</strong>
-              </div>
-              <div className="receipt-row">
-                <span>Validity Duration</span>
-                <strong>{activePlan.durationLabel}</strong>
-              </div>
-              <div className="receipt-row">
-                <span>Payment Gateway</span>
-                <strong>Razorpay (Live/Test Verified)</strong>
-              </div>
-              <div className="receipt-row">
-                <span>Amount Paid</span>
-                <strong style={{ fontSize: "1.1rem", color: "#1e3a34" }}>₹{finalPrice}</strong>
-              </div>
-            </div>
+          {/* Plan Selector Toggle Tabs */}
+          <div className="plan-selector-cards">
+            {Object.values(plans).map((plan) => {
+              const isSelected = selectedPlan === plan.slug;
+              return (
+                <div
+                  key={plan.slug}
+                  className={`plan-card-option ${isSelected ? "selected" : ""}`}
+                  onClick={() => setSelectedPlan(plan.slug as any)}
+                >
+                  <div className="plan-card-top">
+                    <div className="plan-card-radio">
+                      <span className={`radio-dot ${isSelected ? "checked" : ""}`} />
+                    </div>
+                    <div className="plan-card-info">
+                      <div className="plan-card-header-row">
+                        <h3>{plan.name}</h3>
+                        {plan.slug === "ultimate" && (
+                          <span className="plan-pill-highlight">MOST POPULAR</span>
+                        )}
+                      </div>
+                      <p className="plan-duration-text">{plan.validityDays} Days Validity</p>
+                    </div>
+                    <div className="plan-card-pricing">
+                      <span className="plan-price-amount">₹{plan.amount}</span>
+                      <span className="plan-price-label">All-Inclusive</span>
+                    </div>
+                  </div>
 
-            <div className="success-actions">
-              <Link href="/dashboard" className="btn-success-primary">
-                Go to My Dashboard →
-              </Link>
-              <Link href="/exams" className="btn-success-secondary">
-                Explore All Mock Tests
-              </Link>
+                  {isSelected && (
+                    <div className="plan-card-features-tray">
+                      <ul>
+                        {plan.features.map((f, i) => (
+                          <li key={i}>✓ {f}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* If Single Sprint is selected, choose target exam */}
+          {selectedPlan === "sprint" && (
+            <div className="exam-selection-box" style={{ marginTop: "20px" }}>
+              <label htmlFor="target-exam-select">
+                <strong>Target Examination Series:</strong>
+                <span>Select the specific exam you are preparing for</span>
+              </label>
+              <select
+                id="target-exam-select"
+                value={targetExamSlug}
+                onChange={(e) => setTargetExamSlug(e.target.value)}
+                className="checkout-exam-dropdown"
+              >
+                {EXAM_OPTIONS.map((exam) => (
+                  <option key={exam.slug} value={exam.slug}>
+                    {exam.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Payment Method Selector (Razorpay vs Student Wallet) */}
+          <div style={{ marginTop: "24px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "20px" }}>
+            <h3 style={{ fontSize: "15px", fontWeight: 800, color: "#0f172a", margin: "0 0 14px" }}>
+              Choose Payment Method
+            </h3>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              {/* Option 1: Gateway */}
+              <div
+                onClick={() => setPaymentMethod("razorpay")}
+                style={{
+                  padding: "16px",
+                  borderRadius: "12px",
+                  border: paymentMethod === "razorpay" ? "2px solid #0f766e" : "1px solid #cbd5e1",
+                  background: paymentMethod === "razorpay" ? "rgba(15, 118, 110, 0.05)" : "#f8fafc",
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "18px" }}>💳</span>
+                  <strong style={{ fontSize: "14px", color: "#0f172a" }}>Razorpay / UPI</strong>
+                </div>
+                <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>GPay, PhonePe, Paytm, Cards & NetBanking</p>
+              </div>
+
+              {/* Option 2: Wallet */}
+              <div
+                onClick={() => setPaymentMethod("wallet")}
+                style={{
+                  padding: "16px",
+                  borderRadius: "12px",
+                  border: paymentMethod === "wallet" ? "2px solid #059669" : "1px solid #cbd5e1",
+                  background: paymentMethod === "wallet" ? "rgba(16, 185, 129, 0.08)" : "#f8fafc",
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "18px" }}>👛</span>
+                    <strong style={{ fontSize: "14px", color: "#065f46" }}>Student Wallet</strong>
+                  </div>
+                  <span style={{ fontSize: "13px", fontWeight: 800, color: walletBalance >= finalPrice ? "#059669" : "#dc2626" }}>
+                    ₹{walletBalance.toFixed(2)}
+                  </span>
+                </div>
+                <p style={{ fontSize: "11px", color: "#64748b", margin: 0 }}>
+                  {walletBalance >= finalPrice
+                    ? "✓ Sufficient Balance · 1-Click Pay"
+                    : "⚠️ Low Balance"}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      ) : (
-        /* Main Checkout Form View */
-        <main className="checkout-main-grid">
-          {/* Left Column: Plan & Pricing Summary */}
-          <section className="checkout-summary-col">
-            <div className="plan-selector-box">
-              <span className="kicker">SELECT YOUR PASS</span>
-              <div className="plan-toggle-cards">
-                <button
-                  type="button"
-                  className={`plan-toggle-card ${selectedPlan === "ultimate" ? "active" : ""}`}
-                  onClick={() => setSelectedPlan("ultimate")}
-                >
-                  <div className="toggle-badge">RECOMMENDED</div>
-                  <div className="toggle-header">
-                    <strong>All-Exam Ultimate VIP</strong>
-                    <span className="toggle-price">₹999</span>
-                  </div>
-                  <small>6 Months · All Exams Unlocked</small>
-                </button>
+        </section>
 
-                <button
-                  type="button"
-                  className={`plan-toggle-card ${selectedPlan === "sprint" ? "active" : ""}`}
-                  onClick={() => setSelectedPlan("sprint")}
-                >
-                  <div className="toggle-header">
-                    <strong>Single Exam Sprint</strong>
-                    <span className="toggle-price">₹499</span>
-                  </div>
-                  <small>3 Months · 1 Focused Exam Series</small>
-                </button>
+        {/* Right Column: Order Summary, Active Coupons & Payment Button */}
+        <section className="checkout-right-col">
+          <div className="order-summary-card">
+            <h3>Order Breakdown</h3>
+
+            <div className="summary-item-row">
+              <span className="summary-item-name">
+                {activePlan.name} ({activePlan.validityDays} Days)
+              </span>
+              <span className="summary-item-val">₹{originalPrice.toFixed(2)}</span>
+            </div>
+
+            {/* Active Coupons Carousel / Chips */}
+            <div style={{ margin: "16px 0", padding: "14px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#334155" }}>
+                  🏷️ Available Coupons ({activeCoupons.length})
+                </span>
+                <span style={{ fontSize: "11px", color: "#64748b" }}>Admin Verified</span>
               </div>
 
-              {selectedPlan === "sprint" && (
-                <div
-                  style={{
-                    marginTop: "16px",
-                    background: "#eff6ff",
-                    border: "1px solid #bfdbfe",
-                    borderRadius: "10px",
-                    padding: "16px",
-                  }}
-                >
-                  <label
-                    htmlFor="target-exam-select"
-                    style={{
-                      display: "block",
-                      fontSize: "0.85rem",
-                      fontWeight: 700,
-                      color: "#1e3a8a",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    🎯 Select Target Exam Series for this Sprint Pass:
-                  </label>
-                  <select
-                    id="target-exam-select"
-                    value={targetExamSlug}
-                    onChange={(e) => setTargetExamSlug(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "6px",
-                      border: "1px solid #93c5fd",
-                      background: "#ffffff",
-                      fontSize: "0.88rem",
-                      fontWeight: 600,
-                      color: "#1e293b",
-                    }}
-                  >
-                    {EXAM_OPTIONS.map((exam) => (
-                      <option key={exam.slug} value={exam.slug}>
-                        {exam.name}
-                      </option>
-                    ))}
-                  </select>
-                  <small style={{ display: "block", marginTop: "6px", color: "#2563eb", fontSize: "0.78rem" }}>
-                    ℹ️ This pass will grant full access exclusively to mock tests belonging to the chosen exam series.
-                  </small>
+              {activeCoupons.length > 0 ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {activeCoupons.map((cpn) => (
+                    <button
+                      key={cpn.id}
+                      type="button"
+                      onClick={() => handleApplyCoupon(cpn.code)}
+                      style={{
+                        padding: "5px 10px",
+                        fontSize: "11px",
+                        fontWeight: 800,
+                        borderRadius: "6px",
+                        border: appliedCoupon?.code === cpn.code ? "1px solid #059669" : "1px dashed #cbd5e1",
+                        background: appliedCoupon?.code === cpn.code ? "#ecfdf5" : "#fff",
+                        color: appliedCoupon?.code === cpn.code ? "#047857" : "#0f766e",
+                        cursor: "pointer",
+                      }}
+                      title={cpn.description}
+                    >
+                      {cpn.code} ({cpn.discountType === "percentage" ? `${cpn.discountValue}% OFF` : `₹${cpn.discountValue} OFF`})
+                    </button>
+                  ))}
                 </div>
+              ) : (
+                <div style={{ fontSize: "12px", color: "#64748b" }}>No active coupons available currently.</div>
               )}
             </div>
 
-            {/* Selected Plan Details Card */}
-            <div className="selected-plan-card">
-              <div className="plan-header-row">
-                <div>
-                  <span className="plan-pill-tag">{activePlan.badge}</span>
-                  <h2>{activePlan.name}</h2>
-                </div>
-                <div className="plan-big-price">
-                  <span>₹{finalPrice}</span>
-                  <small>{activePlan.durationLabel}</small>
-                </div>
-              </div>
-
-              <ul className="plan-feature-list">
-                {activePlan.features.map((feat, idx) => (
-                  <li key={idx}>
-                    <span className="check-mark">✓</span>
-                    <span>{feat}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Coupon Code Section */}
+            {/* Coupon Code Input */}
             <div className="coupon-box">
-              <label htmlFor="coupon">Apply Promo / Discount Code</label>
               <div className="coupon-input-group">
                 <input
-                  id="coupon"
                   type="text"
-                  placeholder="e.g. INDIAMOCK100"
+                  placeholder="Enter coupon code..."
                   value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  disabled={couponApplied}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  disabled={Boolean(appliedCoupon)}
                 />
-                {couponApplied ? (
-                  <button type="button" className="btn-coupon-remove" onClick={removeCoupon}>
+                {appliedCoupon ? (
+                  <button type="button" onClick={removeCoupon} className="btn-coupon-remove">
                     Remove
                   </button>
                 ) : (
-                  <button type="button" className="btn-coupon-apply" onClick={applyCoupon}>
+                  <button type="button" onClick={() => handleApplyCoupon()} className="btn-coupon-apply">
                     Apply
                   </button>
                 )}
               </div>
-              {couponApplied && (
-                <span className="coupon-success-msg">
-                  ✓ Code applied! You saved ₹{couponDiscount} on this order.
+              {couponError && <p className="coupon-error-msg">{couponError}</p>}
+              {couponSuccessMsg && <p style={{ color: "#059669", fontSize: "12px", margin: "6px 0 0", fontWeight: 600 }}>{couponSuccessMsg}</p>}
+            </div>
+
+            {/* Applied Discount Row */}
+            {appliedCoupon && (
+              <div className="summary-item-row discount-row">
+                <span>Coupon Discount ({appliedCoupon.code})</span>
+                <span className="discount-amount">- ₹{couponDiscount.toFixed(2)}</span>
+              </div>
+            )}
+
+            <div className="summary-divider" />
+
+            {/* Total Row */}
+            <div className="summary-total-row">
+              <div>
+                <strong className="total-label">Total Payable</strong>
+                <span className="total-tax-note">Includes 18% GST (₹{taxPortion.toFixed(2)})</span>
+              </div>
+              <strong className="total-amount">₹{finalPrice.toFixed(2)}</strong>
+            </div>
+
+            {/* Terms Checkbox */}
+            <div className="terms-checkbox-wrap">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                />
+                <span>
+                  I agree to the <Link href="/terms">Terms & Conditions</Link>, <Link href="/privacy">Privacy Policy</Link>, and <Link href="/refund">Refund Policy</Link>.
                 </span>
-              )}
-              {couponError && <span className="coupon-error-msg">{couponError}</span>}
+              </label>
             </div>
 
-            {/* Price Breakdown */}
-            <div className="order-breakdown-card">
-              <h3>Order Price Summary</h3>
-              <div className="breakdown-row">
-                <span>Base Price ({activePlan.durationLabel})</span>
-                <span>₹{originalPrice}</span>
+            {/* Error banner */}
+            {errorMessage && (
+              <div className="checkout-error-banner">
+                <span>⚠️ {errorMessage}</span>
               </div>
-              {couponApplied && (
-                <div className="breakdown-row discount-row">
-                  <span>Coupon Discount</span>
-                  <span>- ₹{couponDiscount}</span>
-                </div>
-              )}
-              <div className="breakdown-row tax-row">
-                <span>18% GST (CGST 9% + SGST 9%)</span>
-                <span>Included (₹{taxPortion})</span>
-              </div>
-              <div className="breakdown-divider" />
-              <div className="breakdown-total-row">
-                <div>
-                  <strong>Total Amount Payable</strong>
-                  <small>Inclusive of all applicable taxes</small>
-                </div>
-                <strong>₹{finalPrice}</strong>
-              </div>
+            )}
+
+            {/* Primary Action Button */}
+            {paymentMethod === "wallet" ? (
+              <button
+                type="button"
+                className="btn-pay-razorpay"
+                disabled={isProcessing || !agreedToTerms || walletBalance < finalPrice}
+                onClick={handleWalletCheckout}
+                style={{
+                  background: walletBalance >= finalPrice ? "linear-gradient(135deg, #059669, #047857)" : "#94a3b8",
+                }}
+              >
+                {isProcessing
+                  ? processingStep || "Processing..."
+                  : walletBalance >= finalPrice
+                  ? `Pay ₹${finalPrice.toFixed(2)} from Student Wallet →`
+                  : `Insufficient Wallet Balance (₹${walletBalance.toFixed(2)})`}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-pay-razorpay"
+                disabled={isProcessing || !agreedToTerms}
+                onClick={handleRazorpayPayment}
+              >
+                {isProcessing ? processingStep || "Processing..." : `Pay ₹${finalPrice.toFixed(2)} via Razorpay →`}
+              </button>
+            )}
+
+            <div className="checkout-trust-footer">
+              <span>🔒 100% Secure Checkout · Instant Subscription Activation</span>
             </div>
+          </div>
+        </section>
+      </main>
 
-            <div className="moneyback-guarantee-note">
-              <span>🛡</span>
-              <p>
-                <strong>Risk-Free Guarantee:</strong> 100% money-back guarantee within 48 hours if you
-                are not satisfied with our practice test quality.
-              </p>
-            </div>
-          </section>
-
-          {/* Right Column: Dedicated Razorpay Gateway */}
-          <section className="checkout-payment-col">
-            <div className="gateway-container">
-              <div className="gateway-header">
-                <div>
-                  <span className="kicker">OFFICIAL PAYMENT GATEWAY</span>
-                  <h2>Razorpay Secure Checkout</h2>
-                </div>
-                <div className="gateway-amount-badge">
-                  <small>Total to Pay</small>
-                  <strong>₹{finalPrice}</strong>
-                </div>
-              </div>
-
-              {!user && (
-                <div className="login-prompt-banner">
-                  <span>⚠️ You are not logged in.</span>
-                  <p>
-                    Please{" "}
-                    <Link href={`/login?redirect=/checkout?plan=${selectedPlan}`}>
-                      <strong>log in to your account</strong>
-                    </Link>{" "}
-                    before proceeding so your VIP pass is linked to your profile.
-                  </p>
-                </div>
-              )}
-
-              {errorMessage && (
-                <div
-                  style={{
-                    background: "#fef2f2",
-                    border: "1px solid #fecaca",
-                    color: "#991b1b",
-                    padding: "14px 20px",
-                    fontSize: "0.85rem",
-                    fontWeight: 500,
-                  }}
-                >
-                  <strong>Payment Notice: </strong>
-                  {errorMessage}
-                </div>
-              )}
-
-              <div className="payment-tab-body">
-                <div
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "12px",
-                    padding: "24px",
-                    textAlign: "center",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      background: "#f0fdf4",
-                      padding: "6px 16px",
-                      borderRadius: "20px",
-                      border: "1px solid #bbf7d0",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <span style={{ fontSize: "1.1rem" }}>🔒</span>
-                    <strong style={{ fontSize: "0.82rem", color: "#166534" }}>
-                      PCI-DSS Level 1 Compliant · 256-Bit SSL
-                    </strong>
-                  </div>
-
-                  <h3 style={{ fontFamily: "Space Grotesk", fontSize: "1.25rem", margin: "0 0 8px", color: "#1e3a34" }}>
-                    Pay ₹{finalPrice} with Razorpay
-                  </h3>
-                  <p style={{ fontSize: "0.88rem", color: "#64748b", margin: "0 0 20px" }}>
-                    Select your preferred payment method on the official Razorpay payment screen:
-                  </p>
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(2, 1fr)",
-                      gap: "12px",
-                      textAlign: "left",
-                      marginBottom: "20px",
-                    }}
-                  >
-                    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 14px" }}>
-                      <strong style={{ display: "block", fontSize: "0.85rem", color: "#1e3a34" }}>⚡ UPI & QR Code</strong>
-                      <small style={{ color: "#64748b", fontSize: "0.75rem" }}>Google Pay, PhonePe, Paytm, CRED, BHIM</small>
-                    </div>
-
-                    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 14px" }}>
-                      <strong style={{ display: "block", fontSize: "0.85rem", color: "#1e3a34" }}>💳 Cards (Debit & Credit)</strong>
-                      <small style={{ color: "#64748b", fontSize: "0.75rem" }}>Visa, Mastercard, RuPay, Diners</small>
-                    </div>
-
-                    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 14px" }}>
-                      <strong style={{ display: "block", fontSize: "0.85rem", color: "#1e3a34" }}>🏦 Net Banking</strong>
-                      <small style={{ color: "#64748b", fontSize: "0.75rem" }}>SBI, HDFC, ICICI, Axis + 50 Banks</small>
-                    </div>
-
-                    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 14px" }}>
-                      <strong style={{ display: "block", fontSize: "0.85rem", color: "#1e3a34" }}>👛 Wallets & PayLater</strong>
-                      <small style={{ color: "#64748b", fontSize: "0.75rem" }}>Amazon Pay, Mobikwik, Airtel Money</small>
-                    </div>
-                  </div>
-
-                  {/* Mandatory Gateway Terms & Policies Acceptance */}
-                  <div
-                    style={{
-                      background: "#f8faf9",
-                      border: "1px solid #d4dfda",
-                      borderRadius: "8px",
-                      padding: "14px 16px",
-                      textAlign: "left",
-                      marginBottom: "20px",
-                    }}
-                  >
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "10px",
-                        cursor: "pointer",
-                        fontSize: "0.82rem",
-                        color: "#334155",
-                        lineHeight: "1.5",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={agreedToTerms}
-                        onChange={(e) => setAgreedToTerms(e.target.checked)}
-                        style={{ marginTop: "3px", accentColor: "#1e3a34", width: "16px", height: "16px", cursor: "pointer" }}
-                      />
-                      <span>
-                        I agree to the{" "}
-                        <Link href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral, #b94a2b)", fontWeight: 600, textDecoration: "underline" }}>
-                          Terms & Conditions
-                        </Link>
-                        ,{" "}
-                        <Link href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral, #b94a2b)", fontWeight: 600, textDecoration: "underline" }}>
-                          Privacy Policy
-                        </Link>
-                        , and{" "}
-                        <Link href="/refund" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral, #b94a2b)", fontWeight: 600, textDecoration: "underline" }}>
-                          Cancellation & Refund Policy
-                        </Link>
-                        . I acknowledge that subscription pass access is delivered digitally and instantly upon payment confirmation.
-                      </span>
-                    </label>
-                  </div>
-
-                  {isProcessing ? (
-                    <div style={{ padding: "16px 0" }}>
-                      <div className="processing-spinner" />
-                      <strong style={{ display: "block", color: "#1e3a34", fontSize: "0.95rem" }}>
-                        {processingStep || "Communicating with Razorpay..."}
-                      </strong>
-                      <small style={{ color: "#94a3b8" }}>Please do not refresh or close this tab.</small>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn-pay-now"
-                      onClick={handleRazorpayPayment}
-                      disabled={isProcessing}
-                      style={{
-                        background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
-                        boxShadow: "0 6px 20px rgba(2, 132, 199, 0.35)",
-                        fontSize: "1rem",
-                        padding: "16px 24px",
-                        width: "100%",
-                      }}
-                    >
-                      ⚡ Proceed to Pay ₹{finalPrice} via Razorpay →
-                    </button>
-                  )}
-
-                  <div style={{ marginTop: "16px", fontSize: "0.78rem", color: "#64748b", lineHeight: "1.5" }}>
-                    <span>Official Billing Partner: <strong>W Technology</strong> & <strong>Make My School</strong> (</span>
-                    <a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer" style={{ color: "#0284c7", textDecoration: "none", fontWeight: 600 }}>
-                      wtechnology.in
-                    </a>
-                    <span> / </span>
-                    <a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer" style={{ color: "#0284c7", textDecoration: "none", fontWeight: 600 }}>
-                      makemyschool.com
-                    </a>
-                    <span>)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </main>
-      )}
-
-      {/* Footer */}
       <Footer />
     </div>
   );

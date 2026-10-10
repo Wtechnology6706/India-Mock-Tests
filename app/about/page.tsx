@@ -1,6 +1,7 @@
 import Link from "next/link";
 import MegaMenu from "../components/MegaMenu";
 import Footer from "../components/Footer";
+import ConditionalCTA from "../components/ConditionalCTA";
 
 export default function AboutPage() {
   return (
@@ -90,13 +91,18 @@ export default function AboutPage() {
 
         <div className="about-cta-box">
           <h2>Ready to start your exam journey?</h2>
-          <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "18px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "18px", flexWrap: "wrap", alignItems: "center" }}>
             <Link href="/exams" className="admin-btn-primary" style={{ padding: "12px 24px", fontSize: "14px" }}>
               Explore Test Series →
             </Link>
-            <Link href="/register" className="admin-btn-secondary" style={{ padding: "12px 24px", fontSize: "14px" }}>
-              Create Free Account
-            </Link>
+            <ConditionalCTA
+              loggedOutText="Create Free Account"
+              loggedOutHref="/register"
+              loggedInText="Go to Student Dashboard"
+              loggedInHref="/dashboard"
+              className="admin-btn-secondary"
+              style={{ padding: "12px 24px", fontSize: "14px", textDecoration: "none" }}
+            />
           </div>
         </div>
       </div>

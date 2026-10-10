@@ -30,11 +30,11 @@ export default function Footer() {
                   src={logoImageUrl}
                   alt={portalName}
                   className="footer-logo-img"
-                  style={{ maxHeight: "46px", width: "auto", objectFit: "contain" }}
+                  style={{ maxHeight: "48px", width: "auto", objectFit: "contain" }}
                 />
               ) : (
                 <div className="footer-logo-text">
-                  <span className="footer-logo-badge">I</span>
+                  <span className="footer-logo-badge">🇮🇳</span>
                   <span className="footer-logo-title">
                     {portalName}
                     <span className="footer-dot">.</span>
@@ -43,12 +43,12 @@ export default function Footer() {
               )}
             </Link>
             <p className="footer-brand-tagline">
-              India&apos;s authoritative online examination simulation and CBT practice hub. Mapped directly to official recruitment commission syllabi and previous-year benchmarking.
+              India&apos;s premier CBT exam preparation and simulation ecosystem. Built by educators and technologists at <strong>W Technology</strong>, providing high-fidelity bilingual mock tests, PYQs, and real-time rank benchmarking for State PSCs, Teaching (TRE/TET), and National Competitive Examinations.
             </p>
             <div className="footer-trust-badges">
               <span className="trust-badge-pill">🔒 256-Bit SSL Encrypted</span>
-              <span className="trust-badge-pill">⚡ Instant Digital Access</span>
-              <span className="trust-badge-pill">🇮🇳 100% Indian Exam Syllabus</span>
+              <span className="trust-badge-pill">⚡ Instant PYQ & Mocks Access</span>
+              <span className="trust-badge-pill">🎯 Official Commission Pattern</span>
             </div>
           </div>
 
