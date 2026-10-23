@@ -9,10 +9,10 @@ export default function AboutPage() {
       <MegaMenu />
 
       <div className="static-page-container">
-        <span className="kicker">ABOUT INDIA MOCK TESTS PLATFORM</span>
+        <span className="kicker">ABOUT SARKARI PRACTICE PLATFORM</span>
         <h1>Empowering Every Aspirant<br /><em>with Trustworthy Practice.</em></h1>
         <p className="static-lede">
-          <strong>India Mock Tests</strong> (<a href="https://mock.wtechnology.in" style={{ color: "var(--coral)", fontWeight: 600 }}>mock.wtechnology.in</a>) is a flagship digital examination simulation platform developed and operated by <strong>W Technology</strong> (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral)", fontWeight: 600 }}>wtechnology.in</a>) in close association with <strong>Make My School</strong> (<a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral)", fontWeight: 600 }}>makemyschool.com</a>).
+          <strong>Sarkari Practice</strong> (<a href="https://sarkaripractice.com" style={{ color: "var(--coral)", fontWeight: 600 }}>sarkaripractice.com</a>) is a premier digital examination simulation platform developed and operated by <strong>W Technology</strong> (<a href="https://wtechnology.in" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral)", fontWeight: 600 }}>wtechnology.in</a>) in close association with <strong>Make My School</strong> (<a href="https://makemyschool.com" target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral)", fontWeight: 600 }}>makemyschool.com</a>).
         </p>
 
         {/* Corporate & EdTech Network Affiliation Box */}
@@ -52,9 +52,9 @@ export default function AboutPage() {
 
             <div style={{ background: "#f8faf9", padding: "16px 20px", borderRadius: "8px", border: "1px solid #e1ebe6" }}>
               <div style={{ fontSize: "18px", marginBottom: "4px" }}>🎯</div>
-              <strong style={{ display: "block", color: "var(--ink)", fontSize: "15px" }}>India Mock Tests</strong>
+              <strong style={{ display: "block", color: "var(--ink)", fontSize: "15px" }}>Sarkari Practice</strong>
               <small style={{ color: "#627a72", display: "block", marginTop: "4px" }}>
-                Dedicated CBT examination practice, teacher recruitment series, and question bank engine.
+                Dedicated CBT examination practice, teacher recruitment series, and question bank engine (<a href="https://sarkaripractice.com" style={{ color: "#0284c7" }}>sarkaripractice.com</a>).
               </small>
             </div>
 
@@ -67,7 +67,7 @@ export default function AboutPage() {
             </div>
           </div>
           <p style={{ fontSize: "12.5px", color: "#7a9188", marginTop: "16px", marginBottom: 0, fontStyle: "italic" }}>
-            💡 Notice for Billing & Payment Verification: All online transactions, merchant payouts, and subscriptions across India Mock Tests and associated subdomains are officially processed and billed under the approved merchant entity <strong>W Technology / Make My School</strong>.
+            💡 Notice for Billing & Payment Verification: All online transactions, merchant payouts, and subscriptions across Sarkari Practice and associated domains are officially processed and billed under the approved merchant entity <strong>W Technology / Make My School</strong>.
           </p>
         </div>
 
