@@ -7,7 +7,7 @@ import Footer from "../components/Footer";
 import ConditionalCTA from "../components/ConditionalCTA";
 
 export default function PricingPage() {
-  const [portalName, setPortalName] = useState("India Mock Tests");
+  const [portalName, setPortalName] = useState("Sarkari Practice");
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly");
   const [subscribedPlan, setSubscribedPlan] = useState<string | null>(null);
 
@@ -152,7 +152,7 @@ export default function PricingPage() {
               <li>✓ Unlimited test retakes</li>
             </ul>
             <Link
-              href="/checkout?plan=sprint"
+              href={`/checkout?plan=sprint&cycle=${billingCycle}&amount=${billingCycle === "yearly" ? 499 : 299}`}
               className="btn-plan-action primary"
               style={{ textAlign: "center", textDecoration: "none" }}
             >
@@ -178,7 +178,7 @@ export default function PricingPage() {
               <li>✓ Offline printable PDF answer keys</li>
             </ul>
             <Link
-              href="/checkout?plan=ultimate"
+              href={`/checkout?plan=ultimate&cycle=${billingCycle}&amount=${billingCycle === "yearly" ? 999 : 599}`}
               className="btn-plan-action primary"
               style={{ textAlign: "center", textDecoration: "none" }}
             >

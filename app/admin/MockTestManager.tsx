@@ -20,7 +20,22 @@ export default function MockTestManager({
 }: MockTestManagerProps) {
   const [tests, setTests] = useState<MockTest[]>(initialTests);
   const [requests, setRequests] = useState<SubjectDemandRequest[]>(initialRequests);
-  const [subTab, setSubTab] = useState<"catalog" | "create" | "demands">("catalog");
+  const [subTab, setSubTab] = useState<"catalog" | "create" | "demands" | "ai-generator">("catalog");
+
+  // AI Question Generator State
+  const [aiExam, setAiExam] = useState("BPSC TRE 4.0");
+  const [aiSubject, setAiSubject] = useState("General Studies");
+  const [aiTopic, setAiTopic] = useState("Modern Indian History & Bihar 1857 Revolt");
+  const [aiCount, setAiCount] = useState("5");
+  const [aiOptionCount, setAiOptionCount] = useState<"4" | "5">("5");
+  const [aiDifficulty, setAiDifficulty] = useState<"easy" | "medium" | "hard">("medium");
+  const [aiLanguage, setAiLanguage] = useState<"bilingual" | "english" | "hindi">("bilingual");
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [generatedAiQuestions, setGeneratedAiQuestions] = useState<any[]>([]);
+  const [selectedAiIndices, setSelectedAiIndices] = useState<Set<number>>(new Set());
+  const [aiTargetTestSlug, setAiTargetTestSlug] = useState("");
+  const [isImportingAi, setIsImportingAi] = useState(false);
+  const [aiImportFeedback, setAiImportFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Filters for catalog
   const [examFilter, setExamFilter] = useState("All");
@@ -498,6 +513,93 @@ export default function MockTestManager({
     });
   }
 
+  // Handle AI Question Generation
+  async function handleGenerateAiQuestions(e: React.FormEvent) {
+    e.preventDefault();
+    setIsGeneratingAi(true);
+    setAiImportFeedback(null);
+    try {
+      const res = await fetch("/api/ai/generate-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          exam: aiExam,
+          subject: aiSubject,
+          topic: aiTopic,
+          count: Number(aiCount) || 5,
+          optionCount: Number(aiOptionCount) || 5,
+          difficulty: aiDifficulty,
+          language: aiLanguage,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to generate questions with AI.");
+      }
+
+      const questions = data.questions || [];
+      if (questions.length === 0) {
+        throw new Error("No questions returned by AI. Please adjust the topic or try again.");
+      }
+
+      setGeneratedAiQuestions(questions);
+      setSelectedAiIndices(new Set(questions.map((_: any, idx: number) => idx)));
+      setAiImportFeedback({
+        type: "success",
+        message: `Successfully generated ${questions.length} authentic questions using Google Gemini AI for ${aiExam} (${aiSubject})! Review and import below.`,
+      });
+    } catch (err) {
+      setAiImportFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to generate AI questions.",
+      });
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  }
+
+  // Handle AI Questions Bulk Import into Question Bank and optionally a Mock Test
+  async function handleImportAiQuestions() {
+    if (selectedAiIndices.size === 0) {
+      alert("Please select at least one question to import.");
+      return;
+    }
+    setIsImportingAi(true);
+    setAiImportFeedback(null);
+    try {
+      const toImport = generatedAiQuestions.filter((_, idx) => selectedAiIndices.has(idx));
+      const res = await fetch("/api/admin/questions/ai-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questions: toImport,
+          targetTestSlug: aiTargetTestSlug || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to import questions.");
+      }
+
+      setAiImportFeedback({
+        type: "success",
+        message: data.message || `Successfully imported ${data.importedCount} questions into the question bank!`,
+      });
+      // Clear imported questions
+      setGeneratedAiQuestions([]);
+      setSelectedAiIndices(new Set());
+    } catch (err) {
+      setAiImportFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to import questions.",
+      });
+    } finally {
+      setIsImportingAi(false);
+    }
+  }
+
   // Handle Create Mock Test submission
   async function handleCreateTest(e: React.FormEvent) {
     e.preventDefault();
@@ -591,6 +693,36 @@ export default function MockTestManager({
           <span>🔥 Learner Demands</span>
           <span className="test-mgr-badge highlight">
             {requests.reduce((acc, r) => acc + r.requestCount, 0)} votes
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className={`test-mgr-tab ${subTab === "ai-generator" ? "active" : ""}`}
+          onClick={() => setSubTab("ai-generator")}
+          style={
+            subTab === "ai-generator"
+              ? {
+                  background: "linear-gradient(135deg, #4338ca 0%, #6366f1 100%)",
+                  color: "#ffffff",
+                  borderColor: "#4f46e5",
+                }
+              : {
+                  borderColor: "#c7d2fe",
+                  color: "#4338ca",
+                }
+          }
+        >
+          <span>🤖 AI Bulk Question Generator</span>
+          <span
+            className="test-mgr-badge"
+            style={{
+              background: subTab === "ai-generator" ? "rgba(255,255,255,0.25)" : "#e0e7ff",
+              color: subTab === "ai-generator" ? "#ffffff" : "#4338ca",
+              fontWeight: 700,
+            }}
+          >
+            Gemini
           </span>
         </button>
       </div>
@@ -1101,9 +1233,488 @@ export default function MockTestManager({
         </div>
       )}
 
-      {/* =========================================================================
-          UNIFIED EDIT MOCK TEST & QUESTIONS MODAL STUDIO
-          ========================================================================= */}
+      {/* SUB-TAB 4: AI BULK QUESTION GENERATOR */}
+      {subTab === "ai-generator" && (
+        <div className="test-ai-generator-view" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          {/* Header Banner */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, #312e81 0%, #4338ca 50%, #6366f1 100%)",
+              borderRadius: "16px",
+              padding: "24px 28px",
+              color: "#ffffff",
+              boxShadow: "0 10px 25px -5px rgba(67, 56, 202, 0.3)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}
+          >
+            <div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.15)", padding: "4px 12px", borderRadius: "999px", fontSize: "0.8rem", fontWeight: 700, marginBottom: "8px" }}>
+                <span>✨ GEMINI AI POWERED</span>
+                <span>•</span>
+                <span>BILINGUAL MCQ ENGINE</span>
+              </div>
+              <h2 style={{ fontSize: "1.5rem", fontWeight: 800, margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>
+                AI Bulk Question Generator Studio
+              </h2>
+              <p style={{ margin: 0, opacity: 0.9, fontSize: "0.95rem", maxWidth: "680px" }}>
+                Generate official syllabus-aligned 4-option or 5-option (BPSC pattern) MCQs with deep bilingual explanations, distractor analysis, and memory mnemonics. Import directly into any mock test or question bank in 1 click.
+              </p>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontSize: "0.8rem", opacity: 0.8 }}>Configured via:</span>
+              <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>Admin &gt; Menu &amp; Site Config &gt; AI Engine</div>
+            </div>
+          </div>
+
+          {/* Generator Controls Card */}
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              padding: "24px",
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+            }}
+          >
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0 0 16px 0", color: "#0f172a", display: "flex", alignItems: "center", gap: "8px" }}>
+              <span>⚙️ Question Generation Parameters</span>
+            </h3>
+
+            <form onSubmit={handleGenerateAiQuestions}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px", marginBottom: "20px" }}>
+                {/* Target Exam */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                    Target Exam *
+                  </label>
+                  <select
+                    value={aiExam}
+                    onChange={(e) => setAiExam(e.target.value)}
+                    className="admin-form-select"
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  >
+                    <option value="BPSC TRE 4.0">BPSC TRE 4.0 (Bihar Teacher)</option>
+                    <option value="Bihar STET">Bihar STET (Eligibility Test)</option>
+                    <option value="CTET">CTET (Central Teacher Eligibility)</option>
+                    <option value="70th BPSC CCE">70th / 71st BPSC CCE Prelims</option>
+                    <option value="SSC CGL">SSC CGL / CHSL</option>
+                    <option value="Railway RRB">Railway RRB NTPC</option>
+                  </select>
+                </div>
+
+                {/* Subject */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                    Subject *
+                  </label>
+                  <select
+                    value={aiSubject}
+                    onChange={(e) => setAiSubject(e.target.value)}
+                    className="admin-form-select"
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  >
+                    <option value="General Studies">General Studies (सामान्य अध्ययन)</option>
+                    <option value="Modern Indian History">Modern Indian History &amp; Bihar</option>
+                    <option value="Indian Polity & Constitution">Indian Polity &amp; Constitution</option>
+                    <option value="Geography & Environment">Geography &amp; Environment</option>
+                    <option value="General Science">General Science (Physics, Chem, Bio)</option>
+                    <option value="Mathematics & Mental Ability">Mathematics &amp; Mental Ability</option>
+                    <option value="Child Development & Pedagogy">Child Development &amp; Pedagogy (CDP)</option>
+                    <option value="Hindi Language">Hindi Language (हिंदी भाषा)</option>
+                    <option value="English Language">English Language</option>
+                    <option value="Bihar Special GK">Bihar Special GK &amp; Current Affairs</option>
+                  </select>
+                </div>
+
+                {/* Topic / Subtopic */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                    Topic / Chapter Focus *
+                  </label>
+                  <input
+                    type="text"
+                    value={aiTopic}
+                    onChange={(e) => setAiTopic(e.target.value)}
+                    placeholder="e.g. 1857 Revolt in Bihar & Kunwar Singh"
+                    required
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
+                  />
+                </div>
+
+                {/* Number of Questions */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                    Questions to Generate
+                  </label>
+                  <select
+                    value={aiCount}
+                    onChange={(e) => setAiCount(e.target.value)}
+                    className="admin-form-select"
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  >
+                    <option value="1">1 Question (Quick Sample)</option>
+                    <option value="3">3 Questions</option>
+                    <option value="5">5 Questions (Standard Batch)</option>
+                    <option value="10">10 Questions (Speed Test)</option>
+                    <option value="15">15 Questions (High-Yield Set)</option>
+                  </select>
+                </div>
+
+                {/* Options Pattern */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                    Options Pattern *
+                  </label>
+                  <select
+                    value={aiOptionCount}
+                    onChange={(e) => setAiOptionCount(e.target.value as "4" | "5")}
+                    className="admin-form-select"
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  >
+                    <option value="5">5 Options (BPSC Style with E: None / More than one)</option>
+                    <option value="4">4 Options (Standard CTET / STET / SSC)</option>
+                  </select>
+                </div>
+
+                {/* Difficulty */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                    Difficulty Level
+                  </label>
+                  <select
+                    value={aiDifficulty}
+                    onChange={(e) => setAiDifficulty(e.target.value as "easy" | "medium" | "hard")}
+                    className="admin-form-select"
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  >
+                    <option value="easy">Easy (Direct Concept / Fact)</option>
+                    <option value="medium">Medium (Standard Exam Pattern)</option>
+                    <option value="hard">Hard (Assertion-Reason / Analytical)</option>
+                  </select>
+                </div>
+
+                {/* Language Format */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                    Language Format
+                  </label>
+                  <select
+                    value={aiLanguage}
+                    onChange={(e) => setAiLanguage(e.target.value as "bilingual" | "english" | "hindi")}
+                    className="admin-form-select"
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  >
+                    <option value="bilingual">Bilingual (Hindi + English) - Recommended</option>
+                    <option value="hindi">Hindi Only (हिंदी माध्यम)</option>
+                    <option value="english">English Only</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="submit"
+                  disabled={isGeneratingAi}
+                  style={{
+                    padding: "12px 28px",
+                    background: "linear-gradient(135deg, #4338ca 0%, #6366f1 100%)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "10px",
+                    fontWeight: 700,
+                    fontSize: "0.95rem",
+                    cursor: isGeneratingAi ? "not-allowed" : "pointer",
+                    boxShadow: "0 4px 14px rgba(67, 56, 202, 0.35)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    opacity: isGeneratingAi ? 0.7 : 1,
+                  }}
+                >
+                  {isGeneratingAi ? (
+                    <>
+                      <span className="spinner" style={{ width: "16px", height: "16px", border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 1s linear infinite" }} />
+                      <span>Gemini Generating Questions...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>✨</span>
+                      <span>Generate {aiCount} Questions with Gemini AI</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Feedback Box */}
+          {aiImportFeedback && (
+            <div
+              style={{
+                padding: "14px 18px",
+                borderRadius: "10px",
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                background: aiImportFeedback.type === "success" ? "#ecfdf5" : "#fef2f2",
+                color: aiImportFeedback.type === "success" ? "#065f46" : "#991b1b",
+                border: `1px solid ${aiImportFeedback.type === "success" ? "#a7f3d0" : "#fecaca"}`,
+              }}
+            >
+              <span>{aiImportFeedback.type === "success" ? "✓" : "⚠️"}</span>
+              <span>{aiImportFeedback.message}</span>
+            </div>
+          )}
+
+          {/* Review & Import Section */}
+          {generatedAiQuestions.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Batch Action Toolbar */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  padding: "16px 20px",
+                  borderRadius: "12px",
+                  border: "1px solid #cbd5e1",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "16px",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedAiIndices.size === generatedAiQuestions.length) {
+                        setSelectedAiIndices(new Set());
+                      } else {
+                        setSelectedAiIndices(new Set(generatedAiQuestions.map((_, i) => i)));
+                      }
+                    }}
+                    style={{
+                      padding: "6px 14px",
+                      background: "#f1f5f9",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "6px",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {selectedAiIndices.size === generatedAiQuestions.length ? "Deselect All" : "Select All"}
+                  </button>
+                  <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#334155" }}>
+                    Selected: <strong>{selectedAiIndices.size}</strong> of {generatedAiQuestions.length}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#475569" }}>
+                      Link to Mock Test:
+                    </label>
+                    <select
+                      value={aiTargetTestSlug}
+                      onChange={(e) => setAiTargetTestSlug(e.target.value)}
+                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.85rem", maxWidth: "260px" }}
+                    >
+                      <option value="">(Question Bank Only - No Test Link)</option>
+                      {tests.map((t) => (
+                        <option value={t.slug} key={t.id}>
+                          {t.name} ({t.examName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleImportAiQuestions}
+                    disabled={isImportingAi || selectedAiIndices.size === 0}
+                    style={{
+                      padding: "10px 22px",
+                      background: selectedAiIndices.size > 0 ? "#059669" : "#94a3b8",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: 700,
+                      fontSize: "0.9rem",
+                      cursor: selectedAiIndices.size > 0 && !isImportingAi ? "pointer" : "not-allowed",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: selectedAiIndices.size > 0 ? "0 4px 12px rgba(5, 150, 105, 0.3)" : "none",
+                    }}
+                  >
+                    {isImportingAi ? "Importing to Database..." : `📥 Import Selected (${selectedAiIndices.size})`}
+                  </button>
+                </div>
+              </div>
+
+              {/* Generated Question Cards */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {generatedAiQuestions.map((q, idx) => {
+                  const isSelected = selectedAiIndices.has(idx);
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        background: "#ffffff",
+                        borderRadius: "14px",
+                        border: isSelected ? "2px solid #6366f1" : "1px solid #e2e8f0",
+                        padding: "20px 24px",
+                        boxShadow: isSelected ? "0 4px 18px rgba(99, 102, 241, 0.12)" : "0 2px 6px rgba(0,0,0,0.03)",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {/* Card Header */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", gap: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              setSelectedAiIndices((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(idx)) next.delete(idx);
+                                else next.add(idx);
+                                return next;
+                              });
+                            }}
+                            style={{ width: "18px", height: "18px", cursor: "pointer", accentColor: "#4f46e5" }}
+                          />
+                          <span
+                            style={{
+                              background: "#e0e7ff",
+                              color: "#3730a3",
+                              padding: "4px 10px",
+                              borderRadius: "6px",
+                              fontWeight: 700,
+                              fontSize: "0.85rem",
+                            }}
+                          >
+                            Q{idx + 1}
+                          </span>
+                          <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 600 }}>
+                            {q.exam} • {q.subject}
+                          </span>
+                        </div>
+
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <span style={{ fontSize: "0.75rem", background: "#f1f5f9", color: "#475569", padding: "3px 8px", borderRadius: "4px", fontWeight: 600 }}>
+                            {q.options?.length || 4} Options
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.75rem",
+                              background: q.difficulty === "easy" ? "#dcfce7" : q.difficulty === "hard" ? "#fee2e2" : "#fef3c7",
+                              color: q.difficulty === "easy" ? "#166534" : q.difficulty === "hard" ? "#991b1b" : "#92400e",
+                              padding: "3px 8px",
+                              borderRadius: "4px",
+                              fontWeight: 600,
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {q.difficulty || "medium"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Question Stem */}
+                      <div
+                        style={{
+                          fontSize: "1rem",
+                          fontWeight: 600,
+                          color: "#0f172a",
+                          lineHeight: "1.6",
+                          marginBottom: "16px",
+                          whiteSpace: "pre-line",
+                        }}
+                      >
+                        {q.stem}
+                      </div>
+
+                      {/* Options Grid */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "8px", marginBottom: "16px" }}>
+                        {q.options?.map((opt: any) => (
+                          <div
+                            key={opt.key}
+                            style={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              gap: "10px",
+                              padding: "10px 14px",
+                              borderRadius: "8px",
+                              background: opt.correct ? "#ecfdf5" : "#f8fafc",
+                              border: opt.correct ? "1.5px solid #10b981" : "1px solid #e2e8f0",
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: "24px",
+                                height: "24px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                borderRadius: "50%",
+                                background: opt.correct ? "#059669" : "#e2e8f0",
+                                color: opt.correct ? "#ffffff" : "#475569",
+                                fontWeight: 700,
+                                fontSize: "0.8rem",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {opt.key}
+                            </span>
+                            <div style={{ flex: 1, fontSize: "0.9rem", color: opt.correct ? "#065f46" : "#334155", fontWeight: opt.correct ? 600 : 400 }}>
+                              {opt.text}
+                            </div>
+                            {opt.correct && (
+                              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#059669", background: "#d1fae5", padding: "2px 8px", borderRadius: "999px" }}>
+                                ✓ Correct Answer
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Explanation Card */}
+                      {q.explanation && (
+                        <div
+                          style={{
+                            background: "#f0fdf4",
+                            border: "1px dashed #86efac",
+                            borderRadius: "10px",
+                            padding: "14px 16px",
+                            fontSize: "0.88rem",
+                            color: "#166534",
+                            lineHeight: "1.6",
+                            whiteSpace: "pre-line",
+                          }}
+                        >
+                          <div style={{ fontWeight: 700, marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>💡 Comprehensive Bilingual Explanation:</span>
+                          </div>
+                          <div>{q.explanation}</div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {editingTest && (
         <div
           className="admin-modal-backdrop"

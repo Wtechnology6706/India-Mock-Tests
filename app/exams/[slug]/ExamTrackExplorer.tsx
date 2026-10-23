@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ExamTrack, SubjectGroup } from "../../../lib/syllabus";
 import type { MockTest, SubjectDemandRequest } from "../../../lib/admin-content";
 import type { AuthUser } from "../../../lib/auth-store";
+import { evaluateTestAccess, defaultExamGroups, type ExamGroup } from "../../../lib/exam-group-types";
 
 interface ExamTrackExplorerProps {
   tracks: ExamTrack[];
@@ -51,38 +52,32 @@ export default function ExamTrackExplorer({
   examTone,
   examMeta,
 }: ExamTrackExplorerProps) {
-  // Check subscription access for individual test series
+  const [examGroups, setExamGroups] = useState<ExamGroup[]>(defaultExamGroups);
+
+  useEffect(() => {
+    fetch("/api/exam-groups")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.groups) && data.groups.length > 0) {
+          setExamGroups(data.groups);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Check subscription access for individual test series (covers both Group bundles and Clubbed individual series)
   function checkTestAccess(test: MockTest) {
-    if (test.access === "Free") {
-      return { hasAccess: true, isFree: true };
-    }
-    if (!currentUser) {
-      return { hasAccess: false, isFree: false };
-    }
-    if (currentUser.role === "admin" || currentUser.role === "editor") {
-      return { hasAccess: true, isFree: false };
-    }
-    const isSubActive = currentUser.subscriptionStatus === "active" || (currentUser.subscriptionExpiresAt && new Date(currentUser.subscriptionExpiresAt).getTime() > Date.now());
-    if (!isSubActive) {
-      return { hasAccess: false, isFree: false };
-    }
-    if (currentUser.subscriptionTier === "ultimate") {
-      return { hasAccess: true, isFree: false };
-    }
-    if (currentUser.subscriptionTier === "sprint") {
-      const userSlug = (currentUser.targetExamSlug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-      const currentExamSlug = (examSlug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-      const userExamName = (currentUser.targetExamName || "").toLowerCase();
-      const currentExamTitle = (examTitle || "").toLowerCase();
-
-      const matchesSlug = (userSlug && currentExamSlug) && (userSlug.includes(currentExamSlug) || currentExamSlug.includes(userSlug));
-      const matchesName = (userExamName && currentExamTitle) && (userExamName.includes(currentExamTitle) || currentExamTitle.includes(userExamName));
-
-      if (matchesSlug || matchesName) {
-        return { hasAccess: true, isFree: false };
-      }
-    }
-    return { hasAccess: false, isFree: false };
+    return evaluateTestAccess(
+      currentUser || null,
+      {
+        access: test.access,
+        examSlug: test.examSlug || examSlug,
+        examName: test.examName || examTitle,
+        subjectName: test.subjectName,
+        slug: test.slug,
+      },
+      examGroups
+    );
   }
 
   // Practice tests catalog state
@@ -461,26 +456,36 @@ export default function ExamTrackExplorer({
                             <span>🎯 {test.totalMarks} Marks</span>
                           </div>
 
-                          <div className="test-card-actions-row">
-                            <Link className="btn-test-instructions" href={`/tests/${test.slug}`}>
-                              Instructions →
-                            </Link>
-                            {accessInfo.hasAccess ? (
-                              <Link
-                                className={`btn-test-start-direct ${!accessInfo.isFree ? "btn-test-unlocked" : ""}`}
-                                href={`/attempt/${test.slug}`}
-                              >
-                                {!accessInfo.isFree ? "🔓 Start Practice →" : "Start Test ⚡"}
+                            <div className="test-card-actions-row">
+                              <Link className="btn-test-instructions" href={`/tests/${test.slug}`}>
+                                Instructions →
                               </Link>
-                            ) : (
-                              <Link
-                                className="btn-test-start-direct btn-test-locked"
-                                href={`/checkout?plan=sprint&exam=${examSlug}`}
-                              >
-                                🔒 Unlock Test
-                              </Link>
-                            )}
-                          </div>
+                              {accessInfo.hasAccess ? (
+                                <Link
+                                  className={`btn-test-start-direct ${!accessInfo.isFree ? "btn-test-unlocked" : ""}`}
+                                  href={`/attempt/${test.slug}`}
+                                >
+                                  {!accessInfo.isFree ? "🔓 Start Practice →" : "Start Test ⚡"}
+                                </Link>
+                              ) : (
+                                (() => {
+                                  const matchingGroup = examGroups.find(
+                                    (g) =>
+                                      g.examSlug === examSlug &&
+                                      (g.targetSubject?.toLowerCase() === test.subjectName.toLowerCase() ||
+                                        g.clubbedSubjects.some((s) => s.toLowerCase() === test.subjectName.toLowerCase()))
+                                  ) || examGroups.find((g) => g.examSlug === examSlug);
+                                  const unlockHref = matchingGroup
+                                    ? `/checkout?plan=sprint&option=${matchingGroup.type}&group=${matchingGroup.slug}&amount=${matchingGroup.price}`
+                                    : `/checkout?plan=sprint&exam=${examSlug}`;
+                                  return (
+                                    <Link className="btn-test-start-direct btn-test-locked" href={unlockHref}>
+                                      🔒 Unlock Test
+                                    </Link>
+                                  );
+                                })()
+                              )}
+                            </div>
                         </article>
                       );
                     })}
@@ -705,12 +710,22 @@ export default function ExamTrackExplorer({
                           {!accessInfo.isFree ? "🔓 Start Practice →" : "Start Test ⚡"}
                         </Link>
                       ) : (
-                        <Link
-                          className="btn-catalog-primary btn-catalog-locked"
-                          href={`/checkout?plan=sprint&exam=${examSlug}`}
-                        >
-                          🔒 Unlock Test
-                        </Link>
+                        (() => {
+                          const matchingGroup = examGroups.find(
+                            (g) =>
+                              g.examSlug === examSlug &&
+                              (g.targetSubject?.toLowerCase() === test.subjectName.toLowerCase() ||
+                                g.clubbedSubjects.some((s) => s.toLowerCase() === test.subjectName.toLowerCase()))
+                          ) || examGroups.find((g) => g.examSlug === examSlug);
+                          const unlockHref = matchingGroup
+                            ? `/checkout?plan=sprint&option=${matchingGroup.type}&group=${matchingGroup.slug}&amount=${matchingGroup.price}`
+                            : `/checkout?plan=sprint&exam=${examSlug}`;
+                          return (
+                            <Link className="btn-catalog-primary btn-catalog-locked" href={unlockHref}>
+                              🔒 Unlock Test
+                            </Link>
+                          );
+                        })()
                       )}
                     </div>
                   </div>

@@ -19,6 +19,8 @@ import NotificationsManager from "./NotificationsManager";
 import AuditLogsViewer from "./AuditLogsViewer";
 import MenuAndSiteConfigManager from "./MenuAndSiteConfigManager";
 import AdminSettings from "./AdminSettings";
+import AnalyticsManager from "./AnalyticsManager";
+import ExamGroupManager from "./ExamGroupManager";
 
 import type { AdminQuestion, RuleProfile, AdminTest, Plan, Notification } from "../../lib/phase1";
 import type { MockTest, SubjectDemandRequest } from "../../lib/admin-content";
@@ -47,12 +49,16 @@ interface AdminShellClientProps {
 
 const VALID_TABS: Record<string, AdminTab> = {
   overview: "overview",
+  analytics: "analytics",
   questions: "questions",
   "question-bank": "questions",
   "add-question": "add-question",
   "bulk-import": "bulk-import",
   tests: "tests",
   "mock-tests": "tests",
+  "exam-groups": "exam-groups",
+  groups: "exam-groups",
+  bundles: "exam-groups",
   pyq: "pyq",
   rules: "rules",
   "scoring-rules": "rules",
@@ -421,6 +427,13 @@ export default function AdminShellClient({
             </div>
           )}
 
+          {/* 1B. USER & TEST ENGAGEMENT ANALYTICS */}
+          {activeTab === "analytics" && (
+            <div className="admin-module-view">
+              <AnalyticsManager />
+            </div>
+          )}
+
           {/* 2. QUESTION BANK */}
           {activeTab === "questions" && (
             <div className="admin-module-view">
@@ -465,7 +478,14 @@ export default function AdminShellClient({
             </div>
           )}
 
-          {/* 5B. PREVIOUS YEAR PAPERS (PYQ) */}
+          {/* 5B. EXAM GROUPS & CLUBBED BUNDLES */}
+          {activeTab === "exam-groups" && (
+            <div className="admin-module-view">
+              <ExamGroupManager />
+            </div>
+          )}
+
+          {/* 5C. PREVIOUS YEAR PAPERS (PYQ) */}
           {activeTab === "pyq" && (
             <div className="admin-module-view">
               <PYQManager />

@@ -2365,6 +2365,21 @@
   padding: 20px;
 }
 
+/* Logo Studio Single-View Side-by-Side Layout */
+.logo-studio-single-view {
+  display: grid;
+  grid-template-columns: minmax(320px, 390px) minmax(460px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .logo-studio-single-view {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 .preview-heading {
   font: 700 10px 'Space Grotesk', sans-serif;
   letter-spacing: 0.8px;

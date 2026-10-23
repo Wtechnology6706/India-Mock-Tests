@@ -4,17 +4,31 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 
 export default function Footer() {
-  const [portalName, setPortalName] = useState("India Mock Tests");
+  const [portalName, setPortalName] = useState("Sarkari Practice");
   const [logoImageUrl, setLogoImageUrl] = useState("");
 
   useEffect(() => {
-    fetch("/api/config")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.config?.portalName) setPortalName(data.config.portalName);
-        if (data?.config?.logoImageUrl) setLogoImageUrl(data.config.logoImageUrl);
-      })
-      .catch(() => {});
+    const fetchFreshConfig = () => {
+      fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.config?.portalName) setPortalName(data.config.portalName);
+          if (data?.config?.logoImageUrl !== undefined) setLogoImageUrl(data.config.logoImageUrl || "");
+        })
+        .catch(() => {});
+    };
+
+    fetchFreshConfig();
+
+    const handleBroadcast = () => fetchFreshConfig();
+    window.addEventListener("site_config_updated", handleBroadcast);
+    window.addEventListener("storage", (e) => {
+      if (e.key === "site_config_updated_at") fetchFreshConfig();
+    });
+
+    return () => {
+      window.removeEventListener("site_config_updated", handleBroadcast);
+    };
   }, []);
 
   return (
@@ -85,10 +99,20 @@ export default function Footer() {
                 <Link href="/pricing">VIP Pricing & Plans</Link>
               </li>
               <li>
-                <Link href="/about">About India Mock Tests</Link>
+                <Link href="/about">About Sarkari Practice</Link>
               </li>
               <li>
                 <Link href="/contact">Student Helpdesk & Support</Link>
+              </li>
+              <li>
+                <a href="mailto:support@sarkaripractice.com" style={{ fontSize: "12px", color: "#8ca39b" }}>
+                  ✉ support@sarkaripractice.com
+                </a>
+              </li>
+              <li>
+                <a href="mailto:info@sarkaripractice.com" style={{ fontSize: "12px", color: "#8ca39b" }}>
+                  ℹ info@sarkaripractice.com
+                </a>
               </li>
               <li>
                 <Link href="/admin">Educator & Admin Portal</Link>

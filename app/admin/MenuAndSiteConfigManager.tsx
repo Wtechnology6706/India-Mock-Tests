@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type {
   SiteConfiguration,
   SubMenuLayer2,
@@ -19,20 +19,155 @@ import {
 export default function MenuAndSiteConfigManager() {
   const [config, setConfig] = useState<SiteConfiguration>(defaultSiteConfig);
   const [activeMenuTab, setActiveMenuTab] = useState<
-    "general" | "mock-test" | "tutorial" | "custom-nav" | "testimonials" | "payment"
+    "general" | "mock-test" | "tutorial" | "custom-nav" | "testimonials" | "payment" | "ai"
   >("general");
   const [selectedLayer2Id, setSelectedLayer2Id] = useState<string>("bpsc-tre-4");
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isTestingAi, setIsTestingAi] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Logo file upload & live preview state
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [logoSourceTab, setLogoSourceTab] = useState<"upload" | "url">("upload");
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isSavingLogo, setIsSavingLogo] = useState(false);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+  const [logoUploadSuccess, setLogoUploadSuccess] = useState<string | null>(null);
+  const [logoSaveFeedback, setLogoSaveFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("light");
+  const [showGuides, setShowGuides] = useState(true);
+
+  async function handleSaveLogoSettings(overrideConfig?: Partial<SiteConfiguration>) {
+    setIsSavingLogo(true);
+    setLogoSaveFeedback(null);
+    const targetConfig = {
+      ...config,
+      ...(overrideConfig || {}),
+    };
+    try {
+      const res = await fetch("/api/admin/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(targetConfig),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save logo configuration");
+      setConfig((prev) => ({
+        ...prev,
+        ...data.config,
+      }));
+      setLogoSaveFeedback({
+        type: "success",
+        message: "✓ Logo configuration saved & published live to the website!",
+      });
+
+      // Broadcast update to all components and open browser tabs
+      try {
+        localStorage.setItem("site_config_updated_at", String(Date.now()));
+        window.dispatchEvent(new Event("site_config_updated"));
+      } catch {}
+
+      setTimeout(() => setLogoSaveFeedback(null), 5000);
+    } catch (err: any) {
+      setLogoSaveFeedback({
+        type: "error",
+        message: err.message || "Failed to save logo settings.",
+      });
+    } finally {
+      setIsSavingLogo(false);
+    }
+  }
+
+  async function handleLogoFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingLogo(true);
+    setLogoUploadError(null);
+    setLogoUploadSuccess(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/admin/upload-logo", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setConfig((prev) => ({
+          ...prev,
+          logoImageUrl: data.url,
+        }));
+        setLogoUploadSuccess(`Logo "${file.name}" uploaded successfully!`);
+        // Immediately persist to DB and broadcast live
+        await handleSaveLogoSettings({ logoImageUrl: data.url });
+        setTimeout(() => setLogoUploadSuccess(null), 4000);
+      } else {
+        setLogoUploadError(data.error || "Failed to upload logo image.");
+      }
+    } catch (err: any) {
+      setLogoUploadError(err.message || "Network error while uploading logo.");
+    } finally {
+      setIsUploadingLogo(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
+  async function handleTestAiConnection() {
+    setIsTestingAi(true);
+    setAiTestResult(null);
+    try {
+      const res = await fetch("/api/ai/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: "Sample commission test connection check.",
+          options: ["A", "B", "C", "D"],
+          correctAnswer: "A",
+          userPrompt: "Ping test",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiTestResult({
+          success: true,
+          message: data.source === "gemini"
+            ? `✓ Connected to Google Gemini (${config.aiModel || "gemini-2.5-flash"}) successfully!`
+            : "✓ AI Simulation Engine active and ready for bilingual doubt solving & question generation.",
+        });
+      } else {
+        setAiTestResult({
+          success: false,
+          message: data.error || "Failed to connect to AI engine.",
+        });
+      }
+    } catch (err: any) {
+      setAiTestResult({
+        success: false,
+        message: err.message || "Network error testing AI connection.",
+      });
+    } finally {
+      setIsTestingAi(false);
+    }
+  }
 
   useEffect(() => {
-    fetch("/api/admin/config")
+    fetch(`/api/admin/config?t=${Date.now()}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data?.config) {
           setConfig({
             ...defaultSiteConfig,
             ...data.config,
+            logoHeight: data.config.logoHeight !== undefined ? Number(data.config.logoHeight) : (defaultSiteConfig.logoHeight ?? 48),
+            logoOffsetX: data.config.logoOffsetX !== undefined ? Number(data.config.logoOffsetX) : 0,
+            logoOffsetY: data.config.logoOffsetY !== undefined ? Number(data.config.logoOffsetY) : 0,
             testimonials: data.config.testimonials?.length ? data.config.testimonials : defaultTestimonials,
             customNavMenu: data.config.customNavMenu || [],
           });
@@ -351,82 +486,1286 @@ export default function MenuAndSiteConfigManager() {
         >
           💳 6. Payment Gateway (Razorpay)
         </button>
+
+        <button
+          type="button"
+          className={`config-tab-btn ${activeMenuTab === "ai" ? "active" : ""}`}
+          onClick={() => setActiveMenuTab("ai")}
+          style={activeMenuTab === "ai" ? { background: "#4338ca", color: "#fff" } : { borderLeft: "3px solid #6366f1" }}
+        >
+          🤖 7. AI Engine (Gemini)
+        </button>
       </div>
 
       {/* TAB 1: GENERAL BRANDING & PORTAL NAME */}
       {activeMenuTab === "general" && (
-        <div className="config-panel">
-          <div className="panel-section-title">
-            <h3>Global Branding & Portal Identity</h3>
-            <p>
-              Changing the portal name here updates the header logo, titles, footer, and branding across the entire website.
-            </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          {/* Card 1: Basic Portal Details */}
+          <div className="config-panel" style={{ padding: "24px", borderRadius: "10px" }}>
+            <div className="panel-section-title">
+              <h3>Global Branding & Portal Identity</h3>
+              <p>
+                Configure the core portal name, tagline, communication contacts, and advertising integration.
+              </p>
+            </div>
+
+            <div className="config-form-grid-2">
+              <div className="config-field">
+                <label>Portal Name (Website Name) *</label>
+                <input
+                  type="text"
+                  value={config.portalName}
+                  onChange={(e) => setConfig({ ...config, portalName: e.target.value })}
+                  placeholder="e.g. Sarkari Practice"
+                  required
+                />
+                <small>Displays on top header logo, favicon title, metadata, and emails.</small>
+              </div>
+
+              <div className="config-field">
+                <label>Portal Tagline</label>
+                <input
+                  type="text"
+                  value={config.portalTagline}
+                  onChange={(e) => setConfig({ ...config, portalTagline: e.target.value })}
+                  placeholder="e.g. India's Premier Examination & Mock Test Practice Platform"
+                />
+                <small>Hero subheader and SEO description metadata.</small>
+              </div>
+
+              <div className="config-field">
+                <label>Support Email Address</label>
+                <input
+                  type="email"
+                  value={config.contactEmail}
+                  onChange={(e) => setConfig({ ...config, contactEmail: e.target.value })}
+                  placeholder="support@sarkaripractice.com"
+                />
+              </div>
+
+              <div className="config-field">
+                <label>Support Phone / WhatsApp</label>
+                <input
+                  type="text"
+                  value={config.supportPhone}
+                  onChange={(e) => setConfig({ ...config, supportPhone: e.target.value })}
+                  placeholder="+91 98765 43210"
+                />
+              </div>
+
+              <div className="config-field" style={{ gridColumn: "1 / -1" }}>
+                <label>Google AdSense Client ID</label>
+                <input
+                  type="text"
+                  value={config.adsenseClientId || ""}
+                  onChange={(e) => setConfig({ ...config, adsenseClientId: e.target.value })}
+                  placeholder="ca-pub-XXXXXXXXXXXXXXXX"
+                />
+                <small>Your approved AdSense publisher ID to dynamically inject ad units.</small>
+              </div>
+            </div>
           </div>
 
-          <div className="config-form-grid-2">
-            <div className="config-field">
-              <label>Portal Name (Website Name) *</label>
-              <input
-                type="text"
-                value={config.portalName}
-                onChange={(e) => setConfig({ ...config, portalName: e.target.value })}
-                placeholder="e.g. India Mock Tests"
-                required
-              />
-              <small>Displays on top header logo, favicon title, metadata, and emails.</small>
+          {/* Card 2: DEDICATED FULL-WIDTH LOGO & PRECISION ALIGNMENT STUDIO */}
+          <div
+            className="config-panel"
+            style={{
+              padding: "26px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              borderRadius: "12px",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.03)",
+            }}
+          >
+            {/* Studio Header Bar */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "16px",
+                marginBottom: "20px",
+                paddingBottom: "16px",
+                borderBottom: "1px solid #e2e8f0",
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    margin: "0 0 4px",
+                    fontSize: "1.25rem",
+                    fontWeight: 700,
+                    color: "#0f172a",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                  }}
+                >
+                  <span>🎨</span> Site Logo &amp; Precision Alignment Studio
+                </h3>
+                <p style={{ margin: 0, fontSize: "0.86rem", color: "#64748b" }}>
+                  Upload from your computer or provide an image link. Adjust scale and alignment in real-time with side-by-side live navbar simulation.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                {config.logoImageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfig({ ...config, logoImageUrl: "" });
+                      handleSaveLogoSettings({ logoImageUrl: "" });
+                    }}
+                    style={{
+                      background: "#fee2e2",
+                      color: "#b91c1c",
+                      border: "1px solid #fecaca",
+                      padding: "8px 14px",
+                      borderRadius: "6px",
+                      fontSize: "0.82rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <span>🗑️</span> Remove Logo
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setConfig({ ...config, logoHeight: 48, logoOffsetX: 0, logoOffsetY: 0 })}
+                  style={{
+                    background: "#f1f5f9",
+                    color: "#475569",
+                    border: "1px solid #cbd5e1",
+                    padding: "8px 14px",
+                    borderRadius: "6px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  ↺ Reset Sliders
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSaveLogoSettings()}
+                  disabled={isSavingLogo}
+                  style={{
+                    background: isSavingLogo
+                      ? "#6366f1"
+                      : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    color: "#ffffff",
+                    border: "none",
+                    padding: "8px 20px",
+                    borderRadius: "6px",
+                    fontSize: "0.86rem",
+                    fontWeight: 700,
+                    cursor: isSavingLogo ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+                  }}
+                >
+                  <span>{isSavingLogo ? "⏳" : "💾"}</span>
+                  <span>{isSavingLogo ? "Saving Logo..." : "Save & Apply Logo Live"}</span>
+                </button>
+              </div>
             </div>
 
-            <div className="config-field">
-              <label>Portal Tagline</label>
-              <input
-                type="text"
-                value={config.portalTagline}
-                onChange={(e) => setConfig({ ...config, portalTagline: e.target.value })}
-                placeholder="e.g. India's Premier Examination & Mock Test Practice Platform"
-              />
-              <small>Hero subheader and SEO description metadata.</small>
-            </div>
+            {/* Notification alert banner */}
+            {logoSaveFeedback && (
+              <div
+                style={{
+                  marginBottom: "18px",
+                  padding: "12px 18px",
+                  borderRadius: "8px",
+                  fontSize: "0.88rem",
+                  fontWeight: 600,
+                  background: logoSaveFeedback.type === "success" ? "#f0fdf4" : "#fef2f2",
+                  color: logoSaveFeedback.type === "success" ? "#15803d" : "#991b1b",
+                  border: `1px solid ${logoSaveFeedback.type === "success" ? "#bbf7d0" : "#fecaca"}`,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <span>{logoSaveFeedback.type === "success" ? "✓" : "⚠️"}</span>
+                <span>{logoSaveFeedback.message}</span>
+              </div>
+            )}
 
-            <div className="config-field">
-              <label>Support Email Address</label>
-              <input
-                type="email"
-                value={config.contactEmail}
-                onChange={(e) => setConfig({ ...config, contactEmail: e.target.value })}
-                placeholder="support@indiamocktests.com"
-              />
-            </div>
+            {logoUploadError && (
+              <div
+                style={{
+                  marginBottom: "18px",
+                  padding: "10px 16px",
+                  borderRadius: "8px",
+                  background: "#fef2f2",
+                  color: "#991b1b",
+                  border: "1px solid #fecaca",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                }}
+              >
+                ⚠️ {logoUploadError}
+              </div>
+            )}
 
-            <div className="config-field">
-              <label>Support Phone / WhatsApp</label>
-              <input
-                type="text"
-                value={config.supportPhone}
-                onChange={(e) => setConfig({ ...config, supportPhone: e.target.value })}
-                placeholder="+91 98765 43210"
-              />
-            </div>
+            {logoUploadSuccess && (
+              <div
+                style={{
+                  marginBottom: "18px",
+                  padding: "10px 16px",
+                  borderRadius: "8px",
+                  background: "#f0fdf4",
+                  color: "#166534",
+                  border: "1px solid #bbf7d0",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                }}
+              >
+                ✓ {logoUploadSuccess}
+              </div>
+            )}
 
-            <div className="config-field full-width">
-              <label>Google AdSense Client ID</label>
-              <input
-                type="text"
-                value={config.adsenseClientId || ""}
-                onChange={(e) => setConfig({ ...config, adsenseClientId: e.target.value })}
-                placeholder="ca-pub-XXXXXXXXXXXXXXXX"
-              />
-              <small>Your approved AdSense publisher ID to dynamically inject ad units.</small>
-            </div>
+            {/* SINGLE VIEW SPLIT LAYOUT (CONTROLS ON LEFT, MAXIMUM PREVIEW ON RIGHT) */}
+            <div className="logo-studio-single-view">
+              {/* LEFT COLUMN: SOURCE SELECTION & PRECISION SLIDERS */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "18px",
+                  background: "#f8fafc",
+                  padding: "20px",
+                  borderRadius: "10px",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                {/* 1. Source Selection Tabs */}
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      color: "#1e293b",
+                    }}
+                  >
+                    Logo Image Source:
+                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      background: "#e2e8f0",
+                      padding: "3px",
+                      borderRadius: "8px",
+                      gap: "4px",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setLogoSourceTab("upload")}
+                      style={{
+                        flex: 1,
+                        padding: "7px 12px",
+                        borderRadius: "6px",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        border: "none",
+                        cursor: "pointer",
+                        background: logoSourceTab === "upload" ? "#ffffff" : "transparent",
+                        color: logoSourceTab === "upload" ? "#4338ca" : "#64748b",
+                        boxShadow: logoSourceTab === "upload" ? "0 2px 4px rgba(0,0,0,0.06)" : "none",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      📁 Upload from Device
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogoSourceTab("url")}
+                      style={{
+                        flex: 1,
+                        padding: "7px 12px",
+                        borderRadius: "6px",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        border: "none",
+                        cursor: "pointer",
+                        background: logoSourceTab === "url" ? "#ffffff" : "transparent",
+                        color: logoSourceTab === "url" ? "#4338ca" : "#64748b",
+                        boxShadow: logoSourceTab === "url" ? "0 2px 4px rgba(0,0,0,0.06)" : "none",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      🔗 Image URL / Path
+                    </button>
+                  </div>
 
-            <div className="config-field full-width">
-              <label>Custom Header Logo Image URL (Optional)</label>
-              <input
-                type="text"
-                value={config.logoImageUrl || ""}
-                onChange={(e) => setConfig({ ...config, logoImageUrl: e.target.value })}
-                placeholder="https://.../logo.png"
-              />
-              <small>If empty, the clean typography logo with orange accent mark is shown.</small>
+                  {logoSourceTab === "upload" ? (
+                    <div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleLogoFileUpload}
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+                        style={{ display: "none" }}
+                      />
+                      <div
+                        onClick={() => !isUploadingLogo && fileInputRef.current?.click()}
+                        style={{
+                          border: "2px dashed #cbd5e1",
+                          borderRadius: "8px",
+                          padding: "18px 20px",
+                          textAlign: "center",
+                          cursor: isUploadingLogo ? "not-allowed" : "pointer",
+                          background: isUploadingLogo ? "#f1f5f9" : "#ffffff",
+                          transition: "all 0.2s ease",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          minHeight: "96px",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isUploadingLogo) e.currentTarget.style.borderColor = "#4338ca";
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isUploadingLogo) e.currentTarget.style.borderColor = "#cbd5e1";
+                        }}
+                      >
+                        {isUploadingLogo ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              color: "#4338ca",
+                              fontWeight: 600,
+                              fontSize: "0.88rem",
+                            }}
+                          >
+                            <span>⏳</span>
+                            <span>Uploading logo to server &amp; publishing...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: "1.6rem", marginBottom: "4px" }}>📁</div>
+                            <div
+                              style={{
+                                fontWeight: 700,
+                                fontSize: "0.9rem",
+                                color: "#1e293b",
+                              }}
+                            >
+                              Choose Logo from Computer
+                            </div>
+                            <div style={{ fontSize: "0.76rem", color: "#64748b", marginTop: "2px" }}>
+                              PNG, JPG, SVG, WebP (Max 10MB) · Auto-saved on upload
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <input
+                        type="text"
+                        value={config.logoImageUrl || ""}
+                        onChange={(e) => setConfig({ ...config, logoImageUrl: e.target.value })}
+                        placeholder="https://example.com/logo.png or /uploads/logo/..."
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: "6px",
+                          border: "1px solid #cbd5e1",
+                          fontSize: "0.88rem",
+                          background: "#ffffff",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                      <small
+                        style={{
+                          color: "#64748b",
+                          fontSize: "0.76rem",
+                          display: "block",
+                          marginTop: "4px",
+                        }}
+                      >
+                        Direct image path or external URL. Click &ldquo;Save &amp; Apply Logo Live&rdquo; to publish.
+                      </small>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Precision Alignment Sliders Box */}
+                <div
+                  style={{
+                    paddingTop: "16px",
+                    borderTop: "1px solid #e2e8f0",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b" }}>
+                      🎛️ Precision Sliders
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, logoHeight: 48, logoOffsetX: 0, logoOffsetY: 0 })}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#4338ca",
+                        fontSize: "0.78rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ↺ Reset Dimensions
+                    </button>
+                  </div>
+
+                  {/* Slider 1: Logo Size (Height) */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      padding: "12px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      <label
+                        style={{
+                          fontWeight: 700,
+                          fontSize: "0.82rem",
+                          color: "#1e293b",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        <span>📐</span> Logo Size (Height)
+                      </label>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span
+                          style={{
+                            background: "#4338ca",
+                            color: "#fff",
+                            padding: "2px 8px",
+                            borderRadius: "12px",
+                            fontSize: "0.76rem",
+                            fontWeight: 800,
+                          }}
+                        >
+                          {config.logoHeight ?? 48} px
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setConfig({ ...config, logoHeight: 48 })}
+                          title="Reset to 48px"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#94a3b8",
+                            cursor: "pointer",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          ↺
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min={20}
+                      max={110}
+                      step={1}
+                      value={config.logoHeight ?? 48}
+                      onChange={(e) => setConfig({ ...config, logoHeight: Number(e.target.value) })}
+                      style={{ width: "100%", accentColor: "#4338ca", cursor: "pointer" }}
+                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "0.7rem",
+                        color: "#94a3b8",
+                        marginTop: "2px",
+                      }}
+                    >
+                      <span>Compact (20px)</span>
+                      <span>Default (48px)</span>
+                      <span>Large (110px)</span>
+                    </div>
+                    <small
+                      style={{
+                        display: "block",
+                        color: "#64748b",
+                        fontSize: "0.73rem",
+                        marginTop: "4px",
+                      }}
+                    >
+                      🔒 Aspect ratio is locked: Width adjusts automatically with zero distortion.
+                    </small>
+                  </div>
+
+                  {/* Slider 2: Vertical Position (Move Up / Down) */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      padding: "12px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      <label
+                        style={{
+                          fontWeight: 700,
+                          fontSize: "0.82rem",
+                          color: "#1e293b",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        <span>↕️</span> Vertical Position (Up / Down)
+                      </label>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span
+                          style={{
+                            background:
+                              (config.logoOffsetY ?? 0) === 0
+                                ? "#64748b"
+                                : (config.logoOffsetY ?? 0) < 0
+                                ? "#0284c7"
+                                : "#0d9488",
+                            color: "#fff",
+                            padding: "2px 8px",
+                            borderRadius: "12px",
+                            fontSize: "0.76rem",
+                            fontWeight: 800,
+                          }}
+                        >
+                          {(config.logoOffsetY ?? 0) === 0
+                            ? "0 px (Center)"
+                            : (config.logoOffsetY ?? 0) < 0
+                            ? `${Math.abs(config.logoOffsetY ?? 0)}px Up ↑`
+                            : `${config.logoOffsetY}px Down ↓`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setConfig({ ...config, logoOffsetY: 0 })}
+                          title="Reset to 0px"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#94a3b8",
+                            cursor: "pointer",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          ↺
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min={-40}
+                      max={40}
+                      step={1}
+                      value={config.logoOffsetY ?? 0}
+                      onChange={(e) => setConfig({ ...config, logoOffsetY: Number(e.target.value) })}
+                      style={{ width: "100%", accentColor: "#0284c7", cursor: "pointer" }}
+                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "0.7rem",
+                        color: "#94a3b8",
+                        marginTop: "2px",
+                      }}
+                    >
+                      <span>-40px (Up ↑)</span>
+                      <span>0px (Centered)</span>
+                      <span>+40px (Down ↓)</span>
+                    </div>
+                  </div>
+
+                  {/* Slider 3: Horizontal Position (Move Left / Right) */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      padding: "12px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      <label
+                        style={{
+                          fontWeight: 700,
+                          fontSize: "0.82rem",
+                          color: "#1e293b",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        <span>↔️</span> Horizontal Position (Left / Right)
+                      </label>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span
+                          style={{
+                            background:
+                              (config.logoOffsetX ?? 0) === 0
+                                ? "#64748b"
+                                : (config.logoOffsetX ?? 0) < 0
+                                ? "#e11d48"
+                                : "#d97706",
+                            color: "#fff",
+                            padding: "2px 8px",
+                            borderRadius: "12px",
+                            fontSize: "0.76rem",
+                            fontWeight: 800,
+                          }}
+                        >
+                          {(config.logoOffsetX ?? 0) === 0
+                            ? "0 px (Center)"
+                            : (config.logoOffsetX ?? 0) < 0
+                            ? `${Math.abs(config.logoOffsetX ?? 0)}px Left ←`
+                            : `${config.logoOffsetX}px Right →`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setConfig({ ...config, logoOffsetX: 0 })}
+                          title="Reset to 0px"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#94a3b8",
+                            cursor: "pointer",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          ↺
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min={-60}
+                      max={60}
+                      step={1}
+                      value={config.logoOffsetX ?? 0}
+                      onChange={(e) => setConfig({ ...config, logoOffsetX: Number(e.target.value) })}
+                      style={{ width: "100%", accentColor: "#d97706", cursor: "pointer" }}
+                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "0.7rem",
+                        color: "#94a3b8",
+                        marginTop: "2px",
+                      }}
+                    >
+                      <span>-60px (Left ←)</span>
+                      <span>0px (Normal)</span>
+                      <span>+60px (Right →)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Left Column Bottom Action Button */}
+                <button
+                  type="button"
+                  onClick={() => handleSaveLogoSettings()}
+                  disabled={isSavingLogo}
+                  style={{
+                    marginTop: "6px",
+                    width: "100%",
+                    background: isSavingLogo
+                      ? "#6366f1"
+                      : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    color: "#ffffff",
+                    border: "none",
+                    padding: "12px 18px",
+                    borderRadius: "8px",
+                    fontSize: "0.92rem",
+                    fontWeight: 700,
+                    cursor: isSavingLogo ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    boxShadow: "0 2px 10px rgba(16, 185, 129, 0.3)",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span>{isSavingLogo ? "⏳" : "💾"}</span>
+                  <span>{isSavingLogo ? "Saving Logo..." : "Save & Apply Logo Live"}</span>
+                </button>
+              </div>
+
+              {/* RIGHT COLUMN: MAXIMUM PREVIEW (REAL-TIME LIVE NAVBAR SIMULATION) */}
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "10px",
+                  padding: "18px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
+                }}
+              >
+                {/* Preview Toolbar */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "10px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontSize: "1.1rem" }}>👁️</span>
+                    <strong style={{ fontSize: "0.92rem", color: "#0f172a" }}>
+                      Live Navbar Header Preview
+                    </strong>
+                    <span
+                      style={{
+                        fontSize: "0.7rem",
+                        background: "#dcfce7",
+                        color: "#15803d",
+                        padding: "2px 7px",
+                        borderRadius: "999px",
+                        fontWeight: 800,
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      ● LIVE
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontSize: "0.76rem",
+                        color: "#475569",
+                        cursor: "pointer",
+                        marginRight: "6px",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={showGuides}
+                        onChange={(e) => setShowGuides(e.target.checked)}
+                      />
+                      <span>Crosshairs</span>
+                    </label>
+
+                    {/* Desktop / Mobile toggle */}
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        background: "#e2e8f0",
+                        padding: "2px",
+                        borderRadius: "6px",
+                        gap: "2px",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setPreviewDevice("desktop")}
+                        style={{
+                          padding: "3px 8px",
+                          borderRadius: "4px",
+                          fontSize: "0.74rem",
+                          fontWeight: 700,
+                          border: "none",
+                          cursor: "pointer",
+                          background: previewDevice === "desktop" ? "#ffffff" : "transparent",
+                          color: previewDevice === "desktop" ? "#0f172a" : "#64748b",
+                        }}
+                      >
+                        🖥️ Desktop
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewDevice("mobile")}
+                        style={{
+                          padding: "3px 8px",
+                          borderRadius: "4px",
+                          fontSize: "0.74rem",
+                          fontWeight: 700,
+                          border: "none",
+                          cursor: "pointer",
+                          background: previewDevice === "mobile" ? "#ffffff" : "transparent",
+                          color: previewDevice === "mobile" ? "#0f172a" : "#64748b",
+                        }}
+                      >
+                        📱 Mobile
+                      </button>
+                    </div>
+
+                    {/* Light / Dark Header toggle */}
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        background: "#e2e8f0",
+                        padding: "2px",
+                        borderRadius: "6px",
+                        gap: "2px",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTheme("light")}
+                        style={{
+                          padding: "3px 8px",
+                          borderRadius: "4px",
+                          fontSize: "0.74rem",
+                          fontWeight: 700,
+                          border: "none",
+                          cursor: "pointer",
+                          background: previewTheme === "light" ? "#ffffff" : "transparent",
+                          color: previewTheme === "light" ? "#0f172a" : "#64748b",
+                        }}
+                      >
+                        ☀️ Light
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTheme("dark")}
+                        style={{
+                          padding: "3px 8px",
+                          borderRadius: "4px",
+                          fontSize: "0.74rem",
+                          fontWeight: 700,
+                          border: "none",
+                          cursor: "pointer",
+                          background: previewTheme === "dark" ? "#0f172a" : "transparent",
+                          color: previewTheme === "dark" ? "#ffffff" : "#64748b",
+                        }}
+                      >
+                        🌙 Dark
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Simulated Browser Frame */}
+                <div
+                  style={{
+                    background: previewTheme === "light" ? "#ffffff" : "#020617",
+                    borderRadius: "10px",
+                    border: previewTheme === "light" ? "1px solid #cbd5e1" : "1px solid #1e293b",
+                    overflow: "hidden",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+                  }}
+                >
+                  {/* Browser Window Titlebar */}
+                  <div
+                    style={{
+                      height: "32px",
+                      background: previewTheme === "light" ? "#f1f5f9" : "#0f172a",
+                      borderBottom:
+                        previewTheme === "light" ? "1px solid #e2e8f0" : "1px solid #1e293b",
+                      display: "flex",
+                      alignItems: "center",
+                      padding: "0 12px",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: "5px" }}>
+                      <span
+                        style={{
+                          width: "9px",
+                          height: "9px",
+                          borderRadius: "50%",
+                          background: "#ef4444",
+                          display: "inline-block",
+                        }}
+                      />
+                      <span
+                        style={{
+                          width: "9px",
+                          height: "9px",
+                          borderRadius: "50%",
+                          background: "#f59e0b",
+                          display: "inline-block",
+                        }}
+                      />
+                      <span
+                        style={{
+                          width: "9px",
+                          height: "9px",
+                          borderRadius: "50%",
+                          background: "#10b981",
+                          display: "inline-block",
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        margin: "0 auto",
+                        background: previewTheme === "light" ? "#ffffff" : "#1e293b",
+                        padding: "2px 14px",
+                        borderRadius: "12px",
+                        fontSize: "0.7rem",
+                        color: previewTheme === "light" ? "#64748b" : "#94a3b8",
+                        border: previewTheme === "light" ? "1px solid #e2e8f0" : "1px solid #334155",
+                      }}
+                    >
+                      🔒 https://{config.portalName.toLowerCase().replace(/[^a-z0-9]/g, "") || "sarkaripractice"}.com
+                    </div>
+                  </div>
+
+                  {/* Header Navbar Simulation Area */}
+                  {previewDevice === "desktop" ? (
+                    <div
+                      style={{
+                        minHeight: "78px",
+                        background: previewTheme === "light" ? "#f7f8f4" : "#0f172a",
+                        borderBottom:
+                          previewTheme === "light" ? "1px solid #dfe5e1" : "1px solid #1e293b",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "0 22px",
+                        position: "relative",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {/* Left: Logo Slot */}
+                      <div
+                        style={{
+                          position: "relative",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          zIndex: 2,
+                        }}
+                      >
+                        {showGuides && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "-30px",
+                              right: "-30px",
+                              top: "50%",
+                              borderTop: "1px dashed rgba(239, 68, 68, 0.45)",
+                              pointerEvents: "none",
+                              zIndex: 1,
+                            }}
+                          />
+                        )}
+                        {config.logoImageUrl ? (
+                          <img
+                            src={config.logoImageUrl}
+                            alt={config.portalName}
+                            style={{
+                              height: `${config.logoHeight ?? 48}px`,
+                              maxHeight: `${config.logoHeight ?? 48}px`,
+                              maxWidth: "340px",
+                              width: "auto",
+                              objectFit: "contain",
+                              display: "block",
+                              position: "relative",
+                              top: `${config.logoOffsetY ?? 0}px`,
+                              left: `${config.logoOffsetX ?? 0}px`,
+                              transition: "none",
+                              zIndex: 2,
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              fontFamily: "'Space Grotesk', sans-serif",
+                              fontWeight: 700,
+                              fontSize: "18px",
+                              color: previewTheme === "light" ? "#213033" : "#f8fafc",
+                              position: "relative",
+                              top: `${config.logoOffsetY ?? 0}px`,
+                              left: `${config.logoOffsetX ?? 0}px`,
+                              zIndex: 2,
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "7px",
+                                background: previewTheme === "light" ? "#213033" : "#3b82f6",
+                                color: "#fff",
+                                display: "grid",
+                                placeItems: "center",
+                                fontSize: "15px",
+                              }}
+                            >
+                              {config.portalName.slice(0, 1).toUpperCase()}
+                            </span>
+                            <span>
+                              {config.portalName}
+                              <span style={{ color: "#df795f" }}>.</span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Middle: Simulated Nav Links */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "16px",
+                          fontSize: "0.8rem",
+                          fontWeight: 600,
+                          color: previewTheme === "light" ? "#4a5f58" : "#94a3b8",
+                        }}
+                      >
+                        <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          Mock Tests <small>▾</small>
+                        </span>
+                        <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          Tutorials <small>▾</small>
+                        </span>
+                        <span>PYQ Papers</span>
+                        <span>Plans &amp; Pricing</span>
+                      </div>
+
+                      {/* Right: Simulated Actions */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <span
+                          style={{
+                            fontSize: "0.78rem",
+                            fontWeight: 600,
+                            color: previewTheme === "light" ? "#63706e" : "#cbd5e1",
+                          }}
+                        >
+                          Log in
+                        </span>
+                        <span
+                          style={{
+                            background: previewTheme === "light" ? "#213033" : "#3b82f6",
+                            color: "#fff",
+                            padding: "7px 12px",
+                            borderRadius: "5px",
+                            fontSize: "0.76rem",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Start Free →
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Mobile Header Simulation */
+                    <div
+                      style={{
+                        minHeight: "64px",
+                        maxWidth: "380px",
+                        margin: "0 auto",
+                        background: previewTheme === "light" ? "#f7f8f4" : "#0f172a",
+                        borderLeft:
+                          previewTheme === "light" ? "1px solid #dfe5e1" : "1px solid #1e293b",
+                        borderRight:
+                          previewTheme === "light" ? "1px solid #dfe5e1" : "1px solid #1e293b",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "0 16px",
+                        position: "relative",
+                      }}
+                    >
+                      <span style={{ fontSize: "1.2rem", cursor: "pointer" }}>☰</span>
+                      <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                        {config.logoImageUrl ? (
+                          <img
+                            src={config.logoImageUrl}
+                            alt={config.portalName}
+                            style={{
+                              height: `${Math.min(config.logoHeight ?? 38, 44)}px`,
+                              maxHeight: "44px",
+                              maxWidth: "180px",
+                              width: "auto",
+                              objectFit: "contain",
+                              display: "block",
+                              position: "relative",
+                              top: `${config.logoOffsetY ?? 0}px`,
+                              left: `${config.logoOffsetX ?? 0}px`,
+                            }}
+                          />
+                        ) : (
+                          <span style={{ fontWeight: 800, fontSize: "0.95rem" }}>
+                            {config.portalName}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: "1rem" }}>🔍</span>
+                    </div>
+                  )}
+
+                  {/* Simulated Content Body Mockup */}
+                  <div
+                    style={{
+                      padding: "20px",
+                      background: previewTheme === "light" ? "#ffffff" : "#0f172a",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "12px",
+                        width: "35%",
+                        background: previewTheme === "light" ? "#e2e8f0" : "#1e293b",
+                        borderRadius: "4px",
+                      }}
+                    />
+                    <div
+                      style={{
+                        height: "8px",
+                        width: "60%",
+                        background: previewTheme === "light" ? "#f1f5f9" : "#1e293b",
+                        borderRadius: "4px",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Specs and Metrics Footer */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                    paddingTop: "4px",
+                    fontSize: "0.76rem",
+                  }}
+                >
+                  <span
+                    style={{
+                      background: "#e0e7ff",
+                      color: "#3730a3",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    📏 Height: {config.logoHeight ?? 48}px
+                  </span>
+                  <span
+                    style={{
+                      background: "#e0f2fe",
+                      color: "#0369a1",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    ↕️ Y-Offset:{" "}
+                    {(config.logoOffsetY ?? 0) === 0
+                      ? "0px (Center)"
+                      : (config.logoOffsetY ?? 0) > 0
+                      ? `+${config.logoOffsetY}px Down ↓`
+                      : `${config.logoOffsetY}px Up ↑`}
+                  </span>
+                  <span
+                    style={{
+                      background: "#fef3c7",
+                      color: "#92400e",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    ↔️ X-Offset:{" "}
+                    {(config.logoOffsetX ?? 0) === 0
+                      ? "0px (Center)"
+                      : (config.logoOffsetX ?? 0) > 0
+                      ? `+${config.logoOffsetX}px Right →`
+                      : `${config.logoOffsetX}px Left ←`}
+                  </span>
+                  <span
+                    style={{
+                      background: "#dcfce7",
+                      color: "#15803d",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    ✓ Aspect Ratio: Preserved
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "0.73rem",
+                    color: "#64748b",
+                    wordBreak: "break-all",
+                    background: "#ffffff",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <strong>Active Logo Path:</strong>{" "}
+                  <code>{config.logoImageUrl || "(Default Clean Typography Logo with Orange Mark)"}</code>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1185,7 +2524,7 @@ export default function MenuAndSiteConfigManager() {
                 placeholder="Enter webhook secret if you configured webhooks..."
               />
               <small>
-                Webhook endpoint to configure in Razorpay: <code>https://mock.makemyschool.com/api/razorpay/webhook</code> (Events: <code>payment.captured</code>, <code>order.paid</code>)
+                Webhook endpoint to configure in Razorpay: <code>https://sarkaripractice.com/api/razorpay/webhook</code> (Events: <code>payment.captured</code>, <code>order.paid</code>)
               </small>
             </div>
           </div>
@@ -1195,6 +2534,143 @@ export default function MenuAndSiteConfigManager() {
             <p>
               Your Razorpay integration automatically activates <strong>UPI (GPay, PhonePe, Paytm, BHIM)</strong>, <strong>Debit / Credit Cards (RuPay, Visa, Mastercard)</strong>, <strong>Net Banking (50+ Indian banks)</strong>, and <strong>Wallets</strong>. This configuration is stored centrally in the database and applied dynamically across all portal subdomains.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 7: AI ENGINE & GEMINI API CONFIGURATION */}
+      {activeMenuTab === "ai" && (
+        <div className="config-panel">
+          <div className="panel-section-title">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <h3>🤖 Artificial Intelligence & Generative Engine</h3>
+                <p>
+                  Configure your Google Gemini API key to activate real-time bilingual student doubt resolution and 1-click bulk mock question generation.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: "14px",
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    background: config.aiEnabled ? "#dcfce7" : "#fee2e2",
+                    color: config.aiEnabled ? "#15803d" : "#b91c1c",
+                  }}
+                >
+                  {config.aiEnabled ? "● AI ENGINE ACTIVE" : "○ AI DISABLED"}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={handleTestAiConnection}
+                  disabled={isTestingAi}
+                  style={{
+                    background: "#4338ca",
+                    color: "#fff",
+                    border: "none",
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    fontWeight: 600,
+                    fontSize: "0.84rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  {isTestingAi ? "Testing..." : "⚡ Test Connection"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {aiTestResult && (
+            <div
+              style={{
+                marginBottom: "20px",
+                padding: "12px 16px",
+                borderRadius: "8px",
+                fontSize: "0.88rem",
+                fontWeight: 600,
+                background: aiTestResult.success ? "#f0fdf4" : "#fef2f2",
+                color: aiTestResult.success ? "#166534" : "#991b1b",
+                border: `1px solid ${aiTestResult.success ? "#bbf7d0" : "#fecaca"}`,
+              }}
+            >
+              {aiTestResult.message}
+            </div>
+          )}
+
+          <div className="config-form-grid-2">
+            <div className="config-field full-width">
+              <label>Master AI Toggle</label>
+              <div style={{ display: "flex", gap: "16px", alignItems: "center", marginTop: "6px" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontWeight: 600 }}>
+                  <input
+                    type="radio"
+                    name="aiEnabled"
+                    checked={config.aiEnabled !== false}
+                    onChange={() => setConfig({ ...config, aiEnabled: true })}
+                  />
+                  <span>Enable AI Everywhere (Student Doubt Solver + Admin Generator)</span>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontWeight: 600, color: "#64748b" }}>
+                  <input
+                    type="radio"
+                    name="aiEnabled"
+                    checked={config.aiEnabled === false}
+                    onChange={() => setConfig({ ...config, aiEnabled: false })}
+                  />
+                  <span>Disable AI Features</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="config-field full-width">
+              <label>Google Gemini API Key</label>
+              <input
+                type="password"
+                value={config.geminiApiKey || ""}
+                onChange={(e) => setConfig({ ...config, geminiApiKey: e.target.value.trim() })}
+                placeholder="AIzaSy..."
+              />
+              <small style={{ display: "block", marginTop: "4px" }}>
+                Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: "#4338ca", fontWeight: 600 }}>Google AI Studio</a>. If left blank, the platform automatically utilizes its high-yield simulation fallback engine with zero downtime.
+              </small>
+            </div>
+
+            <div className="config-field">
+              <label>AI Model</label>
+              <select
+                value={config.aiModel || "gemini-2.5-flash"}
+                onChange={(e) => setConfig({ ...config, aiModel: e.target.value })}
+              >
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended: Ultra-fast, official 2026 commission model)</option>
+                <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deep pedagogical reasoning for high-difficulty UPSC/PSC)</option>
+                <option value="gemini-flash-latest">Gemini Flash Latest (Auto-updating production build)</option>
+                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (Low latency, high throughput)</option>
+              </select>
+              <small>Optimized for bilingual Hindi &amp; English question papers with automatic fallback.</small>
+            </div>
+          </div>
+
+          <div style={{ marginTop: "24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "18px" }}>
+              <div style={{ fontSize: "1.2rem", marginBottom: "8px" }}>💡</div>
+              <h4 style={{ margin: "0 0 6px", fontSize: "0.95rem" }}>Student AI Doubt Tutor</h4>
+              <p style={{ margin: 0, fontSize: "0.82rem", color: "#64748b", lineHeight: 1.5 }}>
+                Active on every student result scorecard (<code>/results/[id]</code>). Allows aspirants to ask why options are wrong and receive bilingual memory tricks.
+              </p>
+            </div>
+
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "18px" }}>
+              <div style={{ fontSize: "1.2rem", marginBottom: "8px" }}>⚡</div>
+              <h4 style={{ margin: "0 0 6px", fontSize: "0.95rem" }}>Admin Bulk Question Generator</h4>
+              <p style={{ margin: 0, fontSize: "0.82rem", color: "#64748b", lineHeight: 1.5 }}>
+                Active inside <strong>Mock Test Manager</strong>. Admin can enter syllabus topics to generate 5-option BPSC pattern MCQs and import them directly to tests.
+              </p>
+            </div>
           </div>
         </div>
       )}

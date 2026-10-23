@@ -53,6 +53,9 @@ export type SiteConfiguration = {
   portalTagline: string;
   logoImageUrl?: string;
   logoText?: string;
+  logoHeight?: number;
+  logoOffsetX?: number;
+  logoOffsetY?: number;
   contactEmail: string;
   supportPhone: string;
   adsenseClientId: string;
@@ -65,6 +68,9 @@ export type SiteConfiguration = {
   razorpayTestKeySecret?: string;
   razorpayLiveKeyId?: string;
   razorpayLiveKeySecret?: string;
+  geminiApiKey?: string;
+  aiModel?: string; // e.g. "gemini-1.5-flash"
+  aiEnabled?: boolean;
   mockTestMenu: SubMenuLayer2[];
   tutorialMenu: SubMenuLayer2[];
   testimonials: TestimonialItem[];
@@ -207,7 +213,7 @@ export const defaultTestimonials: TestimonialItem[] = [
     role: "Parent of STET Paper 1 Aspirant (Kavita)",
     type: "parent",
     rating: 5,
-    content: "India Mock Tests provided the most affordable and structured test series. The daily practice tracker and instant solution keys helped my daughter crack Bihar STET in her very first attempt.",
+    content: "Sarkari Practice provided the most affordable and structured test series. The daily practice tracker and instant solution keys helped my daughter crack Bihar STET in her very first attempt.",
     examBadge: "Parent Review",
     verified: true,
     date: "June 2026",
@@ -237,11 +243,14 @@ export const defaultTestimonials: TestimonialItem[] = [
 ];
 
 export const defaultSiteConfig: SiteConfiguration = {
-  portalName: "India Mock Tests",
+  portalName: "Sarkari Practice",
   portalTagline: "India's Premier Examination & Mock Test Practice Platform",
   logoImageUrl: "",
-  logoText: "India Mock Tests",
-  contactEmail: "support@indiamocktests.com",
+  logoText: "Sarkari Practice",
+  logoHeight: 48,
+  logoOffsetX: 0,
+  logoOffsetY: 0,
+  contactEmail: "support@sarkaripractice.com",
   supportPhone: "+91 98765 43210",
   adsenseClientId: "",
   razorpayEnabled: true,
@@ -250,6 +259,9 @@ export const defaultSiteConfig: SiteConfiguration = {
   razorpayTestKeySecret: "",
   razorpayLiveKeyId: "",
   razorpayLiveKeySecret: "",
+  geminiApiKey: "",
+  aiModel: "gemini-2.5-flash",
+  aiEnabled: true,
   mockTestMenu: defaultMockTestMenu,
   tutorialMenu: defaultTutorialMenu,
   testimonials: defaultTestimonials,

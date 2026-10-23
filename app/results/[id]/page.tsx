@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAttemptResult } from "../../../lib/attempt-store";
+import ResultsReviewClient from "./ResultsReviewClient";
 
 export default async function ResultPage({
   params,
@@ -20,9 +21,9 @@ export default async function ResultPage({
     <main className="results-page">
       <nav className="detail-nav">
         <Link className="logo" href="/">
-          <span className="logo-mark">I</span>
+          <span className="logo-mark">S</span>
           <span>
-            India Mock Tests<span className="logo-dot">.</span>
+            Sarkari Practice<span className="logo-dot">.</span>
           </span>
         </Link>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
@@ -40,8 +41,7 @@ export default async function ResultPage({
           <span className="kicker">PRACTICE RESULT · {attempt.exam.toUpperCase()}</span>
           <h1>{attempt.title}</h1>
           <p>
-            One attempt gives you a clearer next step. Review the signal, then
-            return to the topic that needs you most.
+            One attempt gives you a clearer next step. Review your score, clear doubts with the AI tutor, and share your rank with peers.
           </p>
         </div>
         <div className="result-score-large">
@@ -76,90 +76,21 @@ export default async function ResultPage({
           </div>
         </div>
 
-        <div className="results-columns">
-          <section className="answer-review">
-            <div className="results-heading">
-              <div>
-                <span className="kicker">QUESTION REVIEW</span>
-                <h2>Understand every answer.</h2>
-              </div>
-              <Link href={`/attempt/${attempt.testSlug}`}>Retake test →</Link>
-            </div>
-
-            {attempt.questions.map((question, idx) => {
-              const selectedRaw =
-                attempt.answers[question.id] !== undefined
-                  ? attempt.answers[question.id]
-                  : (attempt.answers as any)[String(question.id)];
-
-              const hasAnswered =
-                selectedRaw !== undefined && selectedRaw !== null && selectedRaw !== "";
-              const selectedIndex = hasAnswered ? Number(selectedRaw) : undefined;
-              const isCorrect =
-                hasAnswered && selectedIndex === Number(question.correctIndex);
-
-              const selectedText =
-                selectedIndex !== undefined && question.options[selectedIndex]
-                  ? question.options[selectedIndex]
-                  : undefined;
-
-              const correctText = question.options[question.correctIndex] ?? "—";
-
-              return (
-                <article
-                  className={`review-row ${
-                    !hasAnswered
-                      ? "unanswered-row"
-                      : isCorrect
-                      ? "correct-row"
-                      : "incorrect-row"
-                  }`}
-                  key={question.id || idx}
-                >
-                  <span className="review-status">
-                    {!hasAnswered ? "—" : isCorrect ? "✓" : "×"}
-                  </span>
-                  <div>
-                    <small>
-                      {question.section} · Question {idx + 1}
-                    </small>
-                    <h3>{question.prompt}</h3>
-                    <p>
-                      {!hasAnswered ? (
-                        <span style={{ color: "#778782" }}>Not answered</span>
-                      ) : (
-                        <span>
-                          Your answer:{" "}
-                          <strong
-                            style={{
-                              color: isCorrect ? "#19693b" : "#c03a1b",
-                            }}
-                          >
-                            {selectedText}
-                          </strong>
-                        </span>
-                      )}{" "}
-                      <span>·</span> Correct: <strong>{correctText}</strong>
-                    </p>
-                    <em>{question.explanation}</em>
-                  </div>
-                </article>
-              );
-            })}
-          </section>
-
-          <aside className="next-step-card">
-            <span className="kicker">RECOMMENDED NEXT STEP</span>
-            <h2>Return to the questions you missed.</h2>
-            <p>
-              Focused repetition is where this result becomes progress. Start with
-              focused practice in your dashboard.
-            </p>
-            <Link className="dark-button" href="/dashboard#tests">
-              Find focused practice <span>→</span>
-            </Link>
-          </aside>
-        </div>
+        {/* Interactive Client Section: WhatsApp Viral Share + Question Review with AI Doubt Solver */}
+        <ResultsReviewClient
+          testId={attempt.id}
+          testTitle={attempt.title}
+          examName={attempt.exam}
+          testSlug={attempt.testSlug}
+          score={result.score}
+          maxScore={result.maxScore}
+          accuracy={accuracy}
+          correctCount={result.correct}
+          incorrectCount={result.incorrect}
+          unansweredCount={result.unanswered}
+          questions={attempt.questions}
+          answers={attempt.answers}
+        />
       </section>
     </main>
   );

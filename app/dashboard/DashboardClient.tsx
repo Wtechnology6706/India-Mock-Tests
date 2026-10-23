@@ -9,8 +9,11 @@ import type { OrderRecord } from "../../lib/commerce-store";
 import type { MockTest } from "../../lib/admin-content";
 import { mockTests } from "../../lib/syllabus";
 import { featuredExams } from "../../lib/catalog";
+import InvoiceModal from "../components/InvoiceModal";
+import WalletModal from "../components/WalletModal";
+import { evaluateTestAccess, defaultExamGroups, type ExamGroup } from "../../lib/exam-group-types";
 
-type TabKey = "overview" | "tests" | "exams" | "progress" | "membership" | "settings";
+type TabKey = "overview" | "tests" | "exams" | "progress" | "membership" | "settings" | "wallet";
 
 type DashboardClientProps = {
   user: AuthUser;
@@ -27,16 +30,71 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<OrderRecord | null>(null);
   const [logoImageUrl, setLogoImageUrl] = useState("");
-  const [portalName, setPortalName] = useState("India Mock Tests");
+  const [logoHeight, setLogoHeight] = useState<number>(38);
+  const [logoOffsetX, setLogoOffsetX] = useState<number>(0);
+  const [logoOffsetY, setLogoOffsetY] = useState<number>(0);
+  const [portalName, setPortalName] = useState("Sarkari Practice");
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Wallet state
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletFilter, setWalletFilter] = useState<"all" | "credit" | "debit">("all");
+  const [accessFilter, setAccessFilter] = useState<"all" | "purchased" | "unpurchased" | "free">("all");
+  const [topupAmount, setTopupAmount] = useState<number>(499);
+  const [topupLoading, setTopupLoading] = useState(false);
+  const [topupMsg, setTopupMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  const loadWallet = async () => {
+    setWalletLoading(true);
+    try {
+      const res = await fetch("/api/wallet");
+      const data = await res.json();
+      if (data?.success) {
+        if (data.wallet) setWalletBalance(data.wallet.balance);
+        if (Array.isArray(data.transactions)) setWalletTransactions(data.transactions);
+      }
+    } catch (err) {
+      console.error("Failed to load wallet data:", err);
+    } finally {
+      setWalletLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch("/api/admin/config")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.config?.logoImageUrl) setLogoImageUrl(data.config.logoImageUrl);
-        if (data?.config?.portalName) setPortalName(data.config.portalName);
-      })
-      .catch(() => {});
+    loadWallet();
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const fetchFreshConfig = () => {
+      fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.config) {
+            if (data.config.logoImageUrl !== undefined) setLogoImageUrl(data.config.logoImageUrl || "");
+            if (data.config.portalName) setPortalName(data.config.portalName);
+            if (data.config.logoHeight !== undefined) setLogoHeight(Number(data.config.logoHeight) || 38);
+            if (data.config.logoOffsetX !== undefined) setLogoOffsetX(Number(data.config.logoOffsetX) || 0);
+            if (data.config.logoOffsetY !== undefined) setLogoOffsetY(Number(data.config.logoOffsetY) || 0);
+          }
+        })
+        .catch(() => { });
+    };
+
+    fetchFreshConfig();
+
+    const handleBroadcast = () => fetchFreshConfig();
+    window.addEventListener("site_config_updated", handleBroadcast);
+    window.addEventListener("storage", (e) => {
+      if (e.key === "site_config_updated_at") fetchFreshConfig();
+    });
+
+    return () => {
+      window.removeEventListener("site_config_updated", handleBroadcast);
+    };
   }, []);
 
   // Settings state
@@ -64,7 +122,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.replace("#", "") as TabKey;
-      if (["overview", "tests", "exams", "progress", "membership", "settings"].includes(hash)) {
+      if (["overview", "tests", "exams", "progress", "membership", "settings", "wallet"].includes(hash)) {
         setActiveTab(hash);
       }
     };
@@ -88,39 +146,108 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
     }
   }
 
-  // Subscription & Exam access checker
-  function checkTestAccess(test: { access?: string; exam?: string; examSlug?: string; slug?: string }) {
-    const isFree = test.access === "Free" || test.access === "free";
-    if (isFree) return { hasAccess: true, isFree: true };
-
-    if (user.role === "admin" || user.role === "editor") {
-      return { hasAccess: true, isFree: false };
-    }
-
-    const isSubActive = user.subscriptionStatus === "active" || (user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt).getTime() > Date.now());
-    if (!isSubActive) {
-      return { hasAccess: false, isFree: false };
-    }
-
-    if (user.subscriptionTier === "ultimate") {
-      return { hasAccess: true, isFree: false };
-    }
-
-    if (user.subscriptionTier === "sprint") {
-      const userSlug = (user.targetExamSlug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-      const testExamSlug = (test.examSlug || (test.exam || "").toLowerCase().replace(/[^a-z0-9]/g, "")).toLowerCase();
-      const userExamName = (user.targetExamName || "").toLowerCase();
-      const testExamName = (test.exam || "").toLowerCase();
-
-      const matchesSlug = (userSlug && testExamSlug) && (userSlug.includes(testExamSlug) || testExamSlug.includes(userSlug));
-      const matchesName = (userExamName && testExamName) && (userExamName.includes(testExamName) || testExamName.includes(userExamName));
-
-      if (matchesSlug || matchesName) {
-        return { hasAccess: true, isFree: false };
+  async function handleDashboardTopup(amt: number) {
+    if (amt < 10) return;
+    setTopupLoading(true);
+    setTopupMsg(null);
+    try {
+      const res = await fetch("/api/wallet/topup/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amt }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setTopupMsg({ text: data.error || "Top-up failed", type: "error" });
+        setTopupLoading(false);
+        return;
       }
+      if (data.mode === "simulated") {
+        const verifyRes = await fetch("/api/wallet/topup/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: amt,
+            isSimulated: true,
+            razorpayOrderId: data.orderId,
+          }),
+        });
+        const vData = await verifyRes.json();
+        if (vData.success) {
+          setWalletBalance(vData.newBalance);
+          setTopupMsg({ text: `✓ ₹${amt} added to your wallet successfully!`, type: "success" });
+          loadWallet();
+        } else {
+          setTopupMsg({ text: vData.error || "Verification failed", type: "error" });
+        }
+      } else if (data.orderId && typeof window !== "undefined") {
+        const options = {
+          key: data.keyId,
+          amount: data.amount,
+          currency: data.currency || "INR",
+          name: portalName || "India Mock Tests",
+          description: "Student Wallet Recharge",
+          order_id: data.orderId,
+          handler: async function (response: any) {
+            const verifyRes = await fetch("/api/wallet/topup/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                amount: amt,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature,
+              }),
+            });
+            const vData = await verifyRes.json();
+            if (vData.success) {
+              setWalletBalance(vData.newBalance);
+              setTopupMsg({ text: `✓ ₹${amt} added to your wallet successfully!`, type: "success" });
+              loadWallet();
+            }
+          },
+          prefill: {
+            name: user.displayName,
+            email: user.email,
+          },
+          theme: { color: "#059669" },
+        };
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      }
+    } catch (err: any) {
+      setTopupMsg({ text: err?.message || "Payment process error", type: "error" });
+    } finally {
+      setTopupLoading(false);
     }
+  }
 
-    return { hasAccess: false, isFree: false };
+  const [examGroups, setExamGroups] = useState<ExamGroup[]>(defaultExamGroups);
+
+  useEffect(() => {
+    fetch("/api/exam-groups")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.groups) && data.groups.length > 0) {
+          setExamGroups(data.groups);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Subscription & Exam access checker (supports both Full Bundles and Clubbed Subject Series)
+  function checkTestAccess(test: { access?: string; exam?: string; examSlug?: string; subject?: string; subjectName?: string; slug?: string }) {
+    return evaluateTestAccess(
+      user,
+      {
+        access: test.access,
+        exam: test.exam,
+        examSlug: test.examSlug,
+        subjectName: test.subjectName || test.subject,
+        slug: test.slug,
+      },
+      examGroups
+    );
   }
 
   // Available tests with database banners
@@ -145,9 +272,19 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
     }));
   }, [initialMockTests]);
 
-  // Filtered mock tests for the "tests" tab
+  // Filtered mock tests for the "tests" tab with purchased, unpurchased, and free filters
   const filteredTests = useMemo(() => {
     return availableTests.filter((test) => {
+      const accessInfo = checkTestAccess(test);
+
+      if (accessFilter === "purchased") {
+        if (!accessInfo.hasAccess || accessInfo.isFree) return false;
+      } else if (accessFilter === "unpurchased") {
+        if (accessInfo.hasAccess) return false;
+      } else if (accessFilter === "free") {
+        if (!accessInfo.isFree && test.access !== "Free") return false;
+      }
+
       if (examFilter !== "All" && !test.exam.toLowerCase().includes(examFilter.toLowerCase())) {
         return false;
       }
@@ -162,7 +299,28 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
       }
       return true;
     });
-  }, [availableTests, examFilter, searchQuery]);
+  }, [availableTests, accessFilter, examFilter, searchQuery, user]);
+
+  const purchasedCount = useMemo(() => {
+    return availableTests.filter((t) => {
+      const acc = checkTestAccess(t);
+      return acc.hasAccess && !acc.isFree;
+    }).length;
+  }, [availableTests, user]);
+
+  const freeCount = useMemo(() => {
+    return availableTests.filter((t) => {
+      const acc = checkTestAccess(t);
+      return acc.isFree || t.access === "Free";
+    }).length;
+  }, [availableTests]);
+
+  const unpurchasedCount = useMemo(() => {
+    return availableTests.filter((t) => {
+      const acc = checkTestAccess(t);
+      return !acc.hasAccess;
+    }).length;
+  }, [availableTests, user]);
 
   const initials = (user.displayName || "User")
     .split(" ")
@@ -187,22 +345,72 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
     <main className="dashboard-page">
       {/* Persistent Left Sidebar */}
       <aside className="dashboard-sidebar">
-        <Link className="logo dashboard-logo-link" href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+        <Link
+          className="logo dashboard-logo-link"
+          href={user.role === "admin" ? "/" : "/dashboard"}
+          onClick={(e) => {
+            if (user.role !== "admin") {
+              e.preventDefault();
+              switchTab("overview");
+            }
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            textDecoration: "none",
+            gap: "10px",
+            minWidth: 0,
+            width: "100%",
+          }}
+        >
           {logoImageUrl ? (
             <img
               src={logoImageUrl}
-              alt={portalName}
-              style={{ height: "38px", maxHeight: "44px", maxWidth: "160px", width: "auto", objectFit: "contain", display: "block" }}
+              alt={portalName || "Sarkari Practice"}
+              style={{
+                height: "46px",
+                maxHeight: "48px",
+                maxWidth: "52px",
+                width: "auto",
+                objectFit: "contain",
+                flexShrink: 0,
+                display: "block",
+              }}
               onError={() => setLogoImageUrl("")}
             />
           ) : (
-            <>
-              <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>
-              <span>
-                {portalName}<span className="logo-dot">.</span>
-              </span>
-            </>
+            <span className="logo-mark" style={{ flexShrink: 0 }}>
+              {(portalName || "Sarkari Practice").slice(0, 1).toUpperCase()}
+            </span>
           )}
+          <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.15, minWidth: 0, overflow: "hidden" }}>
+            <span
+              style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontWeight: 800,
+                fontSize: "16px",
+                color: "var(--ink, #1e293b)",
+                letterSpacing: "-0.4px",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {portalName || "Sarkari Practice"}
+              <span className="logo-dot" style={{ color: "var(--coral, #d96548)" }}>.</span>
+            </span>
+            <span
+              style={{
+                fontSize: "9.5px",
+                fontWeight: 700,
+                color: "#778581",
+                letterSpacing: "0.8px",
+                textTransform: "uppercase",
+              }}
+            >
+              Exam Prep
+            </span>
+          </div>
         </Link>
 
         <nav className="dashboard-nav">
@@ -250,6 +458,25 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
             <span>👑</span>
             VIP Pass & Invoices
           </button>
+
+          <button
+            type="button"
+            className={`dashboard-nav-btn ${activeTab === "wallet" ? "active" : ""}`}
+            onClick={() => switchTab("wallet")}
+          >
+            <img
+              src="/wallet.png"
+              alt="Wallet"
+              style={{
+                width: "18px",
+                height: "18px",
+                objectFit: "contain",
+                display: "inline-block",
+                verticalAlign: "middle",
+              }}
+            />
+            Student Wallet
+          </button>
         </nav>
 
         <div className="dashboard-sidebar-bottom">
@@ -295,19 +522,31 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
       <section className="dashboard-main">
         {/* Top bar with Search & User Menu */}
         <header className="dashboard-topbar">
-          <div className="dashboard-mobile-logo">
+          <div className="dashboard-mobile-logo" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             {logoImageUrl ? (
               <img
                 src={logoImageUrl}
-                alt={portalName}
-                style={{ height: "30px", maxHeight: "36px", maxWidth: "120px", width: "auto", objectFit: "contain", display: "inline-block" }}
+                alt={portalName || "Sarkari Practice"}
+                style={{
+                  height: "36px",
+                  maxHeight: "38px",
+                  maxWidth: "42px",
+                  width: "auto",
+                  objectFit: "contain",
+                  flexShrink: 0,
+                  display: "inline-block",
+                }}
                 onError={() => setLogoImageUrl("")}
               />
             ) : (
-              <>
-                <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>{portalName}
-              </>
+              <span className="logo-mark" style={{ flexShrink: 0 }}>
+                {(portalName || "Sarkari Practice").slice(0, 1).toUpperCase()}
+              </span>
             )}
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: "16px", color: "var(--ink, #1e293b)" }}>
+              {portalName || "Sarkari Practice"}
+              <span style={{ color: "var(--coral, #d96548)" }}>.</span>
+            </span>
           </div>
 
           <div className="dashboard-search-container">
@@ -356,9 +595,12 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
               {isVip ? tierLabel : "⚡ Upgrade to VIP"}
             </Link>
 
-            <Link href="/" className="btn-top-home" title="Go to website home">
-              🏠 Home
-            </Link>
+            {/* Only Super Admin can see Home link on sticky top bar */}
+            {user.role === "admin" && (
+              <Link href="/" className="btn-top-home" title="Go to website home">
+                🏠 Home
+              </Link>
+            )}
 
             {user.role === "admin" && (
               <Link href="/admin" className="btn-top-admin" title="Admin Studio">
@@ -392,6 +634,39 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                   <div className="menu-items">
                     <button type="button" onClick={() => switchTab("overview")}>
                       <span>📊</span> Dashboard Overview
+                    </button>
+                    {/* Wallet link adjusted right below Dashboard Overview */}
+                    <button
+                      type="button"
+                      onClick={() => switchTab("wallet")}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        width: "100%",
+                        color: "#065f46",
+                        fontWeight: 700,
+                        padding: "10px 14px",
+                        margin: "3px 0",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <img src="/wallet.png" alt="Wallet" style={{ width: "18px", height: "18px", objectFit: "contain" }} />
+                        <span>Student Wallet</span>
+                      </div>
+                      <span
+                        style={{
+                          background: "#059669",
+                          color: "#fff",
+                          padding: "2px 8px",
+                          borderRadius: "12px",
+                          fontSize: "0.78rem",
+                          fontWeight: 800,
+                        }}
+                      >
+                        ₹{walletBalance !== null ? walletBalance.toFixed(2) : "0.00"}
+                      </span>
                     </button>
                     <button type="button" onClick={() => switchTab("tests")}>
                       <span>📝</span> My Mock Tests
@@ -430,13 +705,15 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
           <div className="tab-pane-content">
             <div className="dashboard-welcome">
               <div>
-                <span className="kicker">
-                  {new Date().toLocaleDateString("en-US", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  }).toUpperCase()}
+                <span className="kicker" suppressHydrationWarning>
+                  {isMounted
+                    ? new Date().toLocaleDateString("en-US", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      }).toUpperCase()
+                    : ""}
                 </span>
                 <h1>
                   Good morning, {firstName}
@@ -648,7 +925,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                         <span className="result-mark">{attempt.isCompleted ? "✓" : "◷"}</span>
                         <div>
                           <strong>{attempt.title}</strong>
-                          <small>
+                          <small suppressHydrationWarning>
                             {attempt.exam} · {new Date(attempt.startedAt).toLocaleDateString()}
                           </small>
                         </div>
@@ -704,6 +981,96 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
               </div>
             </div>
 
+            {/* Primary Access Segment Filter Buttons */}
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px" }}>
+              <button
+                type="button"
+                onClick={() => setAccessFilter("purchased")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 16px",
+                  borderRadius: "20px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  border: accessFilter === "purchased" ? "2px solid #059669" : "1px solid #cbd5e1",
+                  background: accessFilter === "purchased" ? "#ecfdf5" : "#ffffff",
+                  color: accessFilter === "purchased" ? "#065f46" : "#475569",
+                  boxShadow: accessFilter === "purchased" ? "0 2px 6px rgba(5, 150, 105, 0.2)" : "none",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <span>👑 My Purchased Tests ({purchasedCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAccessFilter("free")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 16px",
+                  borderRadius: "20px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  border: accessFilter === "free" ? "2px solid #2563eb" : "1px solid #cbd5e1",
+                  background: accessFilter === "free" ? "#eff6ff" : "#ffffff",
+                  color: accessFilter === "free" ? "#1d4ed8" : "#475569",
+                  boxShadow: accessFilter === "free" ? "0 2px 6px rgba(37, 99, 235, 0.2)" : "none",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <span>🎁 Free Mock Tests ({freeCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAccessFilter("unpurchased")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 16px",
+                  borderRadius: "20px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  border: accessFilter === "unpurchased" ? "2px solid #d97706" : "1px solid #cbd5e1",
+                  background: accessFilter === "unpurchased" ? "#fffbeb" : "#ffffff",
+                  color: accessFilter === "unpurchased" ? "#b45309" : "#475569",
+                  boxShadow: accessFilter === "unpurchased" ? "0 2px 6px rgba(217, 119, 6, 0.2)" : "none",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <span>🔍 Explore Other Exams ({unpurchasedCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAccessFilter("all")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 16px",
+                  borderRadius: "20px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  border: accessFilter === "all" ? "2px solid #334155" : "1px solid #cbd5e1",
+                  background: accessFilter === "all" ? "#f1f5f9" : "#ffffff",
+                  color: accessFilter === "all" ? "#0f172a" : "#475569",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <span>📚 All Tests ({availableTests.length})</span>
+              </button>
+            </div>
+
             {/* Exam Filter Chips */}
             <div className="dashboard-filter-bar">
               {["All", "BPSC TRE 4.0", "Bihar STET", "CTET"].map((filter) => (
@@ -718,73 +1085,149 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
               ))}
             </div>
 
-            <div className="tests-grid-layout">
-              {filteredTests.map((test: any) => {
-                const accessInfo = checkTestAccess(test);
-                const testExamSlug = test.examSlug || (test.slug.includes("bpsc") ? "bpsc-tre-4" : test.slug.includes("stet") ? "bihar-stet" : "ctet");
-                return (
-                  <div className="test-card-item" key={test.slug}>
-                    {test.bannerImageUrl ? (
-                      <div className="test-card-custom-banner-wrap" style={{ height: "100px", margin: "-18px -18px 12px -18px" }}>
-                        <img src={test.bannerImageUrl} alt={test.name} className="test-card-custom-banner-img" />
-                        <div className="test-card-custom-banner-overlay">
-                          <span className="catalog-subject-tag-overlay">{test.exam || "Official Exam"}</span>
+            {filteredTests.length > 0 ? (
+              <div className="tests-grid-layout">
+                {filteredTests.map((test: any) => {
+                  const accessInfo = checkTestAccess(test);
+                  const testExamSlug = test.examSlug || (test.slug.includes("bpsc") ? "bpsc-tre-4" : test.slug.includes("stet") ? "bihar-stet" : "ctet");
+                  return (
+                    <div className="test-card-item" key={test.slug}>
+                      {test.bannerImageUrl ? (
+                        <div className="test-card-custom-banner-wrap" style={{ height: "100px", margin: "-18px -18px 12px -18px" }}>
+                          <img src={test.bannerImageUrl} alt={test.name} className="test-card-custom-banner-img" />
+                          <div className="test-card-custom-banner-overlay">
+                            <span className="catalog-subject-tag-overlay">{test.exam || "Official Exam"}</span>
+                            <span
+                              className={test.access === "Premium" ? "test-vip-tag-overlay" : "test-free-tag-overlay"}
+                              title={test.access === "Premium" ? "VIP Pass Required" : "Free Mock Test"}
+                            >
+                              {test.access === "Premium" ? "👑" : "Free"}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="test-card-badge-row">
+                          <span className="test-exam-tag">{test.exam}</span>
                           <span
-                            className={test.access === "Premium" ? "test-vip-tag-overlay" : "test-free-tag-overlay"}
+                            className={`test-tier-tag ${test.access === "Premium" ? "premium" : "free"}`}
                             title={test.access === "Premium" ? "VIP Pass Required" : "Free Mock Test"}
                           >
                             {test.access === "Premium" ? "👑" : "Free"}
                           </span>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="test-card-badge-row">
-                        <span className="test-exam-tag">{test.exam}</span>
-                        <span
-                          className={`test-tier-tag ${test.access === "Premium" ? "premium" : "free"}`}
-                          title={test.access === "Premium" ? "VIP Pass Required" : "Free Mock Test"}
-                        >
-                          {test.access === "Premium" ? "👑" : "Free"}
-                        </span>
-                      </div>
-                    )}
-                    <h3>{test.name}</h3>
-                    <p className="test-desc">{test.subject} · {test.track}</p>
-                    <div className="test-card-meta">
-                      <span>⏱ {test.duration}</span>
-                      <span>📝 {test.questions} Questions</span>
-                    </div>
-                    <div className="test-card-actions">
-                      {accessInfo.hasAccess ? (
-                        <Link
-                          href={`/attempt/${test.slug}`}
-                          className="btn-start-test"
-                          style={!accessInfo.isFree ? { background: "linear-gradient(135deg, #15803d 0%, #166534 100%)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" } : undefined}
-                        >
-                          {!accessInfo.isFree ? "🔓 " : ""}Start Test →
-                        </Link>
-                      ) : (
-                        <Link
-                          href={`/checkout?plan=sprint&exam=${testExamSlug}`}
-                          className="btn-start-test"
-                          style={{
-                            background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                            color: "#fff",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "6px",
-                            fontWeight: 700,
-                          }}
-                        >
-                          🔒 Unlock Test
-                        </Link>
                       )}
+                      <h3>{test.name}</h3>
+                      <p className="test-desc">{test.subject} · {test.track}</p>
+                      <div className="test-card-meta">
+                        <span>⏱ {test.duration}</span>
+                        <span>📝 {test.questions} Questions</span>
+                      </div>
+                      <div className="test-card-actions">
+                        {accessInfo.hasAccess ? (
+                          <Link
+                            href={`/attempt/${test.slug}`}
+                            className="btn-start-test"
+                            style={!accessInfo.isFree ? { background: "linear-gradient(135deg, #15803d 0%, #166534 100%)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" } : undefined}
+                          >
+                            {!accessInfo.isFree ? "🔓 " : ""}Start Test →
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/checkout?plan=sprint&exam=${testExamSlug}`}
+                            className="btn-start-test"
+                            style={{
+                              background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                              color: "#fff",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "6px",
+                              fontWeight: 700,
+                            }}
+                          >
+                            🔒 Unlock Test
+                          </Link>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                className="empty-state-box"
+                style={{
+                  background: "#ffffff",
+                  padding: "48px 24px",
+                  borderRadius: "14px",
+                  border: "1px dashed #cbd5e1",
+                  textAlign: "center",
+                  maxWidth: "600px",
+                  margin: "24px auto",
+                }}
+              >
+                <div style={{ fontSize: "40px", marginBottom: "12px" }}>
+                  {accessFilter === "purchased" ? "👑" : accessFilter === "free" ? "🎁" : "🔍"}
+                </div>
+                <h3 style={{ margin: "0 0 8px", fontSize: "1.2rem", fontWeight: 800 }}>
+                  {accessFilter === "purchased"
+                    ? "No Active Purchased Exams"
+                    : accessFilter === "free"
+                    ? "No Free Tests Found"
+                    : "No Mock Tests Found"}
+                </h3>
+                <p style={{ color: "#64748b", margin: "0 0 20px", fontSize: "0.9rem", lineHeight: "1.5" }}>
+                  {accessFilter === "purchased"
+                    ? "You haven't enrolled in a paid test series for this exam category yet. Explore other exam tracks to unlock full mock tests or practice with our free tests!"
+                    : "No mock tests match your selected filter criteria."}
+                </p>
+                <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+                  {accessFilter === "purchased" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="dashboard-primary"
+                        onClick={() => {
+                          setAccessFilter("unpurchased");
+                          setExamFilter("All");
+                        }}
+                      >
+                        🔍 Explore Other Exams →
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAccessFilter("free");
+                          setExamFilter("All");
+                        }}
+                        style={{
+                          background: "#eff6ff",
+                          color: "#1d4ed8",
+                          border: "1px solid #bfdbfe",
+                          padding: "8px 18px",
+                          borderRadius: "6px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        🎁 View Free Mock Tests
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="dashboard-primary"
+                      onClick={() => {
+                        setAccessFilter("all");
+                        setExamFilter("All");
+                      }}
+                    >
+                      Reset All Filters
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -856,7 +1299,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                           <strong>{attempt.title}</strong>
                           <small style={{ display: "block", color: "#94a3b8" }}>{attempt.exam}</small>
                         </td>
-                        <td>{new Date(attempt.startedAt).toLocaleDateString()}</td>
+                        <td suppressHydrationWarning>{new Date(attempt.startedAt).toLocaleDateString()}</td>
                         <td>
                           <strong style={{ color: "#b94a2b" }}>
                             {attempt.isCompleted ? `${attempt.score} / ${attempt.maxScore}` : "—"}
@@ -970,7 +1413,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                   <span style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", fontWeight: 700 }}>
                     VALIDITY STATUS
                   </span>
-                  <strong style={{ fontSize: "1.1rem", color: isVip ? "#166534" : "#64748b" }}>
+                  <strong style={{ fontSize: "1.1rem", color: isVip ? "#166534" : "#64748b" }} suppressHydrationWarning>
                     {user.role === "admin"
                       ? "Permanent Administrator Pass"
                       : user.subscriptionExpiresAt
@@ -1035,7 +1478,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                           )}
                           <small style={{ display: "block", color: "#64748b" }}>{order.durationMonths} Months Validity</small>
                         </td>
-                        <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+                        <td suppressHydrationWarning>{new Date(order.createdAt).toLocaleDateString()}</td>
                         <td>
                           <strong style={{ color: "#1e3a34" }}>₹{order.amount}</strong>
                         </td>
@@ -1070,127 +1513,16 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
               </div>
             )}
 
-            {/* INVOICE MODAL */}
+            {/* INVOICE MODAL (Official GST Tax Invoice & A4 PDF Print) */}
             {selectedInvoice && (
-              <div
-                style={{
-                  position: "fixed",
-                  inset: 0,
-                  background: "rgba(0, 0, 0, 0.6)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  zIndex: 9999,
-                  padding: "16px",
-                }}
-                onClick={() => setSelectedInvoice(null)}
-              >
-                <div
-                  style={{
-                    background: "#fff",
-                    borderRadius: "12px",
-                    maxWidth: "520px",
-                    width: "100%",
-                    padding: "28px",
-                    boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e2e8f0", paddingBottom: "14px" }}>
-                    <div>
-                      <span className="logo-mark" style={{ display: "inline-block", width: "24px", height: "24px", background: "#b94a2b", color: "#fff", textAlign: "center", borderRadius: "4px", fontWeight: "bold" }}>I</span>
-                      <strong style={{ marginLeft: "8px", fontFamily: "Space Grotesk" }}>INDIA MOCK TESTS</strong>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedInvoice(null)}
-                      style={{ background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer" }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  <div style={{ padding: "18px 0" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <small style={{ color: "#64748b" }}>Invoice ID:</small>
-                      <strong>{selectedInvoice.invoiceNumber}</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <small style={{ color: "#64748b" }}>Order ID:</small>
-                      <strong>{selectedInvoice.orderNumber}</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <small style={{ color: "#64748b" }}>Billed To:</small>
-                      <strong>{user.displayName} ({user.email})</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <small style={{ color: "#64748b" }}>Date & Time:</small>
-                      <span>{new Date(selectedInvoice.createdAt).toLocaleString()}</span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <small style={{ color: "#64748b" }}>Payment Method:</small>
-                      <span>{selectedInvoice.paymentMethod}</span>
-                    </div>
-                    {selectedInvoice.targetExamName && (
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                        <small style={{ color: "#64748b" }}>Subscribed Subject/Exam:</small>
-                        <strong style={{ color: "#166534" }}>{selectedInvoice.targetExamName}</strong>
-                      </div>
-                    )}
-
-                    <div style={{ borderTop: "1px dashed #cbd5e1", margin: "14px 0", paddingTop: "14px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                        <span>
-                          {selectedInvoice.planName}
-                          {selectedInvoice.targetExamName ? ` (${selectedInvoice.targetExamName})` : ""}
-                          {` (${selectedInvoice.durationMonths} Mo)`}
-                        </span>
-                        <strong>₹{selectedInvoice.amount}</strong>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", color: "#64748b" }}>
-                        <span>Included 18% GST (CGST + SGST)</span>
-                        <span>₹{selectedInvoice.taxAmount}</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px", fontSize: "1.1rem" }}>
-                        <strong>Total Paid</strong>
-                        <strong style={{ color: "#1e3a34" }}>₹{selectedInvoice.amount}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      style={{
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        border: "1px solid #cbd5e1",
-                        background: "#f8fafc",
-                        cursor: "pointer",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Print Invoice 🖨
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedInvoice(null)}
-                      style={{
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        background: "#1e3a34",
-                        color: "#fff",
-                        border: "none",
-                        cursor: "pointer",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <InvoiceModal
+                invoice={selectedInvoice}
+                onClose={() => setSelectedInvoice(null)}
+                portalName={portalName}
+                logoImageUrl={logoImageUrl}
+                userDisplayName={user.displayName}
+                userEmail={user.email}
+              />
             )}
           </div>
         )}
@@ -1264,6 +1596,334 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
             </div>
           </div>
         )}
+        {/* TAB 7: STUDENT WALLET & TRANSACTIONS PASSBOOK */}
+        {activeTab === "wallet" && (
+          <div className="tab-pane-content">
+            <div className="dashboard-welcome">
+              <div>
+                <span className="kicker">FINANCIAL SUMMARY & PASSBOOK</span>
+                <h1>Student Digital Wallet</h1>
+                <p>Recharge balance, track instant checkout credits, and inspect full transaction receipts.</p>
+              </div>
+              <button
+                type="button"
+                className="dashboard-primary"
+                onClick={() => setWalletModalOpen(true)}
+                style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}
+              >
+                <span>➕</span>
+                <span>Open Wallet Popup</span>
+              </button>
+            </div>
+
+            {/* Wallet Overview & Recharge Cards */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: "24px",
+                marginBottom: "32px",
+              }}
+            >
+              {/* Balance Card */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #064e3b 0%, #065f46 50%, #0f766e 100%)",
+                  borderRadius: "16px",
+                  padding: "28px",
+                  color: "#ffffff",
+                  boxShadow: "0 14px 30px -8px rgba(6, 78, 59, 0.45)",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                <div style={{ position: "relative", zIndex: 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                    <span style={{ fontSize: "12px", letterSpacing: "1px", fontWeight: 700, color: "#a7f3d0" }}>
+                      ACTIVE WALLET BALANCE
+                    </span>
+                    <img src="/wallet.png" alt="Wallet" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
+                  </div>
+
+                  <div style={{ fontSize: "40px", fontWeight: 900, letterSpacing: "-1px", lineHeight: 1 }}>
+                    ₹{walletBalance !== null ? walletBalance.toFixed(2) : "0.00"}
+                  </div>
+
+                  <div style={{ marginTop: "14px", fontSize: "13px", color: "#d1fae5" }}>
+                    Account Holder: <strong>{user.displayName}</strong>
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "20px",
+                      paddingTop: "14px",
+                      borderTop: "1px solid rgba(255,255,255,0.2)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "12px",
+                      color: "#ecfdf5",
+                    }}
+                  >
+                    <span>Instant 1-Click Mock Test Checkout</span>
+                    <span>100% RBI Compliant</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Top-up Card */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "16px",
+                  padding: "24px",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
+                }}
+              >
+                <h3 style={{ margin: "0 0 6px 0", fontSize: "17px", fontWeight: 800, color: "#0f172a" }}>
+                  Instant Top-Up
+                </h3>
+                <p style={{ margin: "0 0 16px 0", fontSize: "13px", color: "#64748b" }}>
+                  Add funds via UPI, QR, Credit/Debit Cards, or Net Banking.
+                </p>
+
+                {/* Preset Chips */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px", marginBottom: "14px" }}>
+                  {[100, 250, 499, 999].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setTopupAmount(amt)}
+                      style={{
+                        padding: "9px 4px",
+                        borderRadius: "8px",
+                        border: topupAmount === amt ? "2px solid #059669" : "1px solid #cbd5e1",
+                        background: topupAmount === amt ? "rgba(16, 185, 129, 0.12)" : "#f8fafc",
+                        color: topupAmount === amt ? "#047857" : "#334155",
+                        fontWeight: 800,
+                        fontSize: "13px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ₹{amt}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <div style={{ position: "relative", flex: 1 }}>
+                    <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", fontWeight: 800, color: "#64748b" }}>
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      min="10"
+                      value={topupAmount}
+                      onChange={(e) => setTopupAmount(Number(e.target.value))}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px 10px 28px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "14px",
+                        fontWeight: 700,
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={topupLoading || topupAmount < 10}
+                    onClick={() => handleDashboardTopup(topupAmount)}
+                    style={{
+                      padding: "10px 20px",
+                      background: "linear-gradient(135deg, #059669, #047857)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      fontWeight: 800,
+                      cursor: topupLoading ? "not-allowed" : "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {topupLoading ? "Processing..." : `Recharge ₹${topupAmount} →`}
+                  </button>
+                </div>
+
+                {topupMsg && (
+                  <div
+                    style={{
+                      marginTop: "12px",
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      background: topupMsg.type === "success" ? "#ecfdf5" : "#fef2f2",
+                      color: topupMsg.type === "success" ? "#065f46" : "#991b1b",
+                      border: `1px solid ${topupMsg.type === "success" ? "#a7f3d0" : "#fecaca"}`,
+                    }}
+                  >
+                    {topupMsg.text}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Transactions Section & Filter Pills */}
+            <div className="dashboard-section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <span className="kicker">LEDGER & STATEMENT</span>
+                <h2>Wallet Transaction History ({walletTransactions.length})</h2>
+              </div>
+
+              <div style={{ display: "inline-flex", gap: "6px", background: "#e2e8f0", padding: "3px", borderRadius: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setWalletFilter("all")}
+                  style={{
+                    padding: "4px 12px",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: walletFilter === "all" ? "#ffffff" : "transparent",
+                    color: walletFilter === "all" ? "#0f172a" : "#64748b",
+                    fontWeight: 700,
+                    fontSize: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWalletFilter("credit")}
+                  style={{
+                    padding: "4px 12px",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: walletFilter === "credit" ? "#ffffff" : "transparent",
+                    color: walletFilter === "credit" ? "#047857" : "#64748b",
+                    fontWeight: 700,
+                    fontSize: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  + Credits (Deposits)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWalletFilter("debit")}
+                  style={{
+                    padding: "4px 12px",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: walletFilter === "debit" ? "#ffffff" : "transparent",
+                    color: walletFilter === "debit" ? "#b91c1c" : "#64748b",
+                    fontWeight: 700,
+                    fontSize: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  - Debits (Spent)
+                </button>
+              </div>
+            </div>
+
+            {walletLoading ? (
+              <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+                Loading wallet transactions...
+              </div>
+            ) : walletTransactions.filter((tx) => walletFilter === "all" || tx.type === walletFilter).length > 0 ? (
+              <div className="performance-table-container">
+                <table className="results-table">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Transaction Details</th>
+                      <th>Reference ID</th>
+                      <th>Date & Time</th>
+                      <th>Amount</th>
+                      <th>Balance After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {walletTransactions
+                      .filter((tx) => walletFilter === "all" || tx.type === walletFilter)
+                      .map((tx) => {
+                        const isCredit = tx.type === "credit";
+                        return (
+                          <tr key={tx.id}>
+                            <td>
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "5px",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "11px",
+                                  fontWeight: 800,
+                                  background: isCredit ? "#dcfce7" : "#fee2e2",
+                                  color: isCredit ? "#15803d" : "#b91c1c",
+                                }}
+                              >
+                                {isCredit ? "↓ CREDIT" : "↑ DEBIT"}
+                              </span>
+                            </td>
+                            <td>
+                              <strong>{tx.description || (isCredit ? "Wallet Recharge" : "Mock Test Purchase")}</strong>
+                            </td>
+                            <td>
+                              <code style={{ fontSize: "11px", color: "#64748b" }}>
+                                {tx.referenceId || tx.id.slice(0, 14)}
+                              </code>
+                            </td>
+                            <td suppressHydrationWarning>{new Date(tx.createdAt).toLocaleString("en-IN")}</td>
+                            <td>
+                              <strong style={{ color: isCredit ? "#166534" : "#dc2626", fontSize: "14px" }}>
+                                {isCredit ? "+" : "-"}₹{tx.amount}
+                              </strong>
+                            </td>
+                            <td>
+                              <span style={{ fontWeight: 600, color: "#334155" }}>
+                                ₹{tx.balanceAfter !== undefined ? tx.balanceAfter.toFixed(2) : "—"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-state-box">
+                <div className="empty-icon">
+                  <img src="/wallet.png" alt="Wallet" style={{ width: "48px", height: "48px", objectFit: "contain", opacity: 0.8 }} />
+                </div>
+                <h3>No Transactions Found</h3>
+                <p>You have not made any wallet deposits or test series redemptions matching this filter yet.</p>
+                <button
+                  type="button"
+                  className="dashboard-primary"
+                  onClick={() => handleDashboardTopup(499)}
+                >
+                  Add ₹499 to Wallet Now →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Global Wallet Modal Popup */}
+        <WalletModal
+          isOpen={walletModalOpen}
+          onClose={() => setWalletModalOpen(false)}
+          userDisplayName={user.displayName}
+          initialBalance={walletBalance}
+          onBalanceUpdate={(newBal) => {
+            setWalletBalance(newBal);
+            loadWallet();
+          }}
+        />
       </section>
     </main>
   );

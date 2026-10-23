@@ -236,9 +236,9 @@ export default function AttemptClient({
     return (
       <main className="attempt-page premium-locked-layout">
         <nav className="cbt-topbar">
-          <Link className="cbt-brand" href="/">
-            <span className="logo-mark">I</span>
-            <span className="cbt-brand-text">India Mock Tests<span>.</span></span>
+          <Link className="cbt-brand" href="/dashboard">
+            <span className="logo-mark">S</span>
+            <span className="cbt-brand-text">Sarkari Practice<span>.</span></span>
           </Link>
           <div className="cbt-exam-heading">
             <strong>{title}</strong>
@@ -256,7 +256,7 @@ export default function AttemptClient({
             <h2>Unlock Full Mock Test & In-Depth Analytics</h2>
             <p>
               {premiumLock.message ||
-                "This mock test is part of our India Mock Tests VIP Test Pass. Subscribe to get unlimited attempts, detailed step-by-step solutions, national percentile ranking, and speed analysis."}
+                "This mock test is part of our Sarkari Practice VIP Test Pass. Subscribe to get unlimited attempts, detailed step-by-step solutions, national percentile ranking, and speed analysis."}
             </p>
 
             <div className="premium-features-list">
@@ -540,7 +540,7 @@ export default function AttemptClient({
       {/* 1. Standard CBT Top Bar (Fixed, Non-Scrollable) */}
       <header className="cbt-topbar">
         <div className="cbt-brand-area">
-          <Link className="cbt-brand" href="/" title="Back to Home">
+          <Link className="cbt-brand" href="/dashboard" title="Back to Dashboard">
             <span className="logo-mark">I</span>
             <span className="cbt-brand-text">India Mock Tests<span>.</span></span>
           </Link>

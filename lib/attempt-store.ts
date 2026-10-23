@@ -48,6 +48,7 @@ export type TestStartInfo = {
   questions: number;
   duration: string;
   access: "Free" | "Premium";
+  subject?: string;
   examTitle: string;
   examSlug: string;
   correctMarks: string;
@@ -138,6 +139,7 @@ export async function getTestStartInfo(testSlug: string): Promise<TestStartInfo 
       questions: foundMock.questions,
       duration: foundMock.duration,
       access: foundMock.access,
+      subject: foundMock.subject,
       examTitle: foundMock.exam,
       examSlug: isBpsc ? "bpsc-tre-4" : "bihar-stet",
       optionCount: isBpsc ? 5 : 4,
@@ -170,7 +172,7 @@ export async function getTestAttemptDefinition(testSlug: string): Promise<TestDe
 
     if (testRows[0]) {
       const test = testRows[0];
-      const examName = test.exam_name || "India Mock Tests Series";
+      const examName = test.exam_name || "Sarkari Practice Series";
       const durationSeconds = (test.duration_minutes || 150) * 60;
       const isBpsc = (test.exam_slug || "").includes("bpsc") || examName.toLowerCase().includes("bpsc");
 

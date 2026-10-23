@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { getUserForToken } from "../lib/auth-store";
 import { getFeaturedExams } from "../lib/catalog-server";
 import { getSiteConfiguration } from "../lib/site-config";
 import MegaMenu from "./components/MegaMenu";
@@ -15,6 +18,14 @@ const categories = [
 ];
 
 export default async function Home() {
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get("northstar_session")?.value;
+  const user = await getUserForToken(sessionToken);
+
+  if (user && user.role !== "admin") {
+    redirect("/dashboard");
+  }
+
   const [config, exams] = await Promise.all([
     getSiteConfiguration(),
     getFeaturedExams(),
@@ -22,13 +33,19 @@ export default async function Home() {
   return (
     <main>
       {/* Dynamic 3-Layer Mega Menu */}
-      <MegaMenu />
+      <MegaMenu initialConfig={config} />
 
       {/* Hero Section */}
       <section className="hero" id="top">
         <div className="hero-copy">
-          <div className="eyebrow">
+          <div className="eyebrow" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <span className="eyebrow-line" /> INDIA'S FOCUSED MOCK-TEST PLATFORM
+            <span style={{ background: "#ecfdf5", color: "#065f46", padding: "2px 8px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, border: "1px solid #a7f3d0" }}>
+              🇮🇳 हिंदी एवं English दोनों माध्यम
+            </span>
+            <span style={{ background: "#eff6ff", color: "#1d4ed8", padding: "2px 8px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, border: "1px solid #bfdbfe" }}>
+              🤖 AI Tutor Enabled
+            </span>
           </div>
           <h1>
             Practice with purpose.<br />
@@ -41,7 +58,35 @@ export default async function Home() {
           {/* Interactive Working Hero Search */}
           <HeroSearch />
 
-          <div className="hero-proof">
+          {/* High-Impact Lead Magnet Hook */}
+          <div style={{ marginTop: "14px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <Link
+              href="/exams"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "#fef3c7",
+                border: "1px solid #fde68a",
+                color: "#92400e",
+                padding: "6px 14px",
+                borderRadius: "999px",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                textDecoration: "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span>🎁</span>
+              <span>Take Free Diagnostic Mock Test (150 Qs + AI Analysis)</span>
+              <span>↗</span>
+            </Link>
+            <span style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>
+              • No card required • Instant results
+            </span>
+          </div>
+
+          <div className="hero-proof" style={{ marginTop: "20px" }}>
             <div className="proof-avatars">
               <span>AK</span>
               <span>RS</span>
@@ -49,9 +94,9 @@ export default async function Home() {
               <b>+</b>
             </div>
             <p>
-              <strong>12,000+ learners</strong>
+              <strong>15,000+ active aspirants</strong>
               <br />
-              practising with clarity
+              practising with 500+ official pattern mocks
             </p>
           </div>
         </div>
@@ -85,14 +130,15 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Trust Strip */}
+      {/* Enhanced Live Trust & Capabilities Strip */}
       <section className="trust-strip">
-        <span>BUILT FOR THE WAY YOU PREPARE</span>
-        <div>
-          <b>Focus</b>
-          <b>Progress</b>
-          <b>Confidence</b>
-          <b>Momentum</b>
+        <span>EXAM-READY FOUNDATION</span>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", justifyContent: "center" }}>
+          <b>🎯 100% Commission Syllabus Pattern</b>
+          <b>🤖 AI Bilingual Doubt Solver</b>
+          <b>⚡ Negative Marking Simulation</b>
+          <b>📱 1-Click WhatsApp Scorecards</b>
+          <b>🇮🇳 15,000+ Aspirants</b>
         </div>
       </section>
 
@@ -235,7 +281,7 @@ export default async function Home() {
         <div className="feature-image">
           <div className="feature-window">
             <div className="window-top">
-              <span>India Mock Tests</span>
+              <span>Sarkari Practice</span>
               <i>•••</i>
             </div>
             <div className="window-content">
@@ -278,6 +324,62 @@ export default async function Home() {
           <Link className="text-link" href="/dashboard">
             See how analytics work <span>↗</span>
           </Link>
+        </div>
+      </section>
+
+      {/* AI Strategic Advantage Section */}
+      <section className="section" style={{ background: "linear-gradient(180deg, #f8fafc 0%, #eff6ff 100%)", borderRadius: "24px", padding: "64px 32px", margin: "40px auto", maxWidth: "1240px", border: "1px solid #e2e8f0" }}>
+        <div style={{ textAlign: "center", maxWidth: "720px", margin: "0 auto 48px auto" }}>
+          <span style={{ display: "inline-block", background: "#dbeafe", color: "#1e40af", padding: "4px 14px", borderRadius: "999px", fontSize: "0.8rem", fontWeight: 700, marginBottom: "12px", letterSpacing: "0.05em" }}>
+            ✨ POWERED BY MODERN AI
+          </span>
+          <h2 style={{ fontSize: "2.2rem", fontWeight: 800, color: "#0f172a", margin: "0 0 16px 0", letterSpacing: "-0.03em" }}>
+            Learn 3x faster with our <em style={{ fontStyle: "italic", color: "#4338ca" }}>AI Bilingual Doubt Tutor.</em>
+          </h2>
+          <p style={{ fontSize: "1.05rem", color: "#475569", lineHeight: "1.6", margin: 0 }}>
+            No more waiting for teacher doubt sessions. Antigravity AI breaks down every question immediately after you finish your mock test.
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "24px" }}>
+          {/* Card 1 */}
+          <div style={{ background: "#ffffff", padding: "32px 28px", borderRadius: "18px", border: "1px solid #cbd5e1", boxShadow: "0 4px 16px rgba(0,0,0,0.04)" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#e0e7ff", color: "#4338ca", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", marginBottom: "20px" }}>
+              🤖
+            </div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a", margin: "0 0 10px 0" }}>
+              Step-by-Step AI Doubt Tutor
+            </h3>
+            <p style={{ fontSize: "0.92rem", color: "#475569", lineHeight: "1.6", margin: 0 }}>
+              On-demand explanations on every test scorecard. AI breaks down exactly why the correct answer is right and why your selected distractor was a common trap.
+            </p>
+          </div>
+
+          {/* Card 2 */}
+          <div style={{ background: "#ffffff", padding: "32px 28px", borderRadius: "18px", border: "1px solid #cbd5e1", boxShadow: "0 4px 16px rgba(0,0,0,0.04)" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#fef3c7", color: "#b45309", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", marginBottom: "20px" }}>
+              💡
+            </div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a", margin: "0 0 10px 0" }}>
+              Bilingual Mnemonics & Memory Tricks
+            </h3>
+            <p style={{ fontSize: "0.92rem", color: "#475569", lineHeight: "1.6", margin: 0 }}>
+              Learn complex dates, articles, and formulas in Hindi &amp; English with high-yield memory aids crafted specifically for Indian competitive exams.
+            </p>
+          </div>
+
+          {/* Card 3 */}
+          <div style={{ background: "#ffffff", padding: "32px 28px", borderRadius: "18px", border: "1px solid #cbd5e1", boxShadow: "0 4px 16px rgba(0,0,0,0.04)" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#dcfce7", color: "#15803d", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", marginBottom: "20px" }}>
+              📱
+            </div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a", margin: "0 0 10px 0" }}>
+              1-Click WhatsApp Scorecard Sharing
+            </h3>
+            <p style={{ fontSize: "0.92rem", color: "#475569", lineHeight: "1.6", margin: 0 }}>
+              Instantly share verified scorecard summaries, accuracy badges, and invite peer study groups on WhatsApp to compete on the live leaderboard.
+            </p>
+          </div>
         </div>
       </section>
 

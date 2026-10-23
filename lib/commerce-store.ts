@@ -41,6 +41,8 @@ export type OrderRecord = {
   paidAt: string | null;
 };
 
+export type Invoice = OrderRecord;
+
 export async function ensureCommercePlans() {
   try {
     await db.execute(`

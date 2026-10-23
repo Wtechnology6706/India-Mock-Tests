@@ -49,7 +49,9 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
       {/* Breadcrumbs */}
       <div className="exam-breadcrumb-container">
         <nav className="exam-breadcrumbs" aria-label="Breadcrumb">
-          <Link href="/">Home</Link>
+          <Link href={currentUser && currentUser.role !== "admin" ? "/dashboard" : "/"}>
+            {currentUser && currentUser.role !== "admin" ? "Dashboard" : "Home"}
+          </Link>
           <span className="breadcrumb-separator">/</span>
           <Link href="/exams">Exams Directory</Link>
           <span className="breadcrumb-separator">/</span>

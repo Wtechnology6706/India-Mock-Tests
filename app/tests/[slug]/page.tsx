@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { getTestStartInfo } from "../../../lib/attempt-store";
 import { getCurrentUser } from "../../../lib/auth-store";
+import { evaluateTestAccess, listExamGroups } from "../../../lib/exam-group-store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function TestStartPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [test, user] = await Promise.all([
+  const [test, user, examGroups] = await Promise.all([
     getTestStartInfo(slug),
     getCurrentUser(),
+    listExamGroups(),
   ]);
 
   if (!test) {
@@ -21,41 +23,27 @@ export default async function TestStartPage({ params }: { params: Promise<{ slug
     );
   }
 
-  // Access check
-  let hasAccess = test.access === "Free";
-  let isVipSubscribed = false;
-
-  if (test.access === "Premium") {
-    if (user && (user.role === "admin" || user.role === "editor")) {
-      hasAccess = true;
-      isVipSubscribed = true;
-    } else if (user && (user.subscriptionStatus === "active" || (user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt).getTime() > Date.now()))) {
-      if (user.subscriptionTier === "ultimate") {
-        hasAccess = true;
-        isVipSubscribed = true;
-      } else if (user.subscriptionTier === "sprint") {
-        const userSlug = (user.targetExamSlug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-        const testSlugLower = (test.examSlug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-        const userExamName = (user.targetExamName || "").toLowerCase();
-        const testExamName = (test.examTitle || "").toLowerCase();
-
-        const matchesSlug = (userSlug && testSlugLower) && (userSlug.includes(testSlugLower) || testSlugLower.includes(userSlug));
-        const matchesName = (userExamName && testExamName) && (userExamName.includes(testExamName) || testExamName.includes(userExamName));
-
-        if (matchesSlug || matchesName) {
-          hasAccess = true;
-          isVipSubscribed = true;
-        }
-      }
-    }
-  }
+  // Access check using unified evaluateTestAccess (handles free, ultimate, group pass & individual clubbed series)
+  const accessEval = evaluateTestAccess(
+    user,
+    {
+      access: test.access,
+      exam: test.examTitle,
+      examSlug: test.examSlug,
+      subjectName: (test as any).subject,
+      slug: test.slug,
+    },
+    examGroups
+  );
+  const hasAccess = accessEval.hasAccess;
+  const isVipSubscribed = hasAccess && !accessEval.isFree;
 
   return (
     <main className="start-page">
       <nav className="detail-nav">
         <Link className="logo" href="/">
-          <span className="logo-mark">I</span>
-          <span>India Mock Tests<span className="logo-dot">.</span></span>
+          <span className="logo-mark">S</span>
+          <span>Sarkari Practice<span className="logo-dot">.</span></span>
         </Link>
         <Link className="back-link" href={`/exams/${test.examSlug}`}>
           ← Back to {test.examTitle}

@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "india-mock-tests",
+      name: "sarkari-practice",
       script: "node_modules/next/dist/bin/next",
       args: "start -p 3005",
       instances: 1,

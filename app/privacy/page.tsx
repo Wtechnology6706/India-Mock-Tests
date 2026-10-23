@@ -6,8 +6,8 @@ import MegaMenu from "../components/MegaMenu";
 import Footer from "../components/Footer";
 
 export default function PrivacyPage() {
-  const [portalName, setPortalName] = useState("India Mock Tests");
-  const [contactEmail, setContactEmail] = useState("support@indiamocktests.com");
+  const [portalName, setPortalName] = useState("Sarkari Practice");
+  const [contactEmail, setContactEmail] = useState("support@sarkaripractice.com");
 
   useEffect(() => {
     fetch("/api/config")

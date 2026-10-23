@@ -7,8 +7,8 @@ import Footer from "../components/Footer";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
-  const [portalName, setPortalName] = useState("India Mock Tests");
-  const [contactEmail, setContactEmail] = useState("support@indiamocktests.com");
+  const [portalName, setPortalName] = useState("Sarkari Practice");
+  const [contactEmail, setContactEmail] = useState("support@sarkaripractice.com");
   const [supportPhone, setSupportPhone] = useState("+91 98765 43210");
 
   useEffect(() => {
@@ -48,10 +48,18 @@ export default function ContactPage() {
 
 
             <div className="contact-channel-item">
+              <span className="channel-icon">🎧</span>
+              <div>
+                <strong>Student & Academic Support</strong>
+                <a href="mailto:support@sarkaripractice.com">support@sarkaripractice.com</a>
+              </div>
+            </div>
+
+            <div className="contact-channel-item">
               <span className="channel-icon">✉️</span>
               <div>
-                <strong>Email Support</strong>
-                <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
+                <strong>General Information & Inquiries</strong>
+                <a href="mailto:info@sarkaripractice.com">info@sarkaripractice.com</a>
               </div>
             </div>
 

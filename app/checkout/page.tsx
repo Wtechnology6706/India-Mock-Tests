@@ -3,8 +3,8 @@ import { getUserForToken } from "../../lib/auth-store";
 import CheckoutClient from "./CheckoutClient";
 
 export const metadata = {
-  title: "Checkout & Payment Gateway | India Mock Tests VIP Pass",
-  description: "Secure payment gateway for India Mock Tests preparation passes.",
+  title: "Checkout & Payment Gateway | Sarkari Practice VIP Pass",
+  description: "Secure payment gateway for Sarkari Practice preparation passes.",
 };
 
 export default async function CheckoutPage() {

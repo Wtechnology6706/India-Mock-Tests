@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 
 export type AdminTab =
   | "overview"
+  | "analytics"
   | "questions"
   | "add-question"
   | "bulk-import"
   | "tests"
+  | "exam-groups"
   | "pyq"
   | "rules"
   | "taxonomy"
@@ -49,16 +51,38 @@ export default function AdminSidebar({
 }: AdminSidebarProps) {
   const router = useRouter();
   const [logoImageUrl, setLogoImageUrl] = useState("");
-  const [portalName, setPortalName] = useState("India Mock Tests");
+  const [logoHeight, setLogoHeight] = useState<number>(36);
+  const [logoOffsetX, setLogoOffsetX] = useState<number>(0);
+  const [logoOffsetY, setLogoOffsetY] = useState<number>(0);
+  const [portalName, setPortalName] = useState("Sarkari Practice");
 
   useEffect(() => {
-    fetch("/api/admin/config")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.config?.logoImageUrl) setLogoImageUrl(data.config.logoImageUrl);
-        if (data?.config?.portalName) setPortalName(data.config.portalName);
-      })
-      .catch(() => {});
+    const fetchFreshConfig = () => {
+      fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.config) {
+            if (data.config.logoImageUrl !== undefined) setLogoImageUrl(data.config.logoImageUrl || "");
+            if (data.config.portalName) setPortalName(data.config.portalName);
+            if (data.config.logoHeight !== undefined) setLogoHeight(Number(data.config.logoHeight) || 36);
+            if (data.config.logoOffsetX !== undefined) setLogoOffsetX(Number(data.config.logoOffsetX) || 0);
+            if (data.config.logoOffsetY !== undefined) setLogoOffsetY(Number(data.config.logoOffsetY) || 0);
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchFreshConfig();
+
+    const handleBroadcast = () => fetchFreshConfig();
+    window.addEventListener("site_config_updated", handleBroadcast);
+    window.addEventListener("storage", (e) => {
+      if (e.key === "site_config_updated_at") fetchFreshConfig();
+    });
+
+    return () => {
+      window.removeEventListener("site_config_updated", handleBroadcast);
+    };
   }, []);
 
   async function handleLogout() {
@@ -79,20 +103,67 @@ export default function AdminSidebar({
       <aside className={`admin-sidebar ${isMobileOpen ? "sidebar-mobile-open" : ""}`}>
         {/* Brand Header */}
         <div className="sidebar-brand-header">
-          <Link className="logo admin-logo-link" href="/" onClick={onCloseMobile} style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+          <Link
+            className="logo admin-logo-link"
+            href="/"
+            onClick={onCloseMobile}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              textDecoration: "none",
+              gap: "10px",
+              minWidth: 0,
+              flex: 1,
+            }}
+          >
             {logoImageUrl ? (
               <img
                 src={logoImageUrl}
-                alt={portalName}
-                style={{ height: "36px", maxHeight: "40px", maxWidth: "150px", width: "auto", objectFit: "contain", display: "block" }}
+                alt={portalName || "Sarkari Practice"}
+                style={{
+                  height: "42px",
+                  maxHeight: "46px",
+                  maxWidth: "50px",
+                  width: "auto",
+                  objectFit: "contain",
+                  flexShrink: 0,
+                  display: "block",
+                }}
                 onError={() => setLogoImageUrl("")}
               />
             ) : (
-              <>
-                <span className="logo-mark">{portalName.slice(0, 1).toUpperCase()}</span>
-                <span>{portalName}<span className="logo-dot">.</span></span>
-              </>
+              <span className="logo-mark" style={{ flexShrink: 0 }}>
+                {(portalName || "Sarkari Practice").slice(0, 1).toUpperCase()}
+              </span>
             )}
+            <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.15, minWidth: 0, overflow: "hidden" }}>
+              <span
+                style={{
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: 800,
+                  fontSize: "15px",
+                  color: "#ffffff",
+                  letterSpacing: "-0.3px",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {portalName || "Sarkari Practice"}
+                <span className="logo-dot" style={{ color: "var(--coral, #d96548)" }}>.</span>
+              </span>
+              <span
+                style={{
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  color: "#8ca39b",
+                  letterSpacing: "0.8px",
+                  textTransform: "uppercase",
+                }}
+              >
+                Admin Panel
+              </span>
+            </div>
           </Link>
           <span className="admin-badge-tag">ADMIN</span>
           <button type="button" className="sidebar-close-btn" onClick={onCloseMobile}>
@@ -123,6 +194,16 @@ export default function AdminSidebar({
             >
               <span className="nav-icon">📊</span>
               <span className="nav-label">Dashboard Overview</span>
+            </button>
+
+            <button
+              type="button"
+              className={`nav-link-btn ${activeTab === "analytics" ? "active" : ""}`}
+              onClick={() => handleTabClick("analytics")}
+            >
+              <span className="nav-icon">📈</span>
+              <span className="nav-label">User &amp; Test Analytics</span>
+              <span className="nav-tag-batch" style={{ background: "#4f46e5" }}>Live</span>
             </button>
           </div>
 
@@ -166,6 +247,16 @@ export default function AdminSidebar({
               <span className="nav-icon">🎯</span>
               <span className="nav-label">Mock Tests & Demands</span>
               <span className="nav-counter">{counts.mockTests}</span>
+            </button>
+
+            <button
+              type="button"
+              className={`nav-link-btn ${activeTab === "exam-groups" ? "active" : ""}`}
+              onClick={() => handleTabClick("exam-groups")}
+            >
+              <span className="nav-icon">🗂️</span>
+              <span className="nav-label">Exam Groups &amp; Bundles</span>
+              <span className="nav-tag-batch" style={{ background: "#7c3aed" }}>Club</span>
             </button>
 
             <button

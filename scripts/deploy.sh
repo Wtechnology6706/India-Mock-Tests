@@ -11,7 +11,7 @@ if [ -d "$HOME/.nvm" ]; then
   [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" || true
 fi
 
-echo "🚀 Starting deployment of India Mock Tests Platform..."
+echo "🚀 Starting deployment of Sarkari Practice Platform..."
 
 # Navigate to project directory
 APP_DIR="/var/www/mocktest/India-Mock-Tests"
@@ -33,7 +33,7 @@ npm run build
 
 # Reload/Restart PM2 process
 echo "🔄 Starting/Reloading PM2 process..."
-pm2 delete india-mock-tests 2>/dev/null || true
+pm2 delete sarkari-practice 2>/dev/null || true
 pm2 start ecosystem.config.js
 pm2 save
 

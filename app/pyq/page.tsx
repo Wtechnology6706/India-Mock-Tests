@@ -5,7 +5,7 @@ import MegaMenu from "../components/MegaMenu";
 import Footer from "../components/Footer";
 
 export const metadata: Metadata = {
-  title: "Official Previous Year Question Papers (PYQ) | India Mock Tests",
+  title: "Official Previous Year Question Papers (PYQ) | Sarkari Practice",
   description:
     "Download and solve official previous year question papers with answer keys for BPSC TRE, Bihar STET, CTET, and State PSCs with full-screen PDF preview.",
 };

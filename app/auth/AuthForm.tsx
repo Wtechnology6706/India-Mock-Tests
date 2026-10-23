@@ -44,9 +44,9 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     <main className="auth-page">
       <div className="auth-art">
         <Link className="logo" href="/">
-          <span className="logo-mark">I</span>
+          <span className="logo-mark">S</span>
           <span>
-            India Mock Tests<span className="logo-dot">.</span>
+            Sarkari Practice<span className="logo-dot">.</span>
           </span>
         </Link>
         <div className="auth-quote">
@@ -63,10 +63,10 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
       </div>
       <section className="auth-panel">
         <Link className="auth-back" href="/">
-          ← Back to India Mock Tests
+          ← Back to Sarkari Practice
         </Link>
         <div className="auth-heading">
-          <span className="kicker">{isRegister ? "WELCOME TO INDIA MOCK TESTS" : "WELCOME BACK"}</span>
+          <span className="kicker">{isRegister ? "WELCOME TO SARKARI PRACTICE" : "WELCOME BACK"}</span>
           <h1>{isRegister ? "Start with a clearer plan." : "Pick up where you left off."}</h1>
           <p>
             {isRegister
@@ -138,7 +138,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
           </button>
         </form>
         <p className="auth-switch">
-          {isRegister ? "Already have an account?" : "New to India Mock Tests?"}{" "}
+          {isRegister ? "Already have an account?" : "New to Sarkari Practice?"}{" "}
           <Link href={isRegister ? "/login" : "/register"}>
             {isRegister ? "Log in" : "Create an account"}
           </Link>

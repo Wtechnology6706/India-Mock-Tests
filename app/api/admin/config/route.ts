@@ -3,6 +3,9 @@ import { cookies } from "next/headers";
 import { getUserForToken } from "../../../../lib/auth-store";
 import { getSiteConfiguration, saveSiteConfiguration } from "../../../../lib/site-config";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   const cookieStore = await cookies();
   const user = await getUserForToken(cookieStore.get("northstar_session")?.value);

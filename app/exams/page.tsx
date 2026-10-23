@@ -1,15 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import MegaMenu from "../components/MegaMenu";
 import Footer from "../components/Footer";
 import { featuredExams } from "../../lib/catalog";
 import { syllabusTracks } from "../../lib/syllabus";
+import { defaultExamGroups, type ExamGroup } from "../../lib/exam-group-types";
 
 export default function ExamsDirectoryPage() {
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [examGroups, setExamGroups] = useState<ExamGroup[]>(defaultExamGroups);
+
+  useEffect(() => {
+    fetch("/api/exam-groups")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.groups) && data.groups.length > 0) {
+          setExamGroups(data.groups);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const categories = [
     { id: "all", label: "🌟 All Examinations" },
@@ -231,10 +244,140 @@ export default function ExamsDirectoryPage() {
           ))}
         </div>
 
+        {/* Featured Clubbed Exam Series & Subject Bundles */}
+        <div className="directory-listing-heading" style={{ marginTop: "50px" }}>
+          <div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#f5f3ff", color: "#6d28d9", padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: 700, marginBottom: "8px" }}>
+              <span>🔗</span> BUNDLED TEST SERIES PACKAGES
+            </div>
+            <h2>Clubbed Exam Series &amp; Subject Combos ({examGroups.filter((g) => g.active).length})</h2>
+            <p>Admin-curated test series bundling core domain subjects with qualifying Language, General Studies &amp; GK papers.</p>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px", margin: "20px 0 50px" }}>
+          {examGroups
+            .filter((g) => g.active)
+            .map((group) => (
+              <div
+                key={group.id}
+                style={{
+                  background: "#fff",
+                  borderRadius: "16px",
+                  border: "1px solid #e2e8f0",
+                  padding: "22px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+                  transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "10px" }}>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        background: group.type === "group" ? "#ecfdf5" : "#f5f3ff",
+                        color: group.type === "group" ? "#047857" : "#6d28d9",
+                        border: `1px solid ${group.type === "group" ? "#a7f3d0" : "#ddd6fe"}`,
+                      }}
+                    >
+                      {group.type === "group" ? "🏢 FULL EXAM BUNDLE" : "🎯 INDIVIDUAL SERIES"}
+                    </span>
+                    {group.badge && (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          padding: "3px 8px",
+                          borderRadius: "6px",
+                          background: "#fffbeb",
+                          color: "#b45309",
+                          border: "1px solid #fde68a",
+                        }}
+                      >
+                        {group.badge}
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 style={{ margin: "0 0 6px", fontSize: "17px", fontWeight: 800, color: "#0f172a" }}>
+                    {group.title}
+                  </h3>
+                  <span style={{ fontSize: "12px", color: "#64748b", display: "block", marginBottom: "12px" }}>
+                    Exam: <strong>{group.examName}</strong>
+                  </span>
+
+                  <p style={{ margin: "0 0 14px", fontSize: "13px", color: "#475569", lineHeight: "1.5" }}>
+                    {group.description}
+                  </p>
+
+                  {/* Clubbed subjects pills */}
+                  <div style={{ background: "#f8fafc", borderRadius: "10px", padding: "12px", border: "1px solid #f1f5f9", marginBottom: "16px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "6px" }}>
+                      🔗 Clubbed Subjects Included:
+                    </span>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                      {group.clubbedSubjects.slice(0, 5).map((sub, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            fontSize: "11px",
+                            padding: "2px 7px",
+                            borderRadius: "4px",
+                            background: "#fff",
+                            border: "1px solid #e2e8f0",
+                            color: "#334155",
+                            fontWeight: 600,
+                          }}
+                        >
+                          ✓ {sub}
+                        </span>
+                      ))}
+                      {group.clubbedSubjects.length > 5 && (
+                        <span style={{ fontSize: "11px", padding: "2px 6px", color: "#6d28d9", fontWeight: 700 }}>
+                          +{group.clubbedSubjects.length - 5} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "14px", borderTop: "1px solid #f1f5f9" }}>
+                  <div>
+                    <span style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a" }}>₹{group.price}</span>
+                    <span style={{ display: "block", fontSize: "11px", color: "#64748b" }}>/ {group.validityDays} Days Pass</span>
+                  </div>
+                  <Link
+                    href={`/checkout?plan=sprint&option=${group.type}&group=${group.slug}&amount=${group.price}`}
+                    style={{
+                      background: group.type === "group" ? "#0f766e" : "#7c3aed",
+                      color: "#fff",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    Unlock Series →
+                  </Link>
+                </div>
+              </div>
+            ))}
+        </div>
+
         {/* Learning Tracks & Class Levels Grid */}
         <div className="tracks-directory-section">
           <div className="tracks-header">
-            <h3>Class-Wise & Paper-Wise Direct Syllabus Tracks</h3>
+            <h3>Class-Wise &amp; Paper-Wise Direct Syllabus Tracks</h3>
             <p>Directly jump to your target teaching grade or paper level:</p>
           </div>
 
