@@ -53,6 +53,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
   const [pyqLoading, setPyqLoading] = useState(false);
   const [pyqExamFilter, setPyqExamFilter] = useState("all");
   const [pyqSearch, setPyqSearch] = useState("");
+  const [selectedPyq, setSelectedPyq] = useState<any | null>(null);
 
   useEffect(() => {
     if (activeTab === "pyq" && dashboardPyqs.length === 0 && !pyqLoading) {
@@ -68,6 +69,21 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
         .finally(() => setPyqLoading(false));
     }
   }, [activeTab, dashboardPyqs.length, pyqLoading]);
+
+  // Read URL query params for direct pyqPaper link
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const paperId = params.get("pyqPaper");
+      if (paperId && dashboardPyqs.length > 0) {
+        const found = dashboardPyqs.find((p) => p.id === paperId || p.slug === paperId);
+        if (found) {
+          setSelectedPyq(found);
+          setActiveTab("pyq");
+        }
+      }
+    }
+  }, [dashboardPyqs]);
 
   const loadWallet = async () => {
     setWalletLoading(true);
@@ -481,8 +497,8 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
             className={`dashboard-nav-btn ${activeTab === "overview" ? "active" : ""}`}
             onClick={() => switchTab("overview")}
           >
-            <span>📊</span>
-            Overview
+            <span className="nav-btn-icon">📊</span>
+            <span className="nav-btn-text">Overview</span>
           </button>
 
           <button
@@ -490,8 +506,8 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
             className={`dashboard-nav-btn ${activeTab === "tests" ? "active" : ""}`}
             onClick={() => switchTab("tests")}
           >
-            <span>📝</span>
-            Mock tests
+            <span className="nav-btn-icon">📝</span>
+            <span className="nav-btn-text">Mock tests</span>
           </button>
 
           <button
@@ -499,31 +515,21 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
             className={`dashboard-nav-btn ${activeTab === "exams" ? "active" : ""}`}
             onClick={() => switchTab("exams")}
           >
-            <span>🏛️</span>
-            Exam directory
+            <span className="nav-btn-icon">🏛️</span>
+            <span className="nav-btn-text">Exam directory</span>
           </button>
 
           <button
             type="button"
             className={`dashboard-nav-btn ${activeTab === "pyq" ? "active" : ""}`}
-            onClick={() => switchTab("pyq")}
+            onClick={() => {
+              setSelectedPyq(null);
+              switchTab("pyq");
+            }}
           >
-            <span>📄</span>
-            Previous Year Papers (PYQ)
-            <span
-              style={{
-                marginLeft: "auto",
-                fontSize: "10px",
-                fontWeight: 700,
-                background: "#ecfdf5",
-                color: "#059669",
-                padding: "2px 6px",
-                borderRadius: "10px",
-                letterSpacing: "0.4px",
-              }}
-            >
-              NEW
-            </span>
+            <span className="nav-btn-icon">📄</span>
+            <span className="nav-btn-text">Previous Year Papers</span>
+            <span className="nav-badge badge-new">NEW</span>
           </button>
 
           <button
@@ -531,22 +537,9 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
             className={`dashboard-nav-btn ${activeTab === "tutorials" ? "active" : ""}`}
             onClick={() => switchTab("tutorials")}
           >
-            <span>📹</span>
-            Tutorials
-            <span
-              style={{
-                marginLeft: "auto",
-                fontSize: "9.5px",
-                fontWeight: 700,
-                background: "#fef3c7",
-                color: "#92400e",
-                padding: "2px 6px",
-                borderRadius: "10px",
-                letterSpacing: "0.4px",
-              }}
-            >
-              SOON
-            </span>
+            <span className="nav-btn-icon">📹</span>
+            <span className="nav-btn-text">Tutorials</span>
+            <span className="nav-badge badge-soon">SOON</span>
           </button>
 
           <button
@@ -554,8 +547,8 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
             className={`dashboard-nav-btn ${activeTab === "progress" ? "active" : ""}`}
             onClick={() => switchTab("progress")}
           >
-            <span>📈</span>
-            Test results ({stats.totalAttempts})
+            <span className="nav-btn-icon">📈</span>
+            <span className="nav-btn-text">Test results ({stats.totalAttempts})</span>
           </button>
 
           <button
@@ -563,8 +556,8 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
             className={`dashboard-nav-btn ${activeTab === "membership" ? "active" : ""}`}
             onClick={() => switchTab("membership")}
           >
-            <span>👑</span>
-            VIP Pass & Invoices
+            <span className="nav-btn-icon">👑</span>
+            <span className="nav-btn-text">VIP Pass &amp; Invoices</span>
           </button>
 
           <button
@@ -581,9 +574,10 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                 objectFit: "contain",
                 display: "inline-block",
                 verticalAlign: "middle",
+                flexShrink: 0,
               }}
             />
-            Student Wallet
+            <span className="nav-btn-text">Student Wallet</span>
           </button>
         </nav>
 
@@ -593,8 +587,8 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
             className={`dashboard-nav-btn ${activeTab === "settings" ? "active" : ""}`}
             onClick={() => switchTab("settings")}
           >
-            <span>⚙️</span>
-            Account Settings
+            <span className="nav-btn-icon">⚙️</span>
+            <span className="nav-btn-text">Account Settings</span>
           </button>
 
           {user.role === "admin" && (
@@ -603,8 +597,8 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
               className="dashboard-nav-btn admin-link-btn"
               style={{ marginBottom: "16px", color: "#b94a2b" }}
             >
-              <span>🛡️</span>
-              Admin Studio
+              <span className="nav-btn-icon">🛡️</span>
+              <span className="nav-btn-text">Admin Studio</span>
             </Link>
           )}
 
@@ -1366,169 +1360,285 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
         {/* TAB: PREVIOUS YEAR QUESTIONS (PYQ) */}
         {activeTab === "pyq" && (
           <div className="tab-pane-content">
-            <div className="dashboard-welcome">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%", flexWrap: "wrap", gap: "16px" }}>
-                <div>
-                  <span className="kicker">OFFICIAL QUESTION ARCHIVE</span>
-                  <h1>Previous Year Question Papers (PYQ)</h1>
-                  <p>Download and practice authentic past examination papers with official answer keys.</p>
-                </div>
-                <Link
-                  href="/pyq"
-                  target="_blank"
-                  className="dashboard-primary"
-                  style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+            {selectedPyq ? (
+              /* IN-DASHBOARD PYQ DOCUMENT READER (With Left Sidebar Active) */
+              <div className="pyq-reader-workspace" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {/* Top Action Bar */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                    background: "#ffffff",
+                    padding: "14px 18px",
+                    borderRadius: "10px",
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+                  }}
                 >
-                  Full-Screen PYQ Hub ↗
-                </Link>
-              </div>
-            </div>
-
-            {/* Filter pills & search */}
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center", marginBottom: "20px" }}>
-              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                {["all", "bpsc-tre-4", "bihar-stet", "ctet"].map((slug) => {
-                  const labels: Record<string, string> = {
-                    all: "🌟 All Exams",
-                    "bpsc-tre-4": "🎯 BPSC TRE",
-                    "bihar-stet": "📖 Bihar STET",
-                    ctet: "📝 CTET",
-                  };
-                  const isSelected = pyqExamFilter === slug;
-                  return (
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
                     <button
-                      key={slug}
                       type="button"
-                      onClick={() => setPyqExamFilter(slug)}
+                      onClick={() => setSelectedPyq(null)}
                       style={{
-                        padding: "6px 14px",
-                        borderRadius: "20px",
-                        fontSize: "0.82rem",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "8px 14px",
+                        background: "#f1f5f9",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "6px",
+                        color: "#334155",
                         fontWeight: 700,
-                        border: isSelected ? "2px solid #059669" : "1px solid #cbd5e1",
-                        background: isSelected ? "#ecfdf5" : "#ffffff",
-                        color: isSelected ? "#065f46" : "#475569",
+                        fontSize: "12.5px",
                         cursor: "pointer",
                       }}
                     >
-                      {labels[slug] || slug}
+                      ← Back to All Papers
                     </button>
-                  );
-                })}
-              </div>
-
-              <input
-                type="text"
-                placeholder="Search PYQ papers..."
-                value={pyqSearch}
-                onChange={(e) => setPyqSearch(e.target.value)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid #cbd5e1",
-                  fontSize: "0.85rem",
-                  marginLeft: "auto",
-                  minWidth: "220px",
-                }}
-              />
-            </div>
-
-            {pyqLoading ? (
-              <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
-                <div style={{ fontSize: "24px", marginBottom: "8px" }}>⏳</div>
-                <p>Loading previous year papers archive...</p>
-              </div>
-            ) : (() => {
-              const filtered = dashboardPyqs.filter((p) => {
-                const matchExam = pyqExamFilter === "all" || p.examSlug === pyqExamFilter;
-                const matchSearch =
-                  !pyqSearch.trim() ||
-                  p.title.toLowerCase().includes(pyqSearch.toLowerCase()) ||
-                  p.paperName.toLowerCase().includes(pyqSearch.toLowerCase()) ||
-                  p.examName.toLowerCase().includes(pyqSearch.toLowerCase());
-                return matchExam && matchSearch;
-              });
-
-              if (filtered.length === 0) {
-                return (
-                  <div style={{ padding: "40px 20px", textAlign: "center", background: "#f8fafc", borderRadius: "10px", border: "1px dashed #cbd5e1" }}>
-                    <span style={{ fontSize: "2rem" }}>📂</span>
-                    <h3 style={{ margin: "10px 0 6px", color: "#1e293b" }}>No PYQ Papers Found</h3>
-                    <p style={{ color: "#64748b", margin: "0 0 16px", fontSize: "0.88rem" }}>
-                      Our editorial faculty is cataloging more authentic past papers. You can visit the full directory now.
-                    </p>
-                    <Link href="/pyq" className="dashboard-primary" style={{ textDecoration: "none", display: "inline-block" }}>
-                      Visit PYQ Directory →
-                    </Link>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#059669", background: "#ecfdf5", padding: "2px 8px", borderRadius: "4px" }}>
+                          {selectedPyq.year} Official Paper
+                        </span>
+                        <span style={{ fontSize: "12px", color: "#64748b" }}>
+                          {selectedPyq.language || "Bilingual"}
+                        </span>
+                      </div>
+                      <h2 style={{ fontSize: "1.1rem", fontWeight: 800, margin: "4px 0 0", color: "#0f172a" }}>
+                        {selectedPyq.title}
+                      </h2>
+                    </div>
                   </div>
-                );
-              }
 
-              return (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
-                  {filtered.map((pyq) => (
-                    <div
-                      key={pyq.id}
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <a
+                      href={selectedPyq.fileUrl || selectedPyq.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        border: "1px solid #cbd5e1",
                         background: "#ffffff",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "10px",
-                        padding: "16px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "10px",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                        color: "#334155",
+                        fontWeight: 700,
+                        fontSize: "12.5px",
+                        textDecoration: "none",
                       }}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#059669", background: "#ecfdf5", padding: "2px 8px", borderRadius: "4px" }}>
-                          {pyq.year} Official
-                        </span>
-                        <span style={{ fontSize: "11px", color: "#64748b" }}>
-                          {pyq.language || "Bilingual"}
-                        </span>
-                      </div>
-                      <h3 style={{ fontSize: "0.98rem", fontWeight: 700, margin: 0, color: "#0f172a", lineHeight: 1.35 }}>
-                        {pyq.title}
-                      </h3>
-                      <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>
-                        {pyq.examName} · {pyq.paperName}
-                      </p>
-                      <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", gap: "8px" }}>
-                        <Link
-                          href={`/pyq?paper=${pyq.id}`}
-                          className="dashboard-primary"
-                          style={{ flex: 1, textAlign: "center", textDecoration: "none", fontSize: "0.82rem", padding: "7px 10px" }}
-                        >
-                          View & Solve ↗
-                        </Link>
-                        {pyq.pdfUrl && (
-                          <a
-                            href={pyq.pdfUrl}
-                            download
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              padding: "7px 12px",
-                              borderRadius: "6px",
-                              border: "1px solid #cbd5e1",
-                              background: "#f8fafc",
-                              color: "#334155",
-                              fontSize: "0.82rem",
-                              fontWeight: 700,
-                              textDecoration: "none",
-                            }}
-                            title="Download PDF"
-                          >
-                            ⬇ PDF
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                      🗗 Pop-out Tab
+                    </a>
+                    <a
+                      href={selectedPyq.fileUrl || selectedPyq.pdfUrl}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        background: "#059669",
+                        color: "#ffffff",
+                        fontWeight: 700,
+                        fontSize: "12.5px",
+                        textDecoration: "none",
+                        boxShadow: "0 2px 6px rgba(5,150,105,0.2)",
+                      }}
+                    >
+                      ⬇ Download PDF
+                    </a>
+                  </div>
                 </div>
-              );
-            })()}
+
+                {/* Embedded PDF Canvas */}
+                <div
+                  style={{
+                    background: "#1e293b",
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    border: "1px solid #334155",
+                    height: "calc(100vh - 220px)",
+                    minHeight: "680px",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                  }}
+                >
+                  <object
+                    data={`${selectedPyq.fileUrl || selectedPyq.pdfUrl}#toolbar=1&navpanes=0`}
+                    type="application/pdf"
+                    style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                  >
+                    <iframe
+                      src={`${selectedPyq.fileUrl || selectedPyq.pdfUrl}#toolbar=1`}
+                      title={selectedPyq.title}
+                      style={{ width: "100%", height: "100%", border: "none" }}
+                    />
+                  </object>
+                </div>
+              </div>
+            ) : (
+              /* PYQ PAPERS CATALOG */
+              <>
+                <div className="dashboard-welcome">
+                  <div>
+                    <span className="kicker">OFFICIAL QUESTION ARCHIVE</span>
+                    <h1>Previous Year Question Papers (PYQ)</h1>
+                    <p>Download and practice authentic past examination papers with official answer keys.</p>
+                  </div>
+                </div>
+
+                {/* Filter pills & search */}
+                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center", marginBottom: "20px" }}>
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    {["all", "bpsc-tre-4", "bihar-stet", "ctet"].map((slug) => {
+                      const labels: Record<string, string> = {
+                        all: "🌟 All Exams",
+                        "bpsc-tre-4": "🎯 BPSC TRE",
+                        "bihar-stet": "📖 Bihar STET",
+                        ctet: "📝 CTET",
+                      };
+                      const isSelected = pyqExamFilter === slug;
+                      return (
+                        <button
+                          key={slug}
+                          type="button"
+                          onClick={() => setPyqExamFilter(slug)}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: "20px",
+                            fontSize: "0.82rem",
+                            fontWeight: 700,
+                            border: isSelected ? "2px solid #059669" : "1px solid #cbd5e1",
+                            background: isSelected ? "#ecfdf5" : "#ffffff",
+                            color: isSelected ? "#065f46" : "#475569",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {labels[slug] || slug}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <input
+                    type="text"
+                    placeholder="Search PYQ papers..."
+                    value={pyqSearch}
+                    onChange={(e) => setPyqSearch(e.target.value)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.85rem",
+                      marginLeft: "auto",
+                      minWidth: "220px",
+                    }}
+                  />
+                </div>
+
+                {pyqLoading ? (
+                  <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+                    <div style={{ fontSize: "24px", marginBottom: "8px" }}>⏳</div>
+                    <p>Loading previous year papers archive...</p>
+                  </div>
+                ) : (() => {
+                  const filtered = dashboardPyqs.filter((p) => {
+                    const matchExam = pyqExamFilter === "all" || p.examSlug === pyqExamFilter;
+                    const matchSearch =
+                      !pyqSearch.trim() ||
+                      p.title.toLowerCase().includes(pyqSearch.toLowerCase()) ||
+                      p.paperName.toLowerCase().includes(pyqSearch.toLowerCase()) ||
+                      p.examName.toLowerCase().includes(pyqSearch.toLowerCase());
+                    return matchExam && matchSearch;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div style={{ padding: "40px 20px", textAlign: "center", background: "#f8fafc", borderRadius: "10px", border: "1px dashed #cbd5e1" }}>
+                        <span style={{ fontSize: "2rem" }}>📂</span>
+                        <h3 style={{ margin: "10px 0 6px", color: "#1e293b" }}>No PYQ Papers Found</h3>
+                        <p style={{ color: "#64748b", margin: "0 0 16px", fontSize: "0.88rem" }}>
+                          Our editorial faculty is cataloging more authentic past papers. Check back shortly.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+                      {filtered.map((pyq) => (
+                        <div
+                          key={pyq.id}
+                          style={{
+                            background: "#ffffff",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "10px",
+                            padding: "16px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "10px",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: "#059669", background: "#ecfdf5", padding: "2px 8px", borderRadius: "4px" }}>
+                              {pyq.year} Official
+                            </span>
+                            <span style={{ fontSize: "11px", color: "#64748b" }}>
+                              {pyq.language || "Bilingual"}
+                            </span>
+                          </div>
+                          <h3 style={{ fontSize: "0.98rem", fontWeight: 700, margin: 0, color: "#0f172a", lineHeight: 1.35 }}>
+                            {pyq.title}
+                          </h3>
+                          <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>
+                            {pyq.examName} · {pyq.paperName}
+                          </p>
+                          <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", gap: "8px" }}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPyq(pyq)}
+                              className="dashboard-primary"
+                              style={{ flex: 1, textAlign: "center", fontSize: "0.82rem", padding: "7px 10px", cursor: "pointer", border: "none" }}
+                            >
+                              View &amp; Solve ↗
+                            </button>
+                            {pyq.pdfUrl && (
+                              <a
+                                href={pyq.pdfUrl}
+                                download
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  padding: "7px 12px",
+                                  borderRadius: "6px",
+                                  border: "1px solid #cbd5e1",
+                                  background: "#f8fafc",
+                                  color: "#334155",
+                                  fontSize: "0.82rem",
+                                  fontWeight: 700,
+                                  textDecoration: "none",
+                                }}
+                                title="Download PDF"
+                              >
+                                ⬇ PDF
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </>
+            )}
           </div>
         )}
 

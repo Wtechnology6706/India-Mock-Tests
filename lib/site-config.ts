@@ -36,6 +36,7 @@ export async function getSiteConfiguration(): Promise<SiteConfiguration> {
       const merged: SiteConfiguration = {
         ...defaultSiteConfig,
         ...parsed,
+        adsenseClientId: parsed.adsenseClientId?.trim() || "ca-pub-6062326114232535",
         logoHeight: parsed.logoHeight !== undefined ? Number(parsed.logoHeight) : (defaultSiteConfig.logoHeight ?? 48),
         logoOffsetX: parsed.logoOffsetX !== undefined ? Number(parsed.logoOffsetX) : (defaultSiteConfig.logoOffsetX ?? 0),
         logoOffsetY: parsed.logoOffsetY !== undefined ? Number(parsed.logoOffsetY) : (defaultSiteConfig.logoOffsetY ?? 0),

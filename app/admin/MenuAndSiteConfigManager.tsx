@@ -565,14 +565,36 @@ export default function MenuAndSiteConfigManager() {
               </div>
 
               <div className="config-field" style={{ gridColumn: "1 / -1" }}>
-                <label>Google AdSense Client ID</label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <label style={{ margin: 0 }}>Google AdSense Client / Publisher ID</label>
+                  <a
+                    href="/ads.txt"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: "11px", color: "#2563eb", fontWeight: 700, textDecoration: "underline" }}
+                  >
+                    View Live /ads.txt ↗
+                  </a>
+                </div>
                 <input
                   type="text"
-                  value={config.adsenseClientId || ""}
-                  onChange={(e) => setConfig({ ...config, adsenseClientId: e.target.value })}
-                  placeholder="ca-pub-XXXXXXXXXXXXXXXX"
+                  value={config.adsenseClientId || "ca-pub-6062326114232535"}
+                  onChange={(e) => {
+                    let val = e.target.value.trim();
+                    const match = val.match(/ca-pub-\d+/);
+                    if (match) val = match[0];
+                    else if (val.match(/^pub-\d+/)) val = `ca-${val}`;
+                    setConfig({ ...config, adsenseClientId: val });
+                  }}
+                  placeholder="ca-pub-6062326114232535"
                 />
-                <small>Your approved AdSense publisher ID to dynamically inject ad units.</small>
+                <div style={{ marginTop: "6px", fontSize: "11.5px", color: "#059669", background: "#ecfdf5", border: "1px solid #a7f3d0", padding: "8px 12px", borderRadius: "6px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <span>✓ <strong>Live AdSense Tag Connected:</strong></span>
+                  <code style={{ background: "#ffffff", padding: "2px 6px", borderRadius: "4px", color: "#065f46" }}>
+                    ca-pub-6062326114232535
+                  </code>
+                  <span style={{ color: "#047857" }}>· Injected directly in &lt;head&gt; across all public pages</span>
+                </div>
               </div>
             </div>
           </div>

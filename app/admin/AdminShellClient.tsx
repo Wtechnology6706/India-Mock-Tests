@@ -21,6 +21,7 @@ import MenuAndSiteConfigManager from "./MenuAndSiteConfigManager";
 import AdminSettings from "./AdminSettings";
 import AnalyticsManager from "./AnalyticsManager";
 import ExamGroupManager from "./ExamGroupManager";
+import BlogManager from "./BlogManager";
 
 import type { AdminQuestion, RuleProfile, AdminTest, Plan, Notification } from "../../lib/phase1";
 import type { MockTest, SubjectDemandRequest } from "../../lib/admin-content";
@@ -72,6 +73,9 @@ const VALID_TABS: Record<string, AdminTab> = {
   wallets: "wallets",
   wallet: "wallets",
   notifications: "notifications",
+  blog: "blog",
+  blogs: "blog",
+  articles: "blog",
   "site-config": "site-config",
   audit: "audit",
   settings: "settings",
@@ -90,17 +94,7 @@ export default function AdminShellClient({
   plans,
   notifications,
 }: AdminShellClientProps) {
-  const [activeTab, setActiveTabState] = useState<AdminTab>(() => {
-    if (typeof window !== "undefined") {
-      const searchParam = new URLSearchParams(window.location.search).get("tab");
-      const hashParam = window.location.hash.replace("#", "");
-      const key = searchParam || hashParam;
-      if (key && VALID_TABS[key]) {
-        return VALID_TABS[key];
-      }
-    }
-    return "overview";
-  });
+  const [activeTab, setActiveTabState] = useState<AdminTab>("overview");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   // Synchronize activeTab on mount and on browser back/forward (popstate / hashchange)
@@ -186,6 +180,8 @@ export default function AdminShellClient({
         return "Communication / Official Exam Alerts";
       case "audit":
         return "Security / Audit Trail & Compliance";
+      case "blog":
+        return "Content / Blog Articles & SEO Engine";
       case "site-config":
         return "Platform / Website Branding & Menu Studio";
       case "settings":
@@ -489,6 +485,13 @@ export default function AdminShellClient({
           {activeTab === "pyq" && (
             <div className="admin-module-view">
               <PYQManager />
+            </div>
+          )}
+
+          {/* 5D. BLOG ARTICLES & SEO */}
+          {activeTab === "blog" && (
+            <div className="admin-module-view">
+              <BlogManager />
             </div>
           )}
 

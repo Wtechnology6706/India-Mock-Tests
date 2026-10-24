@@ -574,13 +574,17 @@ export default function MegaMenu({ initialConfig }: MegaMenuProps = {}) {
             </div>
 
             {/* PYQ Previous Year Papers */}
-            <Link href="/pyq" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <Link href={user ? "/dashboard#pyq" : "/pyq"} className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
               <span>PYQ Papers</span>
               <span style={{ fontSize: "10px", fontWeight: 800, background: "linear-gradient(135deg, #10b981, #059669)", color: "#fff", padding: "1px 6px", borderRadius: "999px", letterSpacing: "0.5px" }}>NEW</span>
             </Link>
 
             <Link href="/pricing" className="nav-item-link">
               Plans & Pricing
+            </Link>
+
+            <Link href="/blog" className="nav-item-link">
+              Blog
             </Link>
 
             {/* Custom Navigation Menu Items (Shopify-Style Navigation Customizer) */}
@@ -724,7 +728,7 @@ export default function MegaMenu({ initialConfig }: MegaMenuProps = {}) {
                           </span>
                         </button>
 
-                        <Link href="/pyq" className="header-dropdown-item">
+                        <Link href={user ? "/dashboard#pyq" : "/pyq"} className="header-dropdown-item">
                           📑 Previous Year Papers (PYQ)
                         </Link>
                         <Link href="/dashboard#tests" className="header-dropdown-item">
@@ -735,6 +739,9 @@ export default function MegaMenu({ initialConfig }: MegaMenuProps = {}) {
                         </Link>
                         <Link href="/dashboard#settings" className="header-dropdown-item">
                           ⚙️ Account Settings
+                        </Link>
+                        <Link href="/blog" className="header-dropdown-item">
+                          📰 Exam Guides &amp; Blog
                         </Link>
                         {user.role === "admin" && (
                           <Link href="/admin" className="header-dropdown-item admin-item">
@@ -838,7 +845,7 @@ export default function MegaMenu({ initialConfig }: MegaMenuProps = {}) {
                   🏠 Home
                 </Link>
               )}
-              <Link href="/pyq" className="mobile-pill-link" onClick={() => setMobileOpen(false)} style={{ background: "rgba(16, 185, 129, 0.12)", color: "#059669", fontWeight: 700 }}>
+              <Link href={user ? "/dashboard#pyq" : "/pyq"} className="mobile-pill-link" onClick={() => setMobileOpen(false)} style={{ background: "rgba(16, 185, 129, 0.12)", color: "#059669", fontWeight: 700 }}>
                 📑 PYQ Papers
               </Link>
               <Link href="/exams" className="mobile-pill-link" onClick={() => setMobileOpen(false)}>
@@ -846,6 +853,9 @@ export default function MegaMenu({ initialConfig }: MegaMenuProps = {}) {
               </Link>
               <Link href="/pricing" className="mobile-pill-link" onClick={() => setMobileOpen(false)}>
                 ⭐ Plans & VIP
+              </Link>
+              <Link href="/blog" className="mobile-pill-link" onClick={() => setMobileOpen(false)}>
+                📰 Blog
               </Link>
             </div>
 

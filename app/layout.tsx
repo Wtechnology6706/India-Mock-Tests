@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Suspense } from "react";
 import GlobalLoader from "./components/GlobalLoader";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 import DynamicFavicon from "./components/DynamicFavicon";
+import { getSiteConfiguration } from "@/lib/site-config";
 import "./globals.css";
 import "./readability.css";
 import "./megamenu.css";
@@ -116,19 +118,35 @@ const jsonLd = {
   ],
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const gaId = process.env.NEXT_PUBLIC_GA_ID || process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+  const config = await getSiteConfiguration().catch(() => null);
+  const adsenseClientId = config?.adsenseClientId?.trim() || "ca-pub-6062326114232535";
 
   return (
-    <html lang="en">
-      <head>
+    <html lang="en" suppressHydrationWarning>
+      <head suppressHydrationWarning>
+        {/* Google AdSense Official Script (afterInteractive prevents DOM reconciliation mutation conflicts) */}
+        {adsenseClientId && (
+          <Script
+            id="google-adsense-sdk"
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        )}
         {gaId && (
           <>
-            <script
+            <Script
+              id="google-gtag-sdk"
               async
               src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+              strategy="afterInteractive"
             />
-            <script
+            <Script
+              id="google-gtag-config"
+              strategy="afterInteractive"
               dangerouslySetInnerHTML={{
                 __html: `
                   window.dataLayer = window.dataLayer || [];
@@ -141,7 +159,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </>
         )}
         <script
+          id="global-schema-graph"
           type="application/ld+json"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>

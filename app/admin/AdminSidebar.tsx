@@ -22,6 +22,7 @@ export type AdminTab =
   | "wallets"
   | "notifications"
   | "audit"
+  | "blog"
   | "site-config"
   | "settings";
 
@@ -287,6 +288,16 @@ export default function AdminSidebar({
               <span className="nav-icon">📑</span>
               <span className="nav-label">PYQ Papers Hub</span>
               <span className="nav-tag-batch" style={{ background: "#059669" }}>PDF</span>
+            </button>
+
+            <button
+              type="button"
+              className={`nav-link-btn ${activeTab === "blog" ? "active" : ""}`}
+              onClick={() => handleTabClick("blog")}
+            >
+              <span className="nav-icon">📰</span>
+              <span className="nav-label">Blog &amp; Articles</span>
+              <span className="nav-tag-batch" style={{ background: "#2563eb" }}>SEO</span>
             </button>
 
             <button

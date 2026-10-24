@@ -252,7 +252,7 @@ export const defaultSiteConfig: SiteConfiguration = {
   logoOffsetY: 0,
   contactEmail: "support@sarkaripractice.com",
   supportPhone: "+91 98765 43210",
-  adsenseClientId: "",
+  adsenseClientId: "ca-pub-6062326114232535",
   razorpayEnabled: true,
   razorpayTestMode: true,
   razorpayTestKeyId: "",

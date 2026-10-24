@@ -83,6 +83,9 @@ export default function Footer() {
                 <Link href="/exams">All State & Central Exams →</Link>
               </li>
               <li>
+                <Link href="/blog">Exam Preparation Blog & Guides</Link>
+              </li>
+              <li>
                 <Link href="/pricing">VIP All-Access Pass</Link>
               </li>
             </ul>

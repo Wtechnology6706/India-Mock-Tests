@@ -1,4 +1,6 @@
 import { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth-store";
 import { getPublishedPYQs } from "@/lib/pyq-store";
 import PYQClient from "./PYQClient";
 import MegaMenu from "../components/MegaMenu";
@@ -12,7 +14,24 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function PYQPage() {
+interface PYQPageProps {
+  searchParams?: Promise<{ paper?: string; exam?: string }>;
+}
+
+export default async function PYQPage({ searchParams }: PYQPageProps) {
+  const user = await getCurrentUser();
+  const resolvedParams = searchParams ? await searchParams : undefined;
+  const paper = resolvedParams?.paper;
+
+  // If user is logged in, open with the layout of dashboard with left navbar
+  if (user) {
+    if (paper) {
+      redirect(`/dashboard?pyqPaper=${encodeURIComponent(paper)}#pyq`);
+    } else {
+      redirect("/dashboard#pyq");
+    }
+  }
+
   const pyqs = await getPublishedPYQs();
   return (
     <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
@@ -24,4 +43,5 @@ export default async function PYQPage() {
     </main>
   );
 }
+
 

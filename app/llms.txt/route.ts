@@ -15,6 +15,7 @@ Sarkari Practice (https://sarkaripractice.com) offers authentic Computer-Based T
 ## Key Pages & Resources
 - Home & Test Catalog: https://sarkaripractice.com/exams
 - Previous Year Papers (PYQ): https://sarkaripractice.com/pyq
+- Exam Preparation Blog & Guides: https://sarkaripractice.com/blog
 - Pricing & VIP Access Plans: https://sarkaripractice.com/plans
 - Student Practice Dashboard: https://sarkaripractice.com/dashboard
 - Concept Tutorials: https://sarkaripractice.com/tutorials
