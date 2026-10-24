@@ -11,10 +11,10 @@ import ConditionalCTA from "./components/ConditionalCTA";
 import Footer from "./components/Footer";
 
 const categories = [
-  ["Teaching", "BPSC · STET · CTET · BTET", "▥", "peach", "teaching"],
-  ["Civil Services", "UPSC · State PSC · BPSC Admin", "◈", "lavender", "civil"],
-  ["Banking & SSC", "IBPS · SBI · CGL · CHSL", "▤", "mint", "banking"],
-  ["Engineering", "GATE · JE · Technical & CS", "⌘", "sky", "engineering"],
+  ["Teaching Exams", "BPSC TRE 4.0 · STET · CTET · Super TET", "🎓", "peach", "teaching"],
+  ["Civil Services & PSC", "UPSC CSE · BPSC Admin · State PSC", "🏛️", "lavender", "civil"],
+  ["Banking & SSC", "IBPS PO · Clerk · SSC CGL · CHSL", "🏦", "mint", "banking"],
+  ["Engineering & Tech", "GATE · RRB JE · Technical & CS", "⚙️", "sky", "engineering"],
 ];
 
 export default async function Home() {
@@ -47,9 +47,9 @@ export default async function Home() {
               🤖 AI Tutor Enabled
             </span>
           </div>
-          <h1>
+          <h1 className="hero-headline">
             Practice with purpose.<br />
-            <i>Perform with confidence.</i>
+            <span className="headline-accent">Perform with confidence.</span>
           </h1>
           <p className="hero-lede">
             Realistic mock tests, clear analytics, and a smarter path to your next exam. Start with one question today.
@@ -101,44 +101,78 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="hero-art" aria-label="Illustration of a learner studying">
-          <div className="sun-shape" />
-          <div className="art-card card-score">
-            <small>YOUR ACCURACY</small>
-            <strong>82<span>.4%</span></strong>
-            <div className="tiny-chart">
-              <i /><i /><i /><i /><i />
+        {/* Live Interactive Examination Simulation Terminal */}
+        <div className="hero-terminal-wrapper" aria-label="Live interactive examination terminal preview">
+          <div className="hero-cbt-terminal">
+            <div className="terminal-header">
+              <div className="terminal-badges">
+                <span className="terminal-pulse-badge">
+                  <span className="live-dot" /> LIVE CBT SIMULATION
+                </span>
+                <span className="terminal-exam-title">BPSC TRE 4.0 · Paper 1</span>
+              </div>
+              <div className="terminal-timer">
+                <span>⏱️ 14:28 Remaining</span>
+              </div>
+            </div>
+            <div className="terminal-meta-bar">
+              <span>QUESTION 24 OF 150</span>
+              <span>Marking: <b className="mark-pos">+1.0</b> / <b className="mark-neg">−0.25</b></span>
+            </div>
+            <div className="terminal-question-box">
+              <p className="terminal-question-text">
+                Article 21A of the Constitution of India provides for which of the following Fundamental Rights?
+              </p>
+              <div className="terminal-options-list">
+                <div className="terminal-option">
+                  <span className="opt-marker">A</span>
+                  <span className="opt-label">Equality before law and equal protection of the laws</span>
+                </div>
+                <div className="terminal-option selected-correct">
+                  <span className="opt-marker">B</span>
+                  <span className="opt-label">Right to free and compulsory education (Ages 6 to 14)</span>
+                  <span className="opt-check">✓ Answer</span>
+                </div>
+                <div className="terminal-option">
+                  <span className="opt-marker">C</span>
+                  <span className="opt-label">Freedom of speech, expression, and assembly</span>
+                </div>
+                <div className="terminal-option">
+                  <span className="opt-marker">D</span>
+                  <span className="opt-label">Right to constitutional remedies under Supreme Court</span>
+                </div>
+              </div>
+              <div className="terminal-solution-card">
+                <div className="sol-badge">💡 STEP-BY-STEP EXPLANATION</div>
+                <p className="sol-text">
+                  The <strong>86th Constitutional Amendment Act, 2002</strong> inserted Article 21A, making education a Fundamental Right for children aged 6 to 14.
+                </p>
+              </div>
+            </div>
+            <div className="terminal-floating-card merit-card">
+              <span className="merit-icon">🏆</span>
+              <div>
+                <strong>Bihar State Rank #142</strong>
+                <small>Top 0.8% in General Studies Cohort</small>
+              </div>
+            </div>
+            <div className="terminal-floating-card accuracy-card">
+              <span className="acc-number">94.2%</span>
+              <small>Accuracy in Pedagogy &amp; GS</small>
             </div>
           </div>
-          <div className="art-card card-check">
-            <span>✓</span>
-            <div>
-              <strong>Session complete</strong>
-              <small>+14 points today</small>
-            </div>
-          </div>
-          <div className="person">
-            <div className="hair" />
-            <div className="head" />
-            <div className="body" />
-            <div className="arm" />
-          </div>
-          <div className="desk" />
-          <div className="plant">🌿</div>
-          <div className="sparkle sparkle-one">✦</div>
-          <div className="sparkle sparkle-two">✧</div>
         </div>
       </section>
 
       {/* Enhanced Live Trust & Capabilities Strip */}
       <section className="trust-strip">
         <span>EXAM-READY FOUNDATION</span>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", justifyContent: "center" }}>
-          <b>🎯 100% Commission Syllabus Pattern</b>
-          <b>🤖 AI Bilingual Doubt Solver</b>
-          <b>⚡ Negative Marking Simulation</b>
-          <b>📱 1-Click WhatsApp Scorecards</b>
-          <b>🇮🇳 15,000+ Aspirants</b>
+        <div>
+          <span className="trust-pill">🎯 100% Commission Syllabus Pattern</span>
+          <span className="trust-pill">🤖 AI Bilingual Doubt Solver</span>
+          <span className="trust-pill">⚡ Negative Marking Simulation</span>
+          <span className="trust-pill">📱 1-Click WhatsApp Scorecards</span>
+          <span className="trust-pill">🇮🇳 15,000+ Aspirants</span>
         </div>
       </section>
 

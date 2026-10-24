@@ -18,41 +18,45 @@ export const mockTestMegaMenu: MegaMenuItem[] = [
   {
     label: "BPSC TRE 4.0",
     slug: "bpsc-tre-4",
+    targetUrl: "/exams/bpsc-tre-4",
     items: [
-      { name: "Class 1–5", slug: "primary-1-5", audience: "Primary Teacher" },
-      { name: "Class 6–8", slug: "middle-6-8", audience: "Middle School Teacher" },
-      { name: "Class 9–10", slug: "secondary-9-10", audience: "Secondary Teacher (TGT)" },
-      { name: "Class 11–12", slug: "higher-secondary-11-12", audience: "Higher Secondary (PGT)" },
+      { name: "Class 1–5", slug: "primary-1-5", audience: "Primary Teacher", targetUrl: "/exams/bpsc-tre-4?track=primary-1-5", isConfigured: true },
+      { name: "Class 6–8", slug: "middle-6-8", audience: "Middle School Teacher", targetUrl: "/exams/bpsc-tre-4?track=middle-6-8", isConfigured: true },
+      { name: "Class 9–10", slug: "secondary-9-10", audience: "Secondary Teacher (TGT)", targetUrl: "/exams/bpsc-tre-4?track=secondary-9-10", isConfigured: true },
+      { name: "Class 11–12", slug: "higher-secondary-11-12", audience: "Higher Secondary (PGT)", targetUrl: "/exams/bpsc-tre-4?track=higher-secondary-11-12", isConfigured: true },
     ],
   },
   {
     label: "STET",
     slug: "bihar-stet",
+    targetUrl: "/exams/bihar-stet",
     items: [
-      { name: "Class 1–5", slug: "paper-1-primary", audience: "Paper I (Primary Foundation)" },
-      { name: "Class 6–8", slug: "paper-1-middle", audience: "Paper I (Upper Primary)" },
-      { name: "Class 9–10", slug: "paper-1", audience: "Paper I (Secondary)" },
-      { name: "Class 11–12", slug: "paper-2", audience: "Paper II (Higher Secondary)" },
+      { name: "Class 9–10 (Paper I)", slug: "paper-1-9-10", audience: "Paper I (Secondary)", targetUrl: "/exams/bihar-stet?track=paper-1-9-10", isConfigured: true },
+      { name: "Class 11–12 (Paper II)", slug: "paper-2-11-12", audience: "Paper II (Higher Secondary)", targetUrl: "/exams/bihar-stet?track=paper-2-11-12", isConfigured: true },
+      { name: "Class 1–5 (Foundation)", slug: "paper-1-primary", audience: "Primary Foundation Prep", targetUrl: "/exams/bihar-stet?track=paper-1-9-10", isConfigured: true },
+      { name: "Class 6–8 (Foundation)", slug: "paper-1-middle", audience: "Upper Primary Foundation", targetUrl: "/exams/bihar-stet?track=paper-1-9-10", isConfigured: true },
     ],
   },
   {
     label: "BTET",
     slug: "btet",
+    targetUrl: "/exams/bihar-stet",
     items: [
-      { name: "Class 1–5", slug: "paper-1", audience: "Paper I (Primary Level)" },
-      { name: "Class 6–8", slug: "paper-2", audience: "Paper II (Upper Primary)" },
-      { name: "Class 9–10", slug: "paper-3", audience: "Secondary Foundation" },
-      { name: "Class 11–12", slug: "paper-4", audience: "Senior Secondary" },
+      { name: "Class 1–5", slug: "paper-1", audience: "Paper I (Primary Level)", targetUrl: "/exams/bihar-stet?track=paper-1-9-10", isConfigured: true },
+      { name: "Class 6–8", slug: "paper-2", audience: "Paper II (Upper Primary)", targetUrl: "/exams/bihar-stet?track=paper-1-9-10", isConfigured: true },
+      { name: "Class 9–10", slug: "paper-3", audience: "Secondary Foundation", targetUrl: "/exams/bihar-stet?track=paper-1-9-10", isConfigured: true },
+      { name: "Class 11–12", slug: "paper-4", audience: "Senior Secondary", targetUrl: "/exams/bihar-stet?track=paper-2-11-12", isConfigured: true },
     ],
   },
   {
     label: "CTET",
     slug: "ctet",
+    targetUrl: "/exams/ctet",
     items: [
-      { name: "Class 1–5", slug: "paper-1", audience: "Paper I (Classes 1 to 5)" },
-      { name: "Class 6–8", slug: "paper-2", audience: "Paper II (Classes 6 to 8)" },
-      { name: "Class 9–10", slug: "secondary-prep", audience: "Secondary Practice" },
-      { name: "Class 11–12", slug: "senior-prep", audience: "Senior Secondary Practice" },
+      { name: "Class 1–5 (Paper I)", slug: "paper-1", audience: "Paper I (Classes 1 to 5)", targetUrl: "/exams/ctet?track=paper-1", isConfigured: true },
+      { name: "Class 6–8 (Paper II)", slug: "paper-2", audience: "Paper II (Classes 6 to 8)", targetUrl: "/exams/ctet?track=paper-2", isConfigured: true },
+      { name: "Class 9–10 (Secondary)", slug: "secondary-prep", audience: "Secondary Practice", targetUrl: "/exams/ctet?track=paper-2", isConfigured: true },
+      { name: "Class 11–12 (Senior)", slug: "senior-prep", audience: "Senior Secondary Practice", targetUrl: "/exams/ctet?track=paper-2", isConfigured: true },
     ],
   },
 ];
@@ -347,7 +351,7 @@ export default function MegaMenu({ initialConfig }: MegaMenuProps = {}) {
               </Link>
             )}
 
-            {/* Mock Test Mega Menu Trigger (2-Column Sidebar Layout as per India Mock Tests (1).html & Screenshot 5) */}
+            {/* Mock Test Mega Menu Trigger (2-Column Sidebar Layout as per Sarkari Practice (1).html & Screenshot 5) */}
             <div
               className={`nav-item-dropdown ${activeMenu === "mock-test" ? "open" : ""}`}
               onMouseEnter={() => handleMouseEnter("mock-test")}
@@ -429,7 +433,11 @@ export default function MegaMenu({ initialConfig }: MegaMenuProps = {}) {
 
                           <div className="mega-category-grid">
                             {activeCol.items.map((sub: any) => {
-                              const target = sub.targetUrl ?? `/tracks/${activeCol.slug}/${sub.slug}`;
+                              // Intelligently fallback to filtered exam route if targetUrl is empty
+                              const target =
+                                sub.targetUrl && sub.targetUrl.trim()
+                                  ? sub.targetUrl.trim()
+                                  : `/exams/${activeCol.slug === "btet" ? "bihar-stet" : activeCol.slug}?track=${sub.slug}`;
                               const isClickable = sub.isConfigured !== false && Boolean(target.trim());
 
                               if (!isClickable) {

@@ -83,6 +83,39 @@ export default function ExamTrackExplorer({
   // Practice tests catalog state
   const [catalogFilter, setCatalogFilter] = useState<"all" | "free" | "vip">("all");
   const [testSearchQuery, setTestSearchQuery] = useState("");
+  const [selectedTrackFilter, setSelectedTrackFilter] = useState<string>("all");
+
+  // Read URL query params (?track=... & ?subj=...) and URL hash (#...) on mount & change
+  useEffect(() => {
+    function parseUrlFilters() {
+      if (typeof window === "undefined") return;
+      const params = new URLSearchParams(window.location.search);
+      const trackParam = params.get("track") || window.location.hash.replace("#", "");
+      const subjParam = params.get("subj") || params.get("subject") || params.get("q");
+
+      if (trackParam) {
+        const found = tracks.find(
+          (t) =>
+            t.slug === trackParam ||
+            t.slug.toLowerCase().includes(trackParam.toLowerCase()) ||
+            trackParam.toLowerCase().includes(t.slug.toLowerCase())
+        );
+        if (found) {
+          setActiveTrackSlug(found.slug);
+          setSelectedTrackFilter(found.slug);
+        }
+      }
+
+      if (subjParam) {
+        setTestSearchQuery(subjParam);
+        setActiveSubjectName(subjParam);
+      }
+    }
+
+    parseUrlFilters();
+    window.addEventListener("hashchange", parseUrlFilters);
+    return () => window.removeEventListener("hashchange", parseUrlFilters);
+  }, [tracks]);
 
   // Syllabus section visibility: collapsed by default as requested!
   const [showSyllabusInline, setShowSyllabusInline] = useState(false);
@@ -221,6 +254,13 @@ export default function ExamTrackExplorer({
     let list = initialTests.filter((t) => t.status === "Published");
     if (catalogFilter === "free") list = list.filter((t) => t.access === "Free");
     if (catalogFilter === "vip") list = list.filter((t) => t.access === "Premium");
+    if (selectedTrackFilter && selectedTrackFilter !== "all") {
+      const target = selectedTrackFilter.toLowerCase().replace(/[^a-z0-9]/g, "");
+      list = list.filter((t) => {
+        const testTrack = (t.trackSlug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        return testTrack.includes(target) || target.includes(testTrack);
+      });
+    }
     if (testSearchQuery.trim()) {
       const q = testSearchQuery.toLowerCase();
       list = list.filter(
@@ -232,7 +272,7 @@ export default function ExamTrackExplorer({
       );
     }
     return list;
-  }, [initialTests, catalogFilter, testSearchQuery]);
+  }, [initialTests, catalogFilter, selectedTrackFilter, testSearchQuery]);
 
   // Filtered subjects inside active track
   const filteredSubjects = useMemo(() => {
@@ -642,14 +682,163 @@ export default function ExamTrackExplorer({
           </div>
         </div>
 
+        {/* Track / Level Segmented Filter Pills */}
+        {tracks.length > 1 && (
+          <div
+            className="catalog-track-pills-row"
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "8px",
+              margin: "14px 0 18px",
+              padding: "10px 14px",
+              background: "#f8faf9",
+              borderRadius: "12px",
+              border: "1px solid #e2e8e5",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#475569",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                marginRight: "4px",
+              }}
+            >
+              Filter by Level:
+            </span>
+            <button
+              type="button"
+              className={`catalog-filter-btn ${selectedTrackFilter === "all" ? "active" : ""}`}
+              onClick={() => {
+                setSelectedTrackFilter("all");
+                if (typeof window !== "undefined") {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete("track");
+                  window.history.replaceState(
+                    null,
+                    "",
+                    url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "")
+                  );
+                }
+              }}
+            >
+              All Levels ({initialTests.filter((t) => t.status === "Published").length})
+            </button>
+            {tracks.map((track) => {
+              const isSelected = selectedTrackFilter === track.slug;
+              const count = initialTests.filter((t) => {
+                if (t.status !== "Published") return false;
+                const testTrack = (t.trackSlug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const target = track.slug.toLowerCase().replace(/[^a-z0-9]/g, "");
+                return testTrack.includes(target) || target.includes(testTrack);
+              }).length;
+              return (
+                <button
+                  key={track.slug}
+                  type="button"
+                  className={`catalog-filter-btn ${isSelected ? "active" : ""}`}
+                  onClick={() => {
+                    setSelectedTrackFilter(track.slug);
+                    setActiveTrackSlug(track.slug);
+                    if (typeof window !== "undefined") {
+                      const url = new URL(window.location.href);
+                      url.searchParams.set("track", track.slug);
+                      window.history.replaceState(
+                        null,
+                        "",
+                        url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "")
+                      );
+                    }
+                  }}
+                >
+                  {track.name} {count > 0 ? `(${count})` : ""}
+                </button>
+              );
+            })}
+            {selectedTrackFilter !== "all" && (
+              <button
+                type="button"
+                style={{
+                  marginLeft: "auto",
+                  border: "none",
+                  background: "transparent",
+                  color: "#dc2626",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                }}
+                onClick={() => {
+                  setSelectedTrackFilter("all");
+                  if (typeof window !== "undefined") {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete("track");
+                    window.history.replaceState(
+                      null,
+                      "",
+                      url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "")
+                    );
+                  }
+                }}
+              >
+                ✕ Clear Level Filter
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Practice Test Cards Grid */}
         {filteredPublishedTests.length === 0 ? (
           <div className="catalog-empty-notice">
             <span className="empty-icon">📂</span>
-            <h4>No published tests match this filter</h4>
+            <h4>
+              {selectedTrackFilter !== "all"
+                ? `No published tests under "${tracks.find((t) => t.slug === selectedTrackFilter)?.name || selectedTrackFilter}" yet`
+                : "No published tests match this filter"}
+            </h4>
             <p>
-              Try clearing your search query or explore the subject tracks below to request tests for upcoming subjects.
+              {selectedTrackFilter !== "all"
+                ? "Our editorial team is authoring high-yield question papers for this syllabus. You can view official topics and upvote below to expedite publishing!"
+                : "Try clearing your search query or explore the subject tracks below to request tests for upcoming subjects."}
             </p>
+            {selectedTrackFilter !== "all" && (
+              <div style={{ marginTop: "16px", display: "flex", gap: "12px", justifyContent: "center" }}>
+                <button
+                  type="button"
+                  className="btn-toggle-syllabus"
+                  onClick={() => {
+                    setShowSyllabusInline(true);
+                    setTimeout(() => {
+                      syllabusSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 150);
+                  }}
+                >
+                  📚 View {tracks.find((t) => t.slug === selectedTrackFilter)?.name || "Track"} Syllabus & Upvote →
+                </button>
+                <button
+                  type="button"
+                  className="catalog-filter-btn active"
+                  onClick={() => {
+                    setSelectedTrackFilter("all");
+                    if (typeof window !== "undefined") {
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete("track");
+                      window.history.replaceState(
+                        null,
+                        "",
+                        url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "")
+                      );
+                    }
+                  }}
+                >
+                  Show All Tests
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="catalog-tests-grid">

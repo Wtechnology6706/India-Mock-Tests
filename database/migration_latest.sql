@@ -1,5 +1,5 @@
 -- =========================================================================
--- INDIA MOCK TESTS - COMPREHENSIVE DATABASE MIGRATION SCRIPT (Ubuntu/Linux)
+-- Sarkari Practice - COMPREHENSIVE DATABASE MIGRATION SCRIPT (Ubuntu/Linux)
 -- =========================================================================
 -- Run this on your Ubuntu server:
 -- mysql -u <user> -p <database_name> < database/migration_latest.sql

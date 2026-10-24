@@ -121,9 +121,9 @@ export default function AdminSidebar({
                 src={logoImageUrl}
                 alt={portalName || "Sarkari Practice"}
                 style={{
-                  height: "42px",
-                  maxHeight: "46px",
-                  maxWidth: "50px",
+                  height: "46px",
+                  maxHeight: "48px",
+                  maxWidth: "52px",
                   width: "auto",
                   objectFit: "contain",
                   flexShrink: 0,
@@ -132,38 +132,58 @@ export default function AdminSidebar({
                 onError={() => setLogoImageUrl("")}
               />
             ) : (
-              <span className="logo-mark" style={{ flexShrink: 0 }}>
+              <span
+                className="logo-mark"
+                style={{
+                  flexShrink: 0,
+                  width: "42px",
+                  height: "42px",
+                  fontSize: "17px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 {(portalName || "Sarkari Practice").slice(0, 1).toUpperCase()}
               </span>
             )}
-            <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.15, minWidth: 0, overflow: "hidden" }}>
-              <span
-                style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontWeight: 800,
-                  fontSize: "15px",
-                  color: "#ffffff",
-                  letterSpacing: "-0.3px",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {portalName || "Sarkari Practice"}
-                <span className="logo-dot" style={{ color: "var(--coral, #d96548)" }}>.</span>
-              </span>
-              <span
-                style={{
-                  fontSize: "9px",
-                  fontWeight: 700,
-                  color: "#8ca39b",
-                  letterSpacing: "0.8px",
-                  textTransform: "uppercase",
-                }}
-              >
-                Admin Panel
-              </span>
-            </div>
+            {(() => {
+              const raw = (portalName || "Sarkari Practice").trim();
+              const words = raw.split(/\s+/);
+              const first = words[0]?.replace(/\.+$/, "") || "Sarkari";
+              const rest = (words.slice(1).join(" ") || "Practice").replace(/\.+$/, "");
+              return (
+                <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.05, minWidth: 0, justifyContent: "center" }}>
+                  <span
+                    style={{
+                      fontFamily: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
+                      fontWeight: 800,
+                      fontSize: "17px",
+                      color: "#ffffff",
+                      letterSpacing: "-0.4px",
+                      lineHeight: 1.08,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {first}.
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
+                      fontWeight: 800,
+                      fontSize: "17px",
+                      color: "#ffffff",
+                      letterSpacing: "-0.4px",
+                      lineHeight: 1.08,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {rest}
+                    <span className="logo-dot" style={{ color: "var(--coral, #d96548)" }}>.</span>
+                  </span>
+                </div>
+              );
+            })()}
           </Link>
           <span className="admin-badge-tag">ADMIN</span>
           <button type="button" className="sidebar-close-btn" onClick={onCloseMobile}>

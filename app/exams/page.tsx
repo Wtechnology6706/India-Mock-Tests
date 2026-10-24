@@ -22,6 +22,16 @@ export default function ExamsDirectoryPage() {
         }
       })
       .catch(() => {});
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("q") || params.get("search");
+      const cat = params.get("category") || params.get("cat");
+      if (q) setSearchQuery(q);
+      if (cat && ["all", "teaching", "state", "central"].includes(cat)) {
+        setActiveCategory(cat);
+      }
+    }
   }, []);
 
   const categories = [

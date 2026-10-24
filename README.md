@@ -1,4 +1,4 @@
-# India Mock Tests Platform
+# Sarkari Practice
 
 ## Delivery plan
 

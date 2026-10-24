@@ -67,7 +67,7 @@ export default function MenuAndSiteConfigManager() {
       try {
         localStorage.setItem("site_config_updated_at", String(Date.now()));
         window.dispatchEvent(new Event("site_config_updated"));
-      } catch {}
+      } catch { }
 
       setTimeout(() => setLogoSaveFeedback(null), 5000);
     } catch (err: any) {
@@ -235,6 +235,17 @@ export default function MenuAndSiteConfigManager() {
     }));
   }
 
+  function syncAllMockMenuToDefaults() {
+    setConfig((prev) => ({
+      ...prev,
+      mockTestMenu: defaultMockTestMenu,
+    }));
+    setFeedback({
+      type: "success",
+      message: "All Mega Menu tracks successfully synchronized with live filtered exam routes! Click 'Save Changes' at the top right to commit.",
+    });
+  }
+
   function addMockLayer3Item(catId: string) {
     const newItem: SubMenuItem3 = {
       id: `item-${Date.now()}`,
@@ -293,7 +304,7 @@ export default function MenuAndSiteConfigManager() {
       role: "Aspirant / Selected Candidate",
       type: "student",
       rating: 5,
-      content: "Write student or parent review feedback here. India Mock Tests helped me clear the examination with confidence.",
+      content: "Write student or parent review feedback here. Sarkari Practice helped me clear the examination with confidence.",
       examBadge: "BPSC TRE 4.0",
       verified: true,
       date: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
@@ -1072,8 +1083,8 @@ export default function MenuAndSiteConfigManager() {
                               (config.logoOffsetY ?? 0) === 0
                                 ? "#64748b"
                                 : (config.logoOffsetY ?? 0) < 0
-                                ? "#0284c7"
-                                : "#0d9488",
+                                  ? "#0284c7"
+                                  : "#0d9488",
                             color: "#fff",
                             padding: "2px 8px",
                             borderRadius: "12px",
@@ -1084,8 +1095,8 @@ export default function MenuAndSiteConfigManager() {
                           {(config.logoOffsetY ?? 0) === 0
                             ? "0 px (Center)"
                             : (config.logoOffsetY ?? 0) < 0
-                            ? `${Math.abs(config.logoOffsetY ?? 0)}px Up ↑`
-                            : `${config.logoOffsetY}px Down ↓`}
+                              ? `${Math.abs(config.logoOffsetY ?? 0)}px Up ↑`
+                              : `${config.logoOffsetY}px Down ↓`}
                         </span>
                         <button
                           type="button"
@@ -1163,8 +1174,8 @@ export default function MenuAndSiteConfigManager() {
                               (config.logoOffsetX ?? 0) === 0
                                 ? "#64748b"
                                 : (config.logoOffsetX ?? 0) < 0
-                                ? "#e11d48"
-                                : "#d97706",
+                                  ? "#e11d48"
+                                  : "#d97706",
                             color: "#fff",
                             padding: "2px 8px",
                             borderRadius: "12px",
@@ -1175,8 +1186,8 @@ export default function MenuAndSiteConfigManager() {
                           {(config.logoOffsetX ?? 0) === 0
                             ? "0 px (Center)"
                             : (config.logoOffsetX ?? 0) < 0
-                            ? `${Math.abs(config.logoOffsetX ?? 0)}px Left ←`
-                            : `${config.logoOffsetX}px Right →`}
+                              ? `${Math.abs(config.logoOffsetX ?? 0)}px Left ←`
+                              : `${config.logoOffsetX}px Right →`}
                         </span>
                         <button
                           type="button"
@@ -1719,8 +1730,8 @@ export default function MenuAndSiteConfigManager() {
                     {(config.logoOffsetY ?? 0) === 0
                       ? "0px (Center)"
                       : (config.logoOffsetY ?? 0) > 0
-                      ? `+${config.logoOffsetY}px Down ↓`
-                      : `${config.logoOffsetY}px Up ↑`}
+                        ? `+${config.logoOffsetY}px Down ↓`
+                        : `${config.logoOffsetY}px Up ↑`}
                   </span>
                   <span
                     style={{
@@ -1735,8 +1746,8 @@ export default function MenuAndSiteConfigManager() {
                     {(config.logoOffsetX ?? 0) === 0
                       ? "0px (Center)"
                       : (config.logoOffsetX ?? 0) > 0
-                      ? `+${config.logoOffsetX}px Right →`
-                      : `${config.logoOffsetX}px Left ←`}
+                        ? `+${config.logoOffsetX}px Right →`
+                        : `${config.logoOffsetX}px Left ←`}
                   </span>
                   <span
                     style={{
@@ -1808,13 +1819,24 @@ export default function MenuAndSiteConfigManager() {
                   />
                 </div>
 
-                <button
-                  type="button"
-                  className="btn-add-layer3"
-                  onClick={() => addMockLayer3Item(currentMockLayer2.id)}
-                >
-                  + Add Layer 3 Exam/Class Link
-                </button>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    className="btn-add-layer3"
+                    style={{ background: "#059669", color: "#ffffff", borderColor: "#047857" }}
+                    onClick={syncAllMockMenuToDefaults}
+                    title="Reset and synchronize all menu links to live filtered exam routes"
+                  >
+                    🔄 Auto-Sync All Menu Tracks
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-add-layer3"
+                    onClick={() => addMockLayer3Item(currentMockLayer2.id)}
+                  >
+                    + Add Layer 3 Exam/Class Link
+                  </button>
+                </div>
               </div>
 
               <div className="layer3-items-list">
@@ -1848,15 +1870,64 @@ export default function MenuAndSiteConfigManager() {
                       }
                     />
 
-                    <input
-                      type="text"
-                      className="layer3-input"
-                      value={item.targetUrl}
-                      placeholder="/exams/..."
-                      onChange={(e) =>
-                        updateMockLayer3Item(currentMockLayer2.id, item.id, "targetUrl", e.target.value)
-                      }
-                    />
+                    <div className="url-select-wrap">
+                      <input
+                        type="text"
+                        className="layer3-input"
+                        value={item.targetUrl}
+                        placeholder="/exams/..."
+                        onChange={(e) =>
+                          updateMockLayer3Item(currentMockLayer2.id, item.id, "targetUrl", e.target.value)
+                        }
+                      />
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+                        <select
+                          className="layer3-input"
+                          style={{ fontSize: "11px", padding: "4px 6px", background: "#f8fafc", color: "#1e293b", borderColor: "#cbd5e1" }}
+                          value={item.targetUrl || ""}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              updateMockLayer3Item(currentMockLayer2.id, item.id, "targetUrl", e.target.value);
+                            }
+                          }}
+                        >
+                          <option value="">⚡ Quick Route Presets...</option>
+                          <optgroup label="BPSC TRE 4.0">
+                            <option value="/exams/bpsc-tre-4">BPSC TRE 4.0 (All Levels)</option>
+                            <option value="/exams/bpsc-tre-4?track=primary-1-5">Class 1–5 (Primary)</option>
+                            <option value="/exams/bpsc-tre-4?track=middle-6-8">Class 6–8 (Middle)</option>
+                            <option value="/exams/bpsc-tre-4?track=secondary-9-10">Class 9–10 (TGT)</option>
+                            <option value="/exams/bpsc-tre-4?track=higher-secondary-11-12">Class 11–12 (PGT)</option>
+                          </optgroup>
+                          <optgroup label="Bihar STET">
+                            <option value="/exams/bihar-stet">Bihar STET (All Papers)</option>
+                            <option value="/exams/bihar-stet?track=paper-1-9-10">Class 9–10 (Paper I Secondary)</option>
+                            <option value="/exams/bihar-stet?track=paper-2-11-12">Class 11–12 (Paper II Senior)</option>
+                          </optgroup>
+                          <optgroup label="CTET July 2026">
+                            <option value="/exams/ctet">CTET July 2026 (All Papers)</option>
+                            <option value="/exams/ctet?track=paper-1">Paper I (Classes 1–5)</option>
+                            <option value="/exams/ctet?track=paper-2">Paper II (Classes 6–8)</option>
+                          </optgroup>
+                          <optgroup label="Standard Hubs">
+                            <option value="/exams">All Available Exams</option>
+                            <option value="/pyq">Previous Year Papers</option>
+                            <option value="/plans">Plans & Pricing</option>
+                          </optgroup>
+                        </select>
+                        {item.targetUrl && (
+                          <a
+                            href={item.targetUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: "11px", color: "#2563eb", fontWeight: 600, textDecoration: "underline", whiteSpace: "nowrap" }}
+                            title="Verify link and filters in new tab"
+                          >
+                            Test ↗
+                          </a>
+                        )}
+                      </div>
+                    </div>
 
                     <div className="layer3-toggle-wrap">
                       <label className="toggle-label">

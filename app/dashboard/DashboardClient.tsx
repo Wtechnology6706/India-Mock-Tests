@@ -13,7 +13,7 @@ import InvoiceModal from "../components/InvoiceModal";
 import WalletModal from "../components/WalletModal";
 import { evaluateTestAccess, defaultExamGroups, type ExamGroup } from "../../lib/exam-group-types";
 
-type TabKey = "overview" | "tests" | "exams" | "progress" | "membership" | "settings" | "wallet";
+type TabKey = "overview" | "tests" | "exams" | "pyq" | "tutorials" | "progress" | "membership" | "settings" | "wallet";
 
 type DashboardClientProps = {
   user: AuthUser;
@@ -35,6 +35,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
   const [logoOffsetY, setLogoOffsetY] = useState<number>(0);
   const [portalName, setPortalName] = useState("Sarkari Practice");
   const [isMounted, setIsMounted] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   // Wallet state
   const [walletModalOpen, setWalletModalOpen] = useState(false);
@@ -46,6 +47,27 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
   const [topupAmount, setTopupAmount] = useState<number>(499);
   const [topupLoading, setTopupLoading] = useState(false);
   const [topupMsg, setTopupMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  // PYQ papers tab state
+  const [dashboardPyqs, setDashboardPyqs] = useState<any[]>([]);
+  const [pyqLoading, setPyqLoading] = useState(false);
+  const [pyqExamFilter, setPyqExamFilter] = useState("all");
+  const [pyqSearch, setPyqSearch] = useState("");
+
+  useEffect(() => {
+    if (activeTab === "pyq" && dashboardPyqs.length === 0 && !pyqLoading) {
+      setPyqLoading(true);
+      fetch("/api/pyq")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.success && Array.isArray(data.pyqs)) {
+            setDashboardPyqs(data.pyqs);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setPyqLoading(false));
+    }
+  }, [activeTab, dashboardPyqs.length, pyqLoading]);
 
   const loadWallet = async () => {
     setWalletLoading(true);
@@ -122,7 +144,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.replace("#", "") as TabKey;
-      if (["overview", "tests", "exams", "progress", "membership", "settings", "wallet"].includes(hash)) {
+      if (["overview", "tests", "exams", "pyq", "tutorials", "progress", "membership", "settings", "wallet"].includes(hash)) {
         setActiveTab(hash);
       }
     };
@@ -134,6 +156,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
   function switchTab(tab: TabKey) {
     setActiveTab(tab);
     window.location.hash = tab;
+    setIsMobileNavOpen(false);
   }
 
   async function handleLogout() {
@@ -185,7 +208,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
           key: data.keyId,
           amount: data.amount,
           currency: data.currency || "INR",
-          name: portalName || "India Mock Tests",
+          name: portalName || "Sarkari Practice",
           description: "Student Wallet Recharge",
           order_id: data.orderId,
           handler: async function (response: any) {
@@ -232,7 +255,7 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
           setExamGroups(data.groups);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Subscription & Exam access checker (supports both Full Bundles and Clubbed Subject Series)
@@ -343,33 +366,42 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
 
   return (
     <main className="dashboard-page">
+      {/* Mobile Backdrop */}
+      {isMobileNavOpen && (
+        <div
+          className="dashboard-mobile-backdrop"
+          onClick={() => setIsMobileNavOpen(false)}
+        />
+      )}
+
       {/* Persistent Left Sidebar */}
-      <aside className="dashboard-sidebar">
-        <Link
-          className="logo dashboard-logo-link"
-          href={user.role === "admin" ? "/" : "/dashboard"}
-          onClick={(e) => {
-            if (user.role !== "admin") {
-              e.preventDefault();
-              switchTab("overview");
-            }
-          }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            textDecoration: "none",
-            gap: "10px",
-            minWidth: 0,
-            width: "100%",
-          }}
-        >
+      <aside className={`dashboard-sidebar ${isMobileNavOpen ? "mobile-sidebar-open" : ""}`}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "8px" }}>
+          <Link
+            className="logo dashboard-logo-link"
+            href={user.role === "admin" ? "/" : "/dashboard"}
+            onClick={(e) => {
+              if (user.role !== "admin") {
+                e.preventDefault();
+                switchTab("overview");
+              }
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              textDecoration: "none",
+              gap: "10px",
+              minWidth: 0,
+              flex: 1,
+            }}
+          >
           {logoImageUrl ? (
             <img
               src={logoImageUrl}
               alt={portalName || "Sarkari Practice"}
               style={{
-                height: "46px",
-                maxHeight: "48px",
+                height: "48px",
+                maxHeight: "52px",
                 maxWidth: "52px",
                 width: "auto",
                 objectFit: "contain",
@@ -379,41 +411,71 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
               onError={() => setLogoImageUrl("")}
             />
           ) : (
-            <span className="logo-mark" style={{ flexShrink: 0 }}>
+            <span
+              className="logo-mark"
+              style={{
+                flexShrink: 0,
+                width: "44px",
+                height: "44px",
+                fontSize: "18px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               {(portalName || "Sarkari Practice").slice(0, 1).toUpperCase()}
             </span>
           )}
-          <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.15, minWidth: 0, overflow: "hidden" }}>
-            <span
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontWeight: 800,
-                fontSize: "16px",
-                color: "var(--ink, #1e293b)",
-                letterSpacing: "-0.4px",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {portalName || "Sarkari Practice"}
-              <span className="logo-dot" style={{ color: "var(--coral, #d96548)" }}>.</span>
-            </span>
-            <span
-              style={{
-                fontSize: "9.5px",
-                fontWeight: 700,
-                color: "#778581",
-                letterSpacing: "0.8px",
-                textTransform: "uppercase",
-              }}
-            >
-              Exam Prep
-            </span>
-          </div>
+          {(() => {
+            const raw = (portalName || "Sarkari Practice").trim();
+            const words = raw.split(/\s+/);
+            const first = words[0]?.replace(/\.+$/, "") || "Sarkari";
+            const rest = (words.slice(1).join(" ") || "Practice").replace(/\.+$/, "");
+            return (
+              <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.05, minWidth: 0, justifyContent: "center" }}>
+                <span
+                  style={{
+                    fontFamily: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
+                    fontWeight: 800,
+                    fontSize: "18.5px",
+                    color: "var(--ink, #1e293b)",
+                    letterSpacing: "-0.5px",
+                    lineHeight: 1.08,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {first}.
+                </span>
+                <span
+                  style={{
+                    fontFamily: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
+                    fontWeight: 800,
+                    fontSize: "18.5px",
+                    color: "var(--ink, #1e293b)",
+                    letterSpacing: "-0.5px",
+                    lineHeight: 1.08,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {rest}
+                  <span className="logo-dot" style={{ color: "var(--coral, #d96548)" }}>.</span>
+                </span>
+              </div>
+            );
+          })()}
         </Link>
+        <button
+          type="button"
+          className="dashboard-drawer-close-btn"
+          onClick={() => setIsMobileNavOpen(false)}
+          title="Close Navigation Drawer"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
 
-        <nav className="dashboard-nav">
+      <nav className="dashboard-nav">
           <button
             type="button"
             className={`dashboard-nav-btn ${activeTab === "overview" ? "active" : ""}`}
@@ -439,6 +501,52 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
           >
             <span>🏛️</span>
             Exam directory
+          </button>
+
+          <button
+            type="button"
+            className={`dashboard-nav-btn ${activeTab === "pyq" ? "active" : ""}`}
+            onClick={() => switchTab("pyq")}
+          >
+            <span>📄</span>
+            Previous Year Papers (PYQ)
+            <span
+              style={{
+                marginLeft: "auto",
+                fontSize: "10px",
+                fontWeight: 700,
+                background: "#ecfdf5",
+                color: "#059669",
+                padding: "2px 6px",
+                borderRadius: "10px",
+                letterSpacing: "0.4px",
+              }}
+            >
+              NEW
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={`dashboard-nav-btn ${activeTab === "tutorials" ? "active" : ""}`}
+            onClick={() => switchTab("tutorials")}
+          >
+            <span>📹</span>
+            Tutorials
+            <span
+              style={{
+                marginLeft: "auto",
+                fontSize: "9.5px",
+                fontWeight: 700,
+                background: "#fef3c7",
+                color: "#92400e",
+                padding: "2px 6px",
+                borderRadius: "10px",
+                letterSpacing: "0.4px",
+              }}
+            >
+              SOON
+            </span>
           </button>
 
           <button
@@ -522,33 +630,15 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
       <section className="dashboard-main">
         {/* Top bar with Search & User Menu */}
         <header className="dashboard-topbar">
-          <div className="dashboard-mobile-logo" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            {logoImageUrl ? (
-              <img
-                src={logoImageUrl}
-                alt={portalName || "Sarkari Practice"}
-                style={{
-                  height: "36px",
-                  maxHeight: "38px",
-                  maxWidth: "42px",
-                  width: "auto",
-                  objectFit: "contain",
-                  flexShrink: 0,
-                  display: "inline-block",
-                }}
-                onError={() => setLogoImageUrl("")}
-              />
-            ) : (
-              <span className="logo-mark" style={{ flexShrink: 0 }}>
-                {(portalName || "Sarkari Practice").slice(0, 1).toUpperCase()}
-              </span>
-            )}
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: "16px", color: "var(--ink, #1e293b)" }}>
-              {portalName || "Sarkari Practice"}
-              <span style={{ color: "var(--coral, #d96548)" }}>.</span>
-            </span>
-          </div>
-
+          <button
+            type="button"
+            className="dashboard-mobile-menu-btn"
+            onClick={() => setIsMobileNavOpen(true)}
+            aria-label="Open navigation menu"
+            title="Open Menu"
+          >
+            ☰
+          </button>
           <div className="dashboard-search-container">
             <span className="search-symbol">⌕</span>
             <input
@@ -671,6 +761,12 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                     <button type="button" onClick={() => switchTab("tests")}>
                       <span>📝</span> My Mock Tests
                     </button>
+                    <button type="button" onClick={() => switchTab("pyq")}>
+                      <span>📄</span> Previous Year Papers (PYQ)
+                    </button>
+                    <button type="button" onClick={() => switchTab("tutorials")}>
+                      <span>📹</span> Video Tutorials (Coming Soon)
+                    </button>
                     <button type="button" onClick={() => switchTab("progress")}>
                       <span>📈</span> Test Performance ({stats.totalAttempts})
                     </button>
@@ -708,11 +804,11 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                 <span className="kicker" suppressHydrationWarning>
                   {isMounted
                     ? new Date().toLocaleDateString("en-US", {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      }).toUpperCase()
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    }).toUpperCase()
                     : ""}
                 </span>
                 <h1>
@@ -1173,8 +1269,8 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                   {accessFilter === "purchased"
                     ? "No Active Purchased Exams"
                     : accessFilter === "free"
-                    ? "No Free Tests Found"
-                    : "No Mock Tests Found"}
+                      ? "No Free Tests Found"
+                      : "No Mock Tests Found"}
                 </h3>
                 <p style={{ color: "#64748b", margin: "0 0 20px", fontSize: "0.9rem", lineHeight: "1.5" }}>
                   {accessFilter === "purchased"
@@ -1263,6 +1359,286 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
                   </Link>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: PREVIOUS YEAR QUESTIONS (PYQ) */}
+        {activeTab === "pyq" && (
+          <div className="tab-pane-content">
+            <div className="dashboard-welcome">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%", flexWrap: "wrap", gap: "16px" }}>
+                <div>
+                  <span className="kicker">OFFICIAL QUESTION ARCHIVE</span>
+                  <h1>Previous Year Question Papers (PYQ)</h1>
+                  <p>Download and practice authentic past examination papers with official answer keys.</p>
+                </div>
+                <Link
+                  href="/pyq"
+                  target="_blank"
+                  className="dashboard-primary"
+                  style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  Full-Screen PYQ Hub ↗
+                </Link>
+              </div>
+            </div>
+
+            {/* Filter pills & search */}
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center", marginBottom: "20px" }}>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                {["all", "bpsc-tre-4", "bihar-stet", "ctet"].map((slug) => {
+                  const labels: Record<string, string> = {
+                    all: "🌟 All Exams",
+                    "bpsc-tre-4": "🎯 BPSC TRE",
+                    "bihar-stet": "📖 Bihar STET",
+                    ctet: "📝 CTET",
+                  };
+                  const isSelected = pyqExamFilter === slug;
+                  return (
+                    <button
+                      key={slug}
+                      type="button"
+                      onClick={() => setPyqExamFilter(slug)}
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: "20px",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        border: isSelected ? "2px solid #059669" : "1px solid #cbd5e1",
+                        background: isSelected ? "#ecfdf5" : "#ffffff",
+                        color: isSelected ? "#065f46" : "#475569",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {labels[slug] || slug}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <input
+                type="text"
+                placeholder="Search PYQ papers..."
+                value={pyqSearch}
+                onChange={(e) => setPyqSearch(e.target.value)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid #cbd5e1",
+                  fontSize: "0.85rem",
+                  marginLeft: "auto",
+                  minWidth: "220px",
+                }}
+              />
+            </div>
+
+            {pyqLoading ? (
+              <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+                <div style={{ fontSize: "24px", marginBottom: "8px" }}>⏳</div>
+                <p>Loading previous year papers archive...</p>
+              </div>
+            ) : (() => {
+              const filtered = dashboardPyqs.filter((p) => {
+                const matchExam = pyqExamFilter === "all" || p.examSlug === pyqExamFilter;
+                const matchSearch =
+                  !pyqSearch.trim() ||
+                  p.title.toLowerCase().includes(pyqSearch.toLowerCase()) ||
+                  p.paperName.toLowerCase().includes(pyqSearch.toLowerCase()) ||
+                  p.examName.toLowerCase().includes(pyqSearch.toLowerCase());
+                return matchExam && matchSearch;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div style={{ padding: "40px 20px", textAlign: "center", background: "#f8fafc", borderRadius: "10px", border: "1px dashed #cbd5e1" }}>
+                    <span style={{ fontSize: "2rem" }}>📂</span>
+                    <h3 style={{ margin: "10px 0 6px", color: "#1e293b" }}>No PYQ Papers Found</h3>
+                    <p style={{ color: "#64748b", margin: "0 0 16px", fontSize: "0.88rem" }}>
+                      Our editorial faculty is cataloging more authentic past papers. You can visit the full directory now.
+                    </p>
+                    <Link href="/pyq" className="dashboard-primary" style={{ textDecoration: "none", display: "inline-block" }}>
+                      Visit PYQ Directory →
+                    </Link>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+                  {filtered.map((pyq) => (
+                    <div
+                      key={pyq.id}
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "10px",
+                        padding: "16px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#059669", background: "#ecfdf5", padding: "2px 8px", borderRadius: "4px" }}>
+                          {pyq.year} Official
+                        </span>
+                        <span style={{ fontSize: "11px", color: "#64748b" }}>
+                          {pyq.language || "Bilingual"}
+                        </span>
+                      </div>
+                      <h3 style={{ fontSize: "0.98rem", fontWeight: 700, margin: 0, color: "#0f172a", lineHeight: 1.35 }}>
+                        {pyq.title}
+                      </h3>
+                      <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>
+                        {pyq.examName} · {pyq.paperName}
+                      </p>
+                      <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", gap: "8px" }}>
+                        <Link
+                          href={`/pyq?paper=${pyq.id}`}
+                          className="dashboard-primary"
+                          style={{ flex: 1, textAlign: "center", textDecoration: "none", fontSize: "0.82rem", padding: "7px 10px" }}
+                        >
+                          View & Solve ↗
+                        </Link>
+                        {pyq.pdfUrl && (
+                          <a
+                            href={pyq.pdfUrl}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              padding: "7px 12px",
+                              borderRadius: "6px",
+                              border: "1px solid #cbd5e1",
+                              background: "#f8fafc",
+                              color: "#334155",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              textDecoration: "none",
+                            }}
+                            title="Download PDF"
+                          >
+                            ⬇ PDF
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* TAB: TUTORIALS (COMING SOON) */}
+        {activeTab === "tutorials" && (
+          <div className="tab-pane-content">
+            <div
+              style={{
+                background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+                border: "1px solid #e2e8f0",
+                borderRadius: "14px",
+                padding: "44px 28px",
+                textAlign: "center",
+                maxWidth: "780px",
+                margin: "20px auto",
+                boxShadow: "0 8px 30px rgba(0,0,0,0.04)",
+              }}
+            >
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "4px 12px",
+                  background: "#fef3c7",
+                  color: "#92400e",
+                  borderRadius: "20px",
+                  fontSize: "0.78rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.5px",
+                  marginBottom: "16px",
+                }}
+              >
+                <span>📹</span> VIDEO MASTERCLASSES & CONCEPT LECTURES
+              </div>
+
+              <h1 style={{ fontSize: "2rem", fontWeight: 800, color: "#0f172a", margin: "0 0 10px", lineHeight: 1.25 }}>
+                Video Tutorials & Notes
+                <br />
+                <span style={{ color: "#d96548" }}>Coming Soon!</span>
+              </h1>
+
+              <p style={{ color: "#475569", fontSize: "0.96rem", lineHeight: 1.6, maxWidth: "580px", margin: "0 auto 28px" }}>
+                Our expert faculty is authoring high-definition concept lectures, previous-year question video solutions, and downloadable PDF summary sheets. We will launch this module shortly.
+              </p>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+                  gap: "14px",
+                  textAlign: "left",
+                  margin: "0 0 28px",
+                }}
+              >
+                <div style={{ background: "#ffffff", padding: "16px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: "20px", marginBottom: "6px" }}>🎥</div>
+                  <strong style={{ fontSize: "0.88rem", color: "#0f172a", display: "block", marginBottom: "4px" }}>
+                    Bilingual Video Classes
+                  </strong>
+                  <p style={{ fontSize: "0.78rem", color: "#64748b", margin: 0, lineHeight: 1.4 }}>
+                    Step-by-step theory and exam tricks for BPSC TRE, STET, and CTET.
+                  </p>
+                </div>
+
+                <div style={{ background: "#ffffff", padding: "16px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: "20px", marginBottom: "6px" }}>📑</div>
+                  <strong style={{ fontSize: "0.88rem", color: "#0f172a", display: "block", marginBottom: "4px" }}>
+                    Revision Formula Sheets
+                  </strong>
+                  <p style={{ fontSize: "0.78rem", color: "#64748b", margin: 0, lineHeight: 1.4 }}>
+                    Concise chapter-wise notes downloadable directly to device.
+                  </p>
+                </div>
+
+                <div style={{ background: "#ffffff", padding: "16px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: "20px", marginBottom: "6px" }}>⚡</div>
+                  <strong style={{ fontSize: "0.88rem", color: "#0f172a", display: "block", marginBottom: "4px" }}>
+                    Quizzes & Retention
+                  </strong>
+                  <p style={{ fontSize: "0.78rem", color: "#64748b", margin: 0, lineHeight: 1.4 }}>
+                    Instant MCQ checkpoints linked with our live mock tests.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="dashboard-primary"
+                  onClick={() => switchTab("tests")}
+                >
+                  📝 Practice Mock Tests Meanwhile →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchTab("pyq")}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    color: "#334155",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  📄 View PYQ Papers
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1925,6 +2301,50 @@ export default function DashboardClient({ user, initialData, initialMockTests }:
           }}
         />
       </section>
+
+      {/* Mobile Bottom Navigation Bar for rapid thumb access */}
+      <nav className="dashboard-mobile-bottom-bar" aria-label="Mobile Navigation">
+        <button
+          type="button"
+          className={`dashboard-mobile-bottom-tab ${activeTab === "overview" ? "active" : ""}`}
+          onClick={() => switchTab("overview")}
+        >
+          <span>📊</span>
+          Overview
+        </button>
+        <button
+          type="button"
+          className={`dashboard-mobile-bottom-tab ${activeTab === "tests" ? "active" : ""}`}
+          onClick={() => switchTab("tests")}
+        >
+          <span>📝</span>
+          Mocks
+        </button>
+        <button
+          type="button"
+          className={`dashboard-mobile-bottom-tab ${activeTab === "progress" ? "active" : ""}`}
+          onClick={() => switchTab("progress")}
+        >
+          <span>📈</span>
+          Results
+        </button>
+        <button
+          type="button"
+          className={`dashboard-mobile-bottom-tab ${activeTab === "membership" ? "active" : ""}`}
+          onClick={() => switchTab("membership")}
+        >
+          <span>👑</span>
+          VIP
+        </button>
+        <button
+          type="button"
+          className="dashboard-mobile-bottom-tab"
+          onClick={() => setIsMobileNavOpen(true)}
+        >
+          <span>☰</span>
+          Menu
+        </button>
+      </nav>
     </main>
   );
 }

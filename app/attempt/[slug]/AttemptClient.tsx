@@ -116,11 +116,11 @@ export default function AttemptClient({
                 optionIndex: optIdx,
                 markForReview: reviewedRef.current.includes(Number(qId)),
               }),
-            }).catch(() => {});
+            }).catch(() => { });
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     return () => {
       isMounted = false;
@@ -159,7 +159,7 @@ export default function AttemptClient({
           optionIndex,
           markForReview,
         }),
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
@@ -499,7 +499,7 @@ export default function AttemptClient({
         <nav className="cbt-topbar">
           <span className="cbt-brand">
             <span className="logo-mark">I</span>
-            <span className="cbt-brand-text">India Mock Tests<span>.</span></span>
+            <span className="cbt-brand-text">Sarkari Practice<span>.</span></span>
           </span>
           <span className="attempt-status">Attempt submitted</span>
         </nav>
@@ -542,7 +542,7 @@ export default function AttemptClient({
         <div className="cbt-brand-area">
           <Link className="cbt-brand" href="/dashboard" title="Back to Dashboard">
             <span className="logo-mark">I</span>
-            <span className="cbt-brand-text">India Mock Tests<span>.</span></span>
+            <span className="cbt-brand-text">Sarkari Practice<span>.</span></span>
           </Link>
           <div className="cbt-exam-heading">
             <strong>{title}</strong>

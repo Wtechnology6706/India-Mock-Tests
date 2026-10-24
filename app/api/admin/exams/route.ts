@@ -25,20 +25,63 @@ export async function GET(request: NextRequest) {
       `SELECT id, name, slug, description, status, badge, visual_tone, visual_symbol, image_url
        FROM exams ORDER BY id ASC`
     );
-    if (rows.length > 0) {
-      return NextResponse.json({
-        exams: rows.map((r) => ({
-          id: String(r.id),
-          slug: r.slug,
-          title: r.name,
-          description: r.description ?? "",
-          status: r.status,
-          badge: r.badge ?? "",
-          tone: r.visual_tone,
-          symbol: r.visual_symbol,
-          imageUrl: r.image_url ?? undefined,
-        })),
-      });
+
+    // Ensure all catalog exams (including CTET) are synced into DB & response
+    const existingSlugs = new Set(rows.map((r) => r.slug.toLowerCase()));
+    for (const fe of featuredExams) {
+      if (!existingSlugs.has(fe.slug.toLowerCase())) {
+        try {
+          await db.execute(
+            `INSERT INTO exams (name, slug, description, status, badge, visual_tone, visual_symbol)
+             VALUES (?, ?, ?, 'published', ?, ?, ?)`,
+            [fe.title, fe.slug, fe.meta, fe.badge, fe.tone, fe.symbol]
+          );
+        } catch {
+          // ignore duplicate / table error
+        }
+      }
+    }
+
+    // Re-fetch after ensure or map
+    const [freshRows] = await db.query<ExamRow[]>(
+      `SELECT id, name, slug, description, status, badge, visual_tone, visual_symbol, image_url
+       FROM exams ORDER BY id ASC`
+    );
+
+    const mergedRows = freshRows.length > 0 ? freshRows : rows;
+
+    if (mergedRows.length > 0) {
+      // Ensure any in-memory catalog items are also merged
+      const returnedSlugs = new Set(mergedRows.map((r) => r.slug.toLowerCase()));
+      const finalExams = mergedRows.map((r) => ({
+        id: String(r.id),
+        slug: r.slug,
+        title: r.name,
+        description: r.description ?? "",
+        status: r.status,
+        badge: r.badge ?? "",
+        tone: r.visual_tone,
+        symbol: r.visual_symbol,
+        imageUrl: r.image_url ?? undefined,
+      }));
+
+      for (const fe of featuredExams) {
+        if (!returnedSlugs.has(fe.slug.toLowerCase())) {
+          finalExams.push({
+            id: fe.slug,
+            slug: fe.slug,
+            title: fe.title,
+            description: fe.meta,
+            status: "published",
+            badge: fe.badge,
+            tone: fe.tone,
+            symbol: fe.symbol,
+            imageUrl: fe.imageUrl,
+          });
+        }
+      }
+
+      return NextResponse.json({ exams: finalExams });
     }
   } catch {
     // fallback

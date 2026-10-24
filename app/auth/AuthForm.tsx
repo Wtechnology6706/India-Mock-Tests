@@ -12,7 +12,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [loading, setLoading] = useState(false);
 
   function fillAdminDemo() {
-    setEmail("admin@indiamocktests.com");
+    setEmail("admin@sarkaripractice.com");
     setPassword("Admin@123456");
     setError("");
   }
