@@ -35,6 +35,9 @@ export const metadata: Metadata = {
   authors: [{ name: "Sarkari Practice Editorial Team" }],
   creator: "Sarkari Practice",
   publisher: "Sarkari Practice",
+  other: {
+    "google-adsense-account": "ca-pub-6062326114232535",
+  },
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
@@ -126,16 +129,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <head suppressHydrationWarning>
-        {/* Google AdSense Official Script (afterInteractive prevents DOM reconciliation mutation conflicts) */}
-        {adsenseClientId && (
-          <Script
-            id="google-adsense-sdk"
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
-            crossOrigin="anonymous"
-            strategy="afterInteractive"
-          />
-        )}
+        {/* Google AdSense Official Script placed directly in head for crawler verification */}
+        <script
+          async
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
+          crossOrigin="anonymous"
+          suppressHydrationWarning
+        />
         {gaId && (
           <>
             <Script

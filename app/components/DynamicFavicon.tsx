@@ -8,28 +8,19 @@ export default function DynamicFavicon() {
       if (!iconUrl) return;
       const head = document.head || document.getElementsByTagName("head")[0];
 
-      // Remove any existing favicon link tags
-      const existingIcons = head.querySelectorAll("link[rel*='icon']");
-      existingIcons.forEach((el) => el.remove());
-
-      // Create new favicon link
-      const iconLink = document.createElement("link");
-      iconLink.rel = "icon";
-      iconLink.type = iconUrl.endsWith(".svg") ? "image/svg+xml" : "image/png";
-      iconLink.href = iconUrl;
-      head.appendChild(iconLink);
-
-      // Create shortcut icon for older browsers
-      const shortcutLink = document.createElement("link");
-      shortcutLink.rel = "shortcut icon";
-      shortcutLink.href = iconUrl;
-      head.appendChild(shortcutLink);
-
-      // Create apple touch icon
-      const appleLink = document.createElement("link");
-      appleLink.rel = "apple-touch-icon";
-      appleLink.href = iconUrl;
-      head.appendChild(appleLink);
+      // Update existing favicon link in-place without deleting nodes from React's fiber tree
+      const iconLinks = head.querySelectorAll("link[rel*='icon']");
+      if (iconLinks.length > 0) {
+        iconLinks.forEach((link) => {
+          (link as HTMLLinkElement).href = iconUrl;
+        });
+      } else {
+        const iconLink = document.createElement("link");
+        iconLink.rel = "icon";
+        iconLink.type = iconUrl.endsWith(".svg") ? "image/svg+xml" : "image/png";
+        iconLink.href = iconUrl;
+        head.appendChild(iconLink);
+      }
     }
 
     // Fetch site config logo
