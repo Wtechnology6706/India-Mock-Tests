@@ -8,7 +8,7 @@
 --   * Unit 2: Teaching Art (30 Qs) + Other Skills (20 Qs) = 50 Marks (Common)
 -- ============================================================================
 
-USE mock_test_platform;
+USE mocktest_db;
 
 -- 1. Ensure Country, Sector, Category & BSEB Organization
 INSERT INTO countries (name, code)
@@ -36,7 +36,7 @@ SELECT
   'Bihar STET 2026',
   'bihar-stet',
   'Bihar Secondary Teacher Eligibility Test (STET 2026) conducted by BSEB for Secondary (Classes 9–10 / Paper 1) and Senior Secondary (Classes 11–12 / Paper 2). Features 150 MCQs (100 Subject + 50 Art of Teaching & Other Skills), 150 minutes, and No Negative Marking.',
-  'published',
+  'draft',
   'Trending',
   'blue',
   '◒',
@@ -48,7 +48,7 @@ WHERE c.code = 'IN'
 ON DUPLICATE KEY UPDATE
   name = 'Bihar STET 2026',
   description = VALUES(description),
-  status = 'published',
+  status = 'draft',
   badge = VALUES(badge),
   visual_tone = 'blue',
   visual_symbol = '◒',
@@ -61,7 +61,7 @@ SET @stet_exam_id := (SELECT id FROM exams WHERE slug = 'bihar-stet' LIMIT 1);
 -- 3. Official BSEB STET Scoring Rule Profile (150 Marks, No Negative Marking)
 -- ----------------------------------------------------------------------------
 INSERT INTO rule_profiles (exam_id, version, name, option_count, marks_per_correct, penalty_wrong, penalty_unanswered, status)
-VALUES (@stet_exam_id, 1, 'Bihar STET Official Pattern (150 MCQs / No Negative Marking)', 4, 1.000, 0.000, 0.000, 'published')
+VALUES (@stet_exam_id, 1, 'Bihar STET Official Pattern (150 MCQs / No Negative Marking)', 4, 1.000, 0.000, 0.000, 'draft')
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),
   option_count = VALUES(option_count),
@@ -83,7 +83,7 @@ VALUES
     'bihar-stet-paper-1-secondary',
     'Full-length 150-question CBT mocks for Secondary Teacher aspirants (Classes 9-10): 100 marks Graduation-level Subject Knowledge + 50 marks Common Unit 2 (Art of Teaching & Other Skills).',
     'free',
-    'published'
+    'draft'
   ),
   (
     @stet_exam_id,
@@ -91,7 +91,7 @@ VALUES
     'bihar-stet-paper-2-senior',
     'Complete 150-question CBT mocks for Senior Secondary Teacher aspirants (Classes 11-12): 100 marks Post-Graduation Honours Subject Knowledge + 50 marks Common Unit 2 across 27 disciplines.',
     'premium',
-    'published'
+    'draft'
   ),
   (
     @stet_exam_id,
@@ -99,7 +99,7 @@ VALUES
     'bihar-stet-common-unit2',
     'Targeted drills on mandatory Unit 2 for all Paper 1 and Paper 2 candidates: 30 marks Art of Teaching (Bloom\'s taxonomy, lesson planning, pedagogy) + 20 marks Other Skills (GK, Reasoning, Maths, EVS).',
     'free',
-    'published'
+    'draft'
   ),
   (
     @stet_exam_id,
@@ -107,7 +107,7 @@ VALUES
     'bihar-stet-clubbed-sets',
     'Combined multidisciplinary mock tests (Maths + Science, Social Sciences, Language Bundles) designed for holistic scoring and topic-level mastery.',
     'free',
-    'published'
+    'draft'
   ),
   (
     @stet_exam_id,
@@ -115,7 +115,7 @@ VALUES
     'bihar-stet-pyq-official',
     'Authentic BSEB STET CBT examination question papers from previous editions with official answer keys and step-by-step solutions.',
     'free',
-    'published'
+    'draft'
   )
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),
@@ -192,7 +192,7 @@ VALUES
     50,
     50,
     50.00,
-    'published',
+    'draft',
     'Official 50-question mandatory Unit-2 paper for both Paper 1 & Paper 2: 30 Qs on Art of Teaching (Bloom\'s Taxonomy, lesson plans, teaching methods, evaluation) + 20 Qs on Other Skills (Bihar GK, Reasoning, Maths & EVS).'
   ),
   (
@@ -204,7 +204,7 @@ VALUES
     30,
     30,
     30.00,
-    'published',
+    'draft',
     'Focused 30-question drill on teaching-learning processes, Bloom\'s taxonomy, microteaching, classroom management, CCE, and educational psychology.'
   ),
   (
@@ -216,7 +216,7 @@ VALUES
     20,
     20,
     20.00,
-    'published',
+    'draft',
     'Speed drill of 20 high-scoring questions: 5 General Knowledge (Bihar history & geography), 5 Environmental Science, 5 Numerical Aptitude, and 5 Logical Reasoning.'
   ),
 
@@ -232,7 +232,7 @@ VALUES
     100,
     100,
     100.00,
-    'published',
+    'draft',
     'Comprehensive 100-question clubbed set combining graduation-level Secondary Mathematics (50 Qs) and Integrated Science (Physics, Chemistry, Biology - 50 Qs).'
   ),
   (
@@ -244,7 +244,7 @@ VALUES
     100,
     100,
     100.00,
-    'published',
+    'draft',
     'Integrated 100-question Social Studies paper covering Ancient/Modern History (25 Qs), Physical/Indian Geography (25 Qs), Indian Polity & Constitution (25 Qs), and Economy (25 Qs).'
   ),
   (
@@ -256,7 +256,7 @@ VALUES
     100,
     100,
     100.00,
-    'published',
+    'draft',
     'Clubbed 100-question language exam: 50 Questions Hindi Vyakaran & Sahitya + 50 Questions English Grammar, Comprehension & Literary devices.'
   ),
 
@@ -272,7 +272,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for TGT Maths: 100 Qs Secondary & Graduation Mathematics (Algebra, Coordinate Geometry, Trigonometry, Calculus, Mensuration) + 50 Qs Common Unit-2 (Art of Teaching & Other Skills).'
   ),
   (
@@ -284,7 +284,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for TGT Science: 100 Qs Physics, Chemistry & Biology + 50 Qs Common Unit-2 (Art of Teaching, GK, Reasoning, Maths, EVS).'
   ),
   (
@@ -296,7 +296,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for TGT Social Science: 100 Qs History, Geography, Political Science & Economics + 50 Qs Common Unit-2.'
   ),
   (
@@ -308,7 +308,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for TGT Hindi: 100 Qs Hindi Grammar, Literature history, Prose & Poetry + 50 Qs Common Unit-2.'
   ),
   (
@@ -320,7 +320,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for TGT English: 100 Qs Grammar, Vocabulary, Literary Analysis & Comprehension + 50 Qs Common Unit-2.'
   ),
   (
@@ -332,7 +332,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for TGT Urdu: 100 Qs Urdu Qawaid, Nazm, Ghazal & Dastan + 50 Qs Common Unit-2.'
   ),
   (
@@ -344,7 +344,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for TGT Sanskrit: 100 Qs Sanskrit Vyakaran, Sandhi, Samas & Sahitya + 50 Qs Common Unit-2.'
   ),
   (
@@ -356,7 +356,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock: 100 Qs Human Anatomy, Sports Psychology, Rules of Games & Yoga + 50 Qs Common Unit-2.'
   ),
 
@@ -372,7 +372,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for STET Code 226: 100 Qs Post-Grad CS (Python/C++, Data Structures, RDBMS/SQL, Computer Networks, OS, Web Tech & Cyber Security) + 50 Qs Common Unit-2.'
   ),
   (
@@ -384,7 +384,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Maths: 100 Qs Higher Mathematics (Calculus, Linear Algebra, Real Analysis, Differential Equations, Vectors & Probability) + 50 Qs Common Unit-2.'
   ),
   (
@@ -396,7 +396,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Physics: 100 Qs Classical Mechanics, Electrodynamics, Thermodynamics, Quantum Physics, Optics & Solid State + 50 Qs Common Unit-2.'
   ),
   (
@@ -408,7 +408,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Chemistry: 100 Qs Physical, Inorganic, Organic Chemistry & Spectroscopy + 50 Qs Common Unit-2.'
   ),
   (
@@ -420,7 +420,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Zoology: 100 Qs Animal Diversity, Physiology, Molecular Genetics, Evolution & Immunology + 50 Qs Common Unit-2.'
   ),
   (
@@ -432,7 +432,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Botany: 100 Qs Plant Diversity, Morphology, Physiology, Plant Biotechnology & Ecology + 50 Qs Common Unit-2.'
   ),
   (
@@ -444,7 +444,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT History: 100 Qs Ancient India, Medieval Sultanate & Mughals, Modern National Movement, World History & Bihar History + 50 Qs Common Unit-2.'
   ),
   (
@@ -456,7 +456,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Geography: 100 Qs Geomorphology, Climatology, Human Geography, Economic Geography & Bihar Geography + 50 Qs Common Unit-2.'
   ),
   (
@@ -468,7 +468,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Political Science: 100 Qs Political Theory, Indian Constitution, Public Administration & International Relations + 50 Qs Common Unit-2.'
   ),
   (
@@ -480,7 +480,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Economics: 100 Qs Micro, Macro, Development Economics, Money & Banking, Indian Economy & Public Finance + 50 Qs Common Unit-2.'
   ),
   (
@@ -492,7 +492,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Sociology: 100 Qs Sociological Concepts, Indian Social Structure, Caste, Family, Kinship & Social Change + 50 Qs Common Unit-2.'
   ),
   (
@@ -504,7 +504,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Psychology: 100 Qs Cognitive Processes, Personality Assessment, Psychological Testing, Social Psychology & Mental Health + 50 Qs Common Unit-2.'
   ),
   (
@@ -516,7 +516,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Home Science: 100 Qs Food & Nutrition, Human Development, Resource Management & Textiles + 50 Qs Common Unit-2.'
   ),
   (
@@ -528,7 +528,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Commerce: 100 Qs Advanced Financial Accounting, Partnership, Company Accounts, Auditing & Income Tax + 50 Qs Common Unit-2.'
   ),
   (
@@ -540,7 +540,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Business Studies: 100 Qs Principles of Management, Financial Markets, Marketing & Business Environment + 50 Qs Common Unit-2.'
   ),
   (
@@ -552,7 +552,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT Hindi: 100 Qs Hindi Sahitya Ka Itihas (Aadikal to Aadhunik Kaal), Kavyashastra, Natak, Nibandh & Vyakaran + 50 Qs Common Unit-2.'
   ),
   (
@@ -564,7 +564,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Complete 150-question CBT mock for PGT English: 100 Qs History of English Literature, Major Literary Movements, Poetry, Drama, Criticism & Advanced Linguistics + 50 Qs Common Unit-2.'
   ),
 
@@ -580,7 +580,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Actual examination paper conducted by BSEB in STET 2024: 100 Qs Social Science + 50 Qs Teaching Art & Other Skills with official answer key.'
   ),
   (
@@ -592,7 +592,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Official examination paper for PGT Computer Science (Subject Code 226) conducted by BSEB in 2024 with verified solutions and answer key.'
   ),
   (
@@ -604,7 +604,7 @@ VALUES
     150,
     150,
     150.00,
-    'published',
+    'draft',
     'Official BSEB CBT question paper for Secondary Teacher eligibility: 100 Qs Mathematics + 50 Qs Teaching Art & General Aptitude.'
   )
 ON DUPLICATE KEY UPDATE
