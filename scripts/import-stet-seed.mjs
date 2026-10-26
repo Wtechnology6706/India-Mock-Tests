@@ -75,6 +75,16 @@ async function run() {
     process.exit(1);
   }
 
+  // Check if user passed --publish
+  const shouldPublish = process.argv.includes('--publish');
+  if (shouldPublish) {
+    console.log('\n📢 Publishing Bihar STET exam, test series, and tests as requested (--publish)...');
+    await connection.query(`UPDATE exams SET status = 'published' WHERE slug = 'bihar-stet'`);
+    await connection.query(`UPDATE test_series ts JOIN exams e ON ts.exam_id = e.id SET ts.status = 'published' WHERE e.slug = 'bihar-stet'`);
+    await connection.query(`UPDATE tests t JOIN test_series ts ON t.test_series_id = ts.id JOIN exams e ON ts.exam_id = e.id SET t.status = 'published' WHERE e.slug = 'bihar-stet'`);
+    console.log('✅ Bihar STET 2026 is now LIVE & PUBLISHED on the learner frontend!');
+  }
+
   // Verification checks
   console.log('\n🔍 Verifying Database Status:');
   try {
@@ -85,9 +95,9 @@ async function run() {
     console.log('\n[Exam Entry]');
     console.table(stetExam);
 
-    // 2. Check STET Mock Tests count and statuses
+    // 2. Check STET Mock Tests count, exam_id and statuses
     const [stetSummary] = await connection.query(
-      `SELECT t.status, COUNT(*) AS count
+      `SELECT t.status, COUNT(*) AS count, COUNT(t.exam_id) AS with_exam_id, COUNT(t.track_slug) AS with_track_slug
        FROM tests t
        JOIN test_series ts ON t.test_series_id = ts.id
        JOIN exams e ON ts.exam_id = e.id
@@ -109,7 +119,11 @@ async function run() {
     console.log('\n[BPSC TRE 4.0 Status Check (Unchanged)]');
     console.table(bpscSummary);
 
-    console.log('\n🎉 SUCCESS: Bihar STET 2026 seed successfully imported as UNPUBLISHED / DRAFT!');
+    console.log(
+      shouldPublish
+        ? '\n🎉 SUCCESS: Bihar STET 2026 is LIVE & PUBLISHED!'
+        : '\n🎉 SUCCESS: Bihar STET 2026 seed is imported as DRAFT (Unpublished). To publish, pass --publish or publish via Admin Panel.'
+    );
   } catch (err) {
     console.warn('⚠️ Verification warning:', err.message);
   } finally {

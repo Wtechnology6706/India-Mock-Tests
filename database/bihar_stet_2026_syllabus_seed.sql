@@ -616,6 +616,34 @@ ON DUPLICATE KEY UPDATE
   status = VALUES(status),
   description = VALUES(description);
 
+-- ----------------------------------------------------------------------------
+-- Ensure tests are mapped to exam_id and appropriate track_slug
+-- ----------------------------------------------------------------------------
+UPDATE tests t
+JOIN test_series ts ON t.test_series_id = ts.id
+SET 
+  t.exam_id = ts.exam_id,
+  t.track_slug = CASE
+    WHEN ts.slug = 'bihar-stet-paper-2-senior' THEN 'higher-secondary-11-12'
+    ELSE 'secondary-9-10'
+  END
+WHERE ts.slug LIKE 'bihar-stet%';
+
+-- Link relevant subjects to tests
+UPDATE tests t
+JOIN subjects s ON s.exam_id = t.exam_id AND (
+  (t.slug LIKE '%art-of-teaching%' AND s.slug = 'art-of-teaching') OR
+  (t.slug LIKE '%hindi%' AND s.name LIKE '%Hindi%') OR
+  (t.slug LIKE '%math%' AND s.name LIKE '%Math%') OR
+  (t.slug LIKE '%science%' AND s.name LIKE '%Science%') OR
+  (t.slug LIKE '%computer%' AND s.name LIKE '%Computer%') OR
+  (t.slug LIKE '%social%' AND s.name LIKE '%Social%') OR
+  (t.slug LIKE '%english%' AND s.name LIKE '%English%') OR
+  (t.slug LIKE '%commerce%' AND s.name LIKE '%Commerce%')
+)
+SET t.subject_id = s.id
+WHERE t.exam_id = @stet_exam_id AND t.subject_id IS NULL;
+
 -- ============================================================================
 -- VERIFICATION QUERY FOR BIHAR STET 2026
 -- ============================================================================
@@ -628,3 +656,4 @@ JOIN test_series ts ON ts.exam_id = e.id
 LEFT JOIN tests t ON t.test_series_id = ts.id
 WHERE e.slug = 'bihar-stet'
 GROUP BY e.name, ts.name;
+

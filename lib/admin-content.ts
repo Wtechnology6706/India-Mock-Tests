@@ -1038,11 +1038,17 @@ export async function listMockTests(filter?: {
   try {
     let sql = `
       SELECT t.id, t.slug, t.name, t.test_type, t.question_count, t.duration_minutes, t.total_marks,
-             t.access_type, t.status, t.description, t.track_slug, t.banner_image_url,
-             e.id AS exam_id, e.name AS exam_name, e.slug AS exam_slug,
+             t.access_type, t.status, t.description,
+             COALESCE(t.track_slug, CASE WHEN ts.slug = 'bihar-stet-paper-2-senior' THEN 'higher-secondary-11-12' ELSE 'secondary-9-10' END) AS track_slug,
+             t.banner_image_url,
+             COALESCE(e.id, tse.id) AS exam_id,
+             COALESCE(e.name, tse.name, 'Unassigned Exam') AS exam_name,
+             COALESCE(e.slug, tse.slug, 'unassigned') AS exam_slug,
              s.id AS subject_id, s.name AS subject_name,
              (SELECT COUNT(DISTINCT tq.question_id) FROM test_questions tq WHERE tq.test_id = t.id) AS linked_count
       FROM tests t
+      LEFT JOIN test_series ts ON ts.id = t.test_series_id
+      LEFT JOIN exams tse ON tse.id = ts.exam_id
       LEFT JOIN exams e ON e.id = t.exam_id
       LEFT JOIN subjects s ON s.id = t.subject_id
     `;
@@ -1052,8 +1058,8 @@ export async function listMockTests(filter?: {
     if (filter?.examSlug && filter.examSlug !== "All") {
       const slugPattern = `%${filter.examSlug}%`;
       const namePattern = `%${filter.examSlug.replace(/-/g, " ")}%`;
-      conditions.push("(e.slug = ? OR e.name = ? OR e.slug LIKE ? OR LOWER(e.name) LIKE LOWER(?))");
-      params.push(filter.examSlug, filter.examSlug, slugPattern, namePattern);
+      conditions.push("(e.slug = ? OR e.name = ? OR e.slug LIKE ? OR LOWER(e.name) LIKE LOWER(?) OR tse.slug = ? OR tse.name = ? OR tse.slug LIKE ? OR LOWER(tse.name) LIKE LOWER(?))");
+      params.push(filter.examSlug, filter.examSlug, slugPattern, namePattern, filter.examSlug, filter.examSlug, slugPattern, namePattern);
     }
     if (filter?.trackSlug && filter.trackSlug !== "All") {
       conditions.push("t.track_slug = ?");

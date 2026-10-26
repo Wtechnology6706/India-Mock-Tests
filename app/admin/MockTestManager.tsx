@@ -164,9 +164,25 @@ export default function MockTestManager({
   // Filtered tests for Catalog
   const filteredTests = useMemo(() => {
     return tests.filter((t) => {
-      if (examFilter !== "All" && t.examName !== examFilter && t.examSlug !== examFilter) return false;
-      if (trackFilter !== "All" && t.trackSlug !== trackFilter) return false;
-      if (statusFilter !== "All" && t.status !== statusFilter) return false;
+      if (examFilter !== "All") {
+        const ef = examFilter.toLowerCase();
+        const matchesExam =
+          t.examName?.toLowerCase() === ef ||
+          t.examSlug?.toLowerCase() === ef ||
+          t.examName?.toLowerCase().includes(ef) ||
+          (ef.includes("stet") && (t.examSlug?.toLowerCase().includes("stet") || t.examName?.toLowerCase().includes("stet"))) ||
+          (ef.includes("bpsc") && (t.examSlug?.toLowerCase().includes("bpsc") || t.examName?.toLowerCase().includes("tre") || t.examName?.toLowerCase().includes("bpsc"))) ||
+          (ef.includes("ctet") && (t.examSlug?.toLowerCase().includes("ctet") || t.examName?.toLowerCase().includes("ctet")));
+        if (!matchesExam) return false;
+      }
+      if (trackFilter !== "All") {
+        const isTrackMatch =
+          t.trackSlug === trackFilter ||
+          (trackFilter === "secondary-9-10" && (t.trackSlug === "paper-1-9-10" || t.trackSlug?.includes("secondary"))) ||
+          (trackFilter === "higher-secondary-11-12" && (t.trackSlug === "paper-2-11-12" || t.trackSlug?.includes("senior") || t.trackSlug?.includes("higher")));
+        if (!isTrackMatch) return false;
+      }
+      if (statusFilter !== "All" && t.status?.toLowerCase() !== statusFilter.toLowerCase()) return false;
       if (searchFilter.trim()) {
         const q = searchFilter.toLowerCase();
         return (
